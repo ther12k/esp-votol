@@ -1,0 +1,176 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000" font-family="system-ui,sans-serif">
+  <defs>
+    <linearGradient id="board" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2b3a52"/><stop offset="1" stop-color="#1c2739"/>
+    </linearGradient>
+    <linearGradient id="chip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#37455e"/><stop offset="1" stop-color="#232f45"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe08a"/><stop offset="1" stop-color="#c9a227"/>
+    </linearGradient>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.4" fill="#22304a"/>
+    </pattern>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- backdrop -->
+  <rect width="1400" height="1000" fill="#0c1424"/>
+  <rect width="1400" height="1000" fill="url(#dots)"/>
+  <rect x="8" y="8" width="1384" height="984" rx="18" fill="none" stroke="#26304a" stroke-width="2"/>
+
+  <text x="700" y="52" text-anchor="middle" fill="#e5e7eb" font-size="30" font-weight="800" letter-spacing="1">VOTOL → ESP32 DevKit V1 wiring</text>
+  <text x="700" y="80" text-anchor="middle" fill="#7fa8e8" font-size="16">USB at the bottom · pin labels printed on the board edge · count the right column from the top</text>
+
+  <!-- ================= ESP32 BOARD ================= -->
+  <g filter="url(#shadow)">
+    <rect x="110" y="130" width="380" height="700" rx="16" fill="url(#board)" stroke="#4b5b78" stroke-width="2.5"/>
+  </g>
+  <!-- mounting holes -->
+  <g fill="#0c1424" stroke="#5b6b88" stroke-width="2">
+    <circle cx="135" cy="155" r="9"/><circle cx="465" cy="155" r="9"/>
+    <circle cx="135" cy="805" r="9"/><circle cx="465" cy="805" r="9"/>
+  </g>
+  <!-- module + usb -->
+  <rect x="190" y="150" width="220" height="86" rx="8" fill="url(#chip)" stroke="#6b7b98" stroke-width="1.5"/>
+  <text x="300" y="188" text-anchor="middle" fill="#aebcd4" font-size="15">ESP32-WROOM</text>
+  <text x="300" y="208" text-anchor="middle" fill="#66748e" font-size="11">Wi-Fi + BT Classic module</text>
+  <rect x="180" y="735" width="240" height="40" rx="6" fill="#101a2c" stroke="#5b6b88"/>
+  <text x="300" y="760" text-anchor="middle" fill="#93a3bd" font-size="12">CP2102 · USB-UART</text>
+  <rect x="245" y="790" width="110" height="30" rx="5" fill="#31415e" stroke="#5b6b88"/>
+  <text x="300" y="810" text-anchor="middle" fill="#dbe4f0" font-size="12">USB-C / micro</text>
+  <!-- buttons -->
+  <rect x="132" y="150" width="34" height="26" rx="4" fill="#1a2332" stroke="#4b5b78"/>
+  <text x="149" y="167" text-anchor="middle" fill="#8b9ab4" font-size="10">EN</text>
+  <rect x="434" y="150" width="34" height="26" rx="4" fill="#1a2332" stroke="#4b5b78"/>
+  <text x="451" y="167" text-anchor="middle" fill="#8b9ab4" font-size="10">BOOT</text>
+
+  <!-- right column pins: 16 pads from y=210 step 34 -->
+  <!-- order: 23 22 TX0 RX0 21 [GND] [19] [18] 5 17 16 4 2 15 3V3 -->
+  <g id="rpins">
+    <rect x="452" y="210" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="225" fill="#cbd5e1" font-size="14">23</text>
+    <rect x="452" y="244" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="259" fill="#cbd5e1" font-size="14">22</text>
+    <rect x="452" y="278" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="293" fill="#cbd5e1" font-size="14">TX0</text>
+    <rect x="452" y="312" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="327" fill="#cbd5e1" font-size="14">RX0</text>
+    <rect x="452" y="346" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="361" fill="#cbd5e1" font-size="14">21</text>
+    <rect x="452" y="380" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="395" fill="#fde047" font-size="15" font-weight="800">GND</text>
+    <rect x="452" y="414" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="429" fill="#fde047" font-size="15" font-weight="800">19</text>
+    <rect x="452" y="448" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="463" fill="#fde047" font-size="15" font-weight="800">18</text>
+    <rect x="452" y="482" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="497" fill="#cbd5e1" font-size="14">5</text>
+    <rect x="452" y="516" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="531" fill="#cbd5e1" font-size="14">17</text>
+    <rect x="452" y="550" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="565" fill="#cbd5e1" font-size="14">16</text>
+    <rect x="452" y="584" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="599" fill="#cbd5e1" font-size="14">4</text>
+    <rect x="452" y="618" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="633" fill="#cbd5e1" font-size="14">2</text>
+    <rect x="452" y="652" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="667" fill="#cbd5e1" font-size="14">15</text>
+    <rect x="452" y="686" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="500" y="701" fill="#cbd5e1" font-size="14">3V3</text>
+  </g>
+  <!-- left column: EN 36 39 34 35 32 33 25 26 27 14 12 13 GND VIN -->
+  <g font-size="14" fill="#cbd5e1">
+    <text x="148" y="225" text-anchor="end">EN</text>
+    <rect x="132" y="210" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="148" y="259" text-anchor="end">36</text><rect x="132" y="244" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="148" y="293" text-anchor="end">39</text><rect x="132" y="278" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="148" y="327" text-anchor="end">34</text><rect x="132" y="312" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="148" y="361" text-anchor="end">35</text><rect x="132" y="346" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="148" y="395" text-anchor="end">32</text><rect x="132" y="380" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="148" y="429" text-anchor="end">33</text><rect x="132" y="414" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="148" y="463" text-anchor="end">25</text><rect x="132" y="448" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="148" y="497" text-anchor="end">26</text><rect x="132" y="482" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="148" y="531" text-anchor="end">27</text><rect x="132" y="516" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="148" y="565" text-anchor="end">14</text><rect x="132" y="550" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="148" y="599" text-anchor="end">12</text><rect x="132" y="584" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="148" y="633" text-anchor="end">13</text><rect x="132" y="618" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="148" y="667" text-anchor="end" font-weight="800" fill="#fde047">GND</text><rect x="132" y="652" width="16" height="20" rx="2" fill="url(#gold)"/>
+    <text x="148" y="701" text-anchor="end" font-weight="800" fill="#fde047">VIN</text><rect x="132" y="686" width="16" height="20" rx="2" fill="url(#gold)"/>
+  </g>
+  <!-- column captions -->
+  <text x="460" y="196" text-anchor="end" fill="#66748e" font-size="12">right column ▾</text>
+  <text x="140" y="196" fill="#66748e" font-size="12">left column ▾</text>
+
+  <!-- target rings -->
+  <g fill="none" stroke="#fbbf24" stroke-width="3">
+    <circle cx="460" cy="390" r="18"/><circle cx="460" cy="424" r="18"/><circle cx="460" cy="458" r="18"/>
+  </g>
+  <circle cx="140" cy="696" r="18" fill="none" stroke="#fbbf24" stroke-width="3"/>
+
+  <!-- ================= WIRES ================= -->
+  <!-- black GND -->
+  <path d="M 460 390 C 560 390, 580 640, 700 640" stroke="#0b0f14" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <path d="M 460 390 C 560 390, 580 640, 700 640" stroke="#2c3a52" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- white: ESP TX (19) -> VOTOL RX -->
+  <path d="M 460 424 C 560 424, 620 500, 810 500 L 980 500" stroke="#f1f5f9" stroke-width="9" fill="none" stroke-linecap="round" filter="url(#glow)" opacity="0.95"/>
+  <!-- green: VOTOL TX -> 1k -> 18, with 2k tap to GND rail -->
+  <path d="M 460 458 C 540 458, 560 400, 640 400" stroke="#22c55e" stroke-width="9" fill="none" stroke-linecap="round" filter="url(#glow)"/>
+  <path d="M 760 400 L 850 400 L 850 534 L 980 534" stroke="#22c55e" stroke-width="9" fill="none" stroke-linecap="round"/>
+  <!-- red: VOTOL +5V -> VIN (around the bottom) -->
+  <path d="M 1080 720 C 1000 860, 240 930, 128 700" stroke="#ef4444" stroke-width="9" fill="none" stroke-linecap="round" filter="url(#glow)" opacity="0.9"/>
+
+  <!-- divider block -->
+  <g filter="url(#shadow)">
+    <rect x="640" y="378" width="120" height="44" rx="10" fill="#123b2a" stroke="#22c55e" stroke-width="2"/>
+    <text x="700" y="405" text-anchor="middle" fill="#86efac" font-size="16" font-weight="700">1 kΩ →</text>
+    <rect x="850" y="378" width="110" height="44" rx="10" fill="#123b2a" stroke="#22c55e" stroke-width="2"/>
+    <text x="905" y="397" text-anchor="middle" fill="#86efac" font-size="14" font-weight="700">2 kΩ</text>
+    <text x="905" y="414" text-anchor="middle" fill="#4ade80" font-size="11">to GND</text>
+  </g>
+  <path d="M 905 422 L 905 640 L 700 640" stroke="#22c55e" stroke-width="4" fill="none" stroke-dasharray="7 7" opacity="0.8"/>
+
+  <!-- ================= VOTOL SOCKET ================= -->
+  <g filter="url(#shadow)">
+    <rect x="980" y="440" width="300" height="320" rx="18" fill="#111c30" stroke="#64748b" stroke-width="2.5"/>
+  </g>
+  <text x="1130" y="478" text-anchor="middle" fill="#e5e7eb" font-size="20" font-weight="800">VOTOL socket</text>
+  <text x="1130" y="500" text-anchor="middle" fill="#66748e" font-size="12">4-pin program plug</text>
+  <g font-size="15">
+    <circle cx="1015" cy="534" r="9" fill="#f1f5f9"/><text x="1038" y="539" fill="#f1f5f9">RX · white → D19</text>
+    <circle cx="1015" cy="584" r="9" fill="#22c55e"/><text x="1038" y="589" fill="#4ade80">TX · green → 1 kΩ → D18</text>
+    <circle cx="1015" cy="640" r="9" fill="#0b0f14" stroke="#64748b" stroke-width="2"/><text x="1038" y="645" fill="#94a3b8">GND · black → GND</text>
+    <circle cx="1015" cy="720" r="9" fill="#ef4444"/><text x="1038" y="725" fill="#f87171">+5V · red → VIN</text>
+  </g>
+
+  <!-- ================= NOTES ================= -->
+  <g>
+    <rect x="110" y="880" width="620" height="86" rx="12" fill="#121d33" stroke="#26304a"/>
+    <text x="130" y="910" fill="#fde047" font-size="16" font-weight="800">How to find the pins</text>
+    <text x="130" y="934" fill="#cbd5e1" font-size="13.5">Right column, USB down, from the top: 23 · 22 · TX0 · RX0 · 21 · then <tspan fill="#fde047" font-weight="700">GND · 19 · 18</tspan> — three in a row.</text>
+    <text x="130" y="955" fill="#cbd5e1" font-size="13.5"><tspan fill="#fde047" font-weight="700">VIN</tspan> = bottom-left corner pin (next to a GND). 38-pin boards: same positions, 4 extra pins below.</text>
+  </g>
+  <g>
+    <rect x="750" y="880" width="540" height="86" rx="12" fill="#2a1a10" stroke="#f59e0b" stroke-opacity="0.6"/>
+    <text x="770" y="910" fill="#fbbf24" font-size="16" font-weight="800">⚠ Safety</text>
+    <text x="770" y="934" fill="#fcd34d" font-size="13.5">Green wire = 5 V logic: put a 1 kΩ resistor in series before D18 (divider = safest).</text>
+    <text x="770" y="955" fill="#fcd34d" font-size="13.5">Never leave USB plugged in while the bike's +5 V (red) is connected.</text>
+  </g>
+
+  <!-- baud / info chips -->
+  <g font-size="13">
+    <rect x="700" y="120" width="150" height="34" rx="17" fill="#16223a" stroke="#26304a"/>
+    <text x="775" y="142" text-anchor="middle" fill="#93c5fd" font-weight="600">115200 baud</text>
+    <rect x="862" y="120" width="150" height="34" rx="17" fill="#16223a" stroke="#26304a"/>
+    <text x="937" y="142" text-anchor="middle" fill="#93c5fd" font-weight="600">8N1 · 3.3 V logic</text>
+    <rect x="1024" y="120" width="266" height="34" rx="17" fill="#16223a" stroke="#26304a"/>
+    <text x="1157" y="142" text-anchor="middle" fill="#93c5fd" font-weight="600">ignition ON powers the ESP32</text>
+  </g>
+</svg>

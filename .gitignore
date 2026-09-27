@@ -1,0 +1,17 @@
+.venv/
+.esphome/
+*.bin
+*.elf
+__pycache__/
+# build caches & local artifacts
+.pio/
+output/
+.playwright-cli/
+.zcode/
+nohup.out
+*.pid
+# third-party dealer tools / large references (kept locally, not for the repo)
+research/
+# local-only credentials (copy the .example and fill in; never commit)
+wifi_secrets.h
+secrets.yaml

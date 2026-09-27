@@ -1,0 +1,55 @@
+esphome:
+  name: votol-wifi-bridge
+  friendly_name: VOTOL WiFi Bridge
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# --- Logging goes to USB only (UART0), never touches the Votol UART2 pins ---
+logger:
+
+# --- API for Home Assistant, but never reboot the bridge if HA is absent ---
+api:
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+
+# --- WiFi: no credentials here on purpose. On first boot the ESP32 opens a
+# hotspot ("votol-wifi-bridge"); connect to it and a captive portal asks for
+# your home WiFi. Credentials are then stored on the device. ---
+wifi:
+  power_save_mode: none
+  ap:
+    ssid: "votol-wifi-bridge"
+    password: "votol1234"
+
+captive_portal:
+
+# Handy: status page + live logs from any browser at http://<esp-ip>/
+web_server:
+
+# --- Serial-to-WiFi bridge component (TCP server) ---
+# Vendored copy of github://oxan/esphome-stream-server with a one-line fix for
+# the get_use_address() API removal in ESPHome 2026.9 (see components/stream_server/)
+external_components:
+  - source: { type: local, path: components }
+
+uart:
+  id: votol_uart
+  # VOTOL official software talks 115200 8N1 (use 9600 only if yours is an
+  # older unit configured that way)
+  baud_rate: 115200
+  # Pins chosen for the easiest wiring on a DOIT ESP32 DevKit V1: GND, D19 and
+  # D18 are three consecutive pins on the right column (D21-GND-D19-D18).
+  # On a WROVER (PSRAM) board GPIO18/19 are taken — use rx GPIO16 / tx GPIO17.
+  rx_pin: GPIO18   # Votol TX (green wire) -> ESP32 RX, via 1k/2k divider
+  tx_pin: GPIO19   # Votol RX (white wire) <- ESP32 TX
+
+# Raw TCP server: connect the Votol PC software through a virtual COM port
+# pointed at <esp-ip>:6638
+stream_server:
+  uart_id: votol_uart
+  port: 6638
