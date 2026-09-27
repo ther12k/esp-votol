@@ -97,10 +97,15 @@ uint8_t relayMode = RM_IMMOBILIZER_NC;
 bool relayActiveLow = false;   // relay module IN energizes on LOW (common opto boards)
 bool vibeEnable = false;       // OFF until an SW-420 is actually wired (GPIO34 floats)
 String webPin = "1234";        // access PIN for state-changing web endpoints
-bool ignHotState = false;      // ignition/key line hot (sampled each tick)
 bool ignSenseWired = false;    // IGN divider connected; MUST be ON before wiring the E-LOCK cut
+bool benchMode = false;        // relay contacts guaranteed DISCONNECTED — relaxes interlocks for bench testing
 bool masterWired = false;      // saklar switch connected to GPIO32
 bool masterOff = false;        // saklar OFF: keyless suspended (bike stays usable)
+
+// Tri-state ignition: UNKNOWN (sense not wired/validated) is never treated as
+// "key off" — a cut command requires COLD, or benchMode.
+enum IgnState : uint8_t { IGN_UNKNOWN = 0, IGN_COLD = 1, IGN_HOT = 2 };
+IgnState ignNow = IGN_UNKNOWN;
 
 // ---- runtime state ----
 bool armed = false;
@@ -112,7 +117,7 @@ uint32_t lastSeenMs = 0;       // 0 = never seen since boot
 uint32_t absentSinceMs = 0;
 uint32_t bootMs = 0;
 uint32_t armedSinceMs = 0;
-uint32_t alarmUntilMs = 0;
+uint32_t alarmStartMs = 0;   // siren window START (elapsed math survives millis() wrap)
 uint16_t vibeEvents = 0;
 uint32_t lastVibeMs = 0;
 
@@ -149,7 +154,7 @@ bool patOn = false;
 uint8_t patIdx = 0;
 uint32_t patMs = 0;
 
-bool sirenActive() { return alarmUntilMs && millis() < alarmUntilMs; }
+bool sirenActive() { return alarmStartMs && millis() - alarmStartMs < SIREN_S * 1000UL; }
 
 void playPattern(const Pattern &p, bool force = false) {
   if (!force && sirenActive() && curPat.steps == ST_SIREN) return;  // siren wins
@@ -166,19 +171,18 @@ void stopPattern() {
 void patternTick() {
   if (!curPat.steps) return;
   if (curPat.steps == ST_SIREN && !sirenActive()) {  // siren window over
-    alarmUntilMs = 0;
+    alarmStartMs = 0;
     stopPattern();
     return;
   }
   uint32_t now = millis();
-  if (now - patMs < curPat.steps[patIdx]) return;
+  if (now - patMs < (uint32_t)curPat.steps[patIdx]) return;  // current slot not over
   patMs = now;
   patOn = !patOn;
   digitalWrite(BUZZER_PIN, patOn ? HIGH : LOW);
-  if (patOn) return;  // ON phase runs with the same slot duration
-  uint8_t next = patIdx + 2;
+  uint8_t next = patIdx + 1;                       // advance EVERY slot: [on,off,on,off,...]
   if (next < curPat.n && curPat.steps[next] != 0) patIdx = next;
-  else if (curPat.repeat) patIdx = 0;
+  else if (curPat.repeat) { patIdx = 0; patOn = true; digitalWrite(BUZZER_PIN, HIGH); }
   else stopPattern();
 }
 
@@ -193,12 +197,40 @@ bool relayShouldEnergize() {
     // you're riding, a dropped/missed fob scan can NOT open the contact —
     // it releases when the key turns off (or the fob is absent with the key
     // off, or the master switch opens). Requires the ignition sense wire.
-    case RM_IGNITION_NO:    return !armed && (fobPresent || (ignSenseWired && ignHotState));
+    case RM_IGNITION_NO:    return !armed && (fobPresent || ignNow == IGN_HOT);
     case RM_ALARM_ONLY:     return sirenActive();            // strobe/siren output
   }
   return false;
 }
-void applyRelay() { digitalWrite(RELAY_PIN, relayShouldEnergize() ? relayEnergizeLevel() : relayIdleLevel()); }
+bool relayAppliedE = false;  // last GPIO level actually written (requested != applied is a bug)
+void applyRelay() {
+  relayAppliedE = relayShouldEnergize();
+  digitalWrite(RELAY_PIN, relayAppliedE ? relayEnergizeLevel() : relayIdleLevel());
+}
+
+bool armingCutsPower() { return relayMode == RM_IMMOBILIZER_NC || relayMode == RM_IGNITION_NO; }
+
+// ---- central safety gate: EVERY path that would newly energize the coil in a
+// power-cutting mode passes through armGate() — auto-arm, manual arm, relay
+// test, settings changes. 0 = allowed.
+//   1 master switch OFF · 2 ignition HOT · 3 ignition sense UNKNOWN (unwired
+//   sensor is never authorization to cut power)
+int armGate() {
+  if (masterOff) return 1;
+  if (benchMode) return 0;         // contacts physically disconnected
+  if (!armingCutsPower()) return 0;
+  if (ignNow == IGN_HOT) return 2;
+  if (ignNow == IGN_UNKNOWN) return 3;
+  return 0;
+}
+const char *armGateText(int g) {
+  switch (g) {
+    case 1: return "master switch (saklar) is OFF";
+    case 2: return "ignition/key line is hot";
+    case 3: return "ignition sense not validated (wire the divider, or tick bench mode)";
+    default: return "";
+  }
+}
 
 // ---------------- fob matching ----------------
 int matchFob(const String &mac, const String &name) {
@@ -254,6 +286,7 @@ void loadCfg() {
   vibeEnable     = prefs.getBool("vibe", false);
   ignSenseWired  = prefs.getBool("ignwired", false);
   masterWired    = prefs.getBool("masterwired", false);
+  benchMode      = prefs.getBool("bench", false);
   webPin         = prefs.getString("pin", "1234");
   if (!webPin.length()) webPin = "1234";
   prefs.end();
@@ -285,6 +318,7 @@ void saveCfg() {
   prefs.putBool("vibe", vibeEnable);
   prefs.putBool("ignwired", ignSenseWired);
   prefs.putBool("masterwired", masterWired);
+  prefs.putBool("bench", benchMode);
   prefs.putString("pin", webPin);
   prefs.end();
 }
@@ -341,21 +375,18 @@ bool ignHot() {
   return (s >> 2) > 310;
 }
 
-bool armingCutsPower() { return relayMode == RM_IMMOBILIZER_NC || relayMode == RM_IGNITION_NO; }
+bool armingCutsPower();  // defined with the relay logic above
 
-// Manual/auto arm goes through here. ARMING IS REFUSED while the ignition is
-// hot (key ON / controller powered): opening the cut with the bike in use
-// would kill propulsion. The dashboard exposes the same refusal via state.json.
+// Manual/auto arm goes through here, gated by the central safety policy
+// (armGate). Refusals chirp + log; the dashboard sees the same state.
 bool tryArm(bool a, bool manual) {
-  if (a && masterOff) {
-    playPattern(PAT_DENY, true);
-    Serial.println("[KEY] arm REFUSED — master switch (saklar) is OFF");
-    return false;
-  }
-  if (a && armingCutsPower() && ignHotState) {
-    playPattern(PAT_DENY, true);
-    Serial.println("[KEY] arm REFUSED — ignition/key line is hot");
-    return false;
+  if (a) {
+    int g = armGate();
+    if (g) {
+      playPattern(PAT_DENY, true);
+      Serial.printf("[KEY] arm REFUSED — %s\n", armGateText(g));
+      return false;
+    }
   }
   setArmed(a, manual);
   return true;
@@ -387,22 +418,26 @@ void keylessTick() {
   if (masterOff) {
     // saklar OFF suspends everything: disarm, never arm, no siren
     if (armed) setArmed(false, false);
-    if (sirenActive()) { alarmUntilMs = 0; stopPattern(); }
+    if (sirenActive()) { alarmStartMs = 0; stopPattern(); }
     absentSinceMs = now;
-    ignHotState = ignHot();
+    ignNow = IGN_UNKNOWN;
+    patternTick();   // keep the suspend chirp playing / finish patterns
     return;
   }
 
-  ignHotState = ignHot();
-  if (ignHotState) absentSinceMs = now;  // key on: the arm clock never runs while riding
+  ignNow = ignSenseWired ? (ignHot() ? IGN_HOT : IGN_COLD) : IGN_UNKNOWN;
+  if (ignNow == IGN_HOT) absentSinceMs = now;   // key on: arm clock never runs while riding
   bool wasPresent = fobPresent;
   fobPresent = consecHits >= presentHits && lastSeenMs && (now - lastSeenMs < 8000);
+  if (fobPresent) absentSinceMs = now;          // hold the clock while the fob is here:
+                                                // leaving must cost the FULL armAfter,
+                                                // not "grace since boot/disarm" (review #3)
 
   if (fobPresent && armed) setArmed(false, false);          // approach -> disarm
   else if (!fobPresent && !armed) {
     bool graceOver = now - bootMs > bootGraceS * 1000UL;
     bool goneEnough = now - absentSinceMs > armAfterS * 1000UL;
-    if (!ignHotState && graceOver && goneEnough) setArmed(true, false);  // walked away -> arm
+    if (graceOver && goneEnough && armGate() == 0) setArmed(true, false);  // walked away -> arm
   }
   if (fobPresent != wasPresent)
     Serial.printf("[KEY] fob %s (%d dBm)\n", fobPresent ? "present" : "gone", fobRssi);
@@ -412,12 +447,15 @@ void keylessTick() {
     if (digitalRead(VIBE_PIN) == HIGH) {
       lastVibeMs = now;
       vibeEvents++;
-      alarmUntilMs = now + SIREN_S * 1000UL;  // (re)trigger
+      alarmStartMs = now;                     // (re)trigger
       playPattern(PAT_SIREN, true);
       Serial.printf("[ALARM] vibration #%u — siren %lus\n", vibeEvents, (unsigned long)SIREN_S);
     }
   }
-  if (relayMode == RM_ALARM_ONLY) applyRelay();  // siren relay follows live
+  // keep the GPIO glued to the computed state: in ignition-NO mode the relay
+  // depends on continuously-varying inputs (fob/ignition), not just arming
+  // transitions — first fob after boot must close the contact (review #5)
+  if (relayShouldEnergize() != relayAppliedE) applyRelay();
 }
 
 // ---------------- optional physical button: hold 2 s toggles ----------------
@@ -435,10 +473,30 @@ void buttonTick() {
 }
 
 // ---------------- web ----------------
-// state-changing endpoints require ?pin=<webPin> (default 1234, change below/
-// in settings). / and /state.json stay open for the dashboard status panel.
-bool pinOk() { return web.hasArg("pin") && web.arg("pin") == webPin; }
-void denyPin() { web.send(403, "text/plain", "wrong or missing ?pin="); }
+// Two auth paths, by design:
+//  - machine API: ?pin=<webPin> on any method (dashboard proxy, curl)
+//  - browser session: one-time POST /auth login -> cookie (SameSite=Strict,
+//    HttpOnly, 1 h). Cookies only count on POST, so a cross-site page can
+//    neither read the credential nor trigger state changes via GET links.
+// The PIN itself is NEVER rendered into any page (no disclosure via HTML).
+uint32_t authTok = 0;  // per-boot session token; 0 = no session support
+void redirectHome();   // defined below
+
+bool authByPin() { return web.hasArg("pin") && web.arg("pin") == webPin; }
+bool authByCookie() {
+  if (!authTok || web.method() != HTTP_POST) return false;
+  String c = web.header("Cookie");
+  return c.length() && c.indexOf("kauth=" + String(authTok)) >= 0;
+}
+bool authed() { return authByPin() || authByCookie(); }
+void denyAuth() { web.send(403, "text/plain", "not authorized — POST /auth with pin=, or pass ?pin="); }
+
+void handleAuth() {
+  if (!authByPin()) { denyAuth(); return; }
+  web.sendHeader("Set-Cookie",
+                 String("kauth=") + authTok + "; Path=/; Max-Age=3600; SameSite=Strict; HttpOnly");
+  redirectHome();
+}
 
 String modeName() {
   switch (relayMode) {
@@ -455,8 +513,10 @@ String fobEntriesHtml(bool withRemove) {
     s += F("<code>"); s += htmlEsc(fobs[i]); s += F("</code>");
     if (fobPresent && i == seenIdx) s += F(" <span class=ok>&#10003;</span>");
     if (withRemove) {
-      s += F(" <a href='/fob?pin="); s += urlEnc(webPin);
-      s += F("&del="); s += urlEnc(fobs[i]); s += F("'>&#10005;</a>");
+      s += F(" <form method=post action=/fob style='display:inline'>"
+             "<input type=hidden name=del value='");
+      s += htmlEsc(fobs[i]);
+      s += F("'><button>&#10005;</button></form>");
     }
   }
   return fobCount ? s : String(F("<span class=dim>none learned</span>"));
@@ -475,11 +535,12 @@ void handleRoot() {
   h += armed ? F("<span class=bad>&#128274; ARMED</span>") : F("<span class=ok>&#128275; disarmed</span>");
   if (armed && alarm) h += F(" <span class=bad>&#128680; SIREN</span>");
   if (masterOff) h += F(" <span class=bad>&#9888; master switch OFF &mdash; keyless suspended</span>");
-  if (ignHotState) h += F(" <span class=bad>&#9888; ignition ON &mdash; arming blocked</span>");
-  else if (armingCutsPower() && !ignSenseWired)
-    h += F(" <span class=bad>&#9888; ignition sense not wired &mdash; do NOT install the E-LOCK cut yet</span>");
-  if (relayMode == RM_IGNITION_NO && !ignSenseWired)
-    h += F(" <span class=bad>&#9888; ignition-NO mode needs the ignition sense wire for the ride latch</span>");
+  if (ignNow == IGN_HOT) h += F(" <span class=bad>&#9888; ignition ON &mdash; arming blocked</span>");
+  else if (ignNow == IGN_UNKNOWN && armingCutsPower())
+    h += benchMode ? F(" <span class=bad>&#9888; BENCH MODE &mdash; interlocks relaxed, relay contacts must be disconnected</span>")
+                   : F(" <span class=bad>&#9888; ignition sense UNKNOWN &mdash; arming blocked (wire the divider, or tick bench mode)</span>");
+  if (relayMode == RM_IGNITION_NO && ignNow != IGN_COLD && !benchMode)
+    h += F(" <span class=bad>&#9888; ignition-NO mode needs a validated sense wire for the ride latch</span>");
   if (!armed && now - bootMs < bootGraceS * 1000UL) {
     h += String(F(" <span class=dim>(boot grace ")) + String((bootGraceS * 1000UL - (now - bootMs)) / 1000 + 1) + F(" s)</span>");
   }
@@ -493,13 +554,16 @@ void handleRoot() {
   h += fobPresent ? F("<span class=ok>present</span>") : F("<span class=dim>absent</span>");
   if (lastSeenMs) { h += F(" &middot; last seen "); h += String((now - lastSeenMs) / 1000); h += F(" s ago"); }
   if (fobPresent) { h += F(" &middot; "); h += String(fobRssi); h += F(" dBm"); }
-  h += F(" &middot; <a href='/scan?go=1&amp;pin="); h += urlEnc(webPin); h += F("'>[learn new fob]</a>");
+  h += F(" &mdash; <form method=post action=/scan style='display:inline'>"
+         "<input type=hidden name=go value=1><button>[learn new fob]</button></form>");
   h += F("</td></tr><tr><th>Relay</th><td>");
   h += modeName();
   h += F(" &mdash; coil ");
   h += en ? F("<b>energized</b>") : F("idle");
+  h += F(" &middot; GPIO ");
+  h += (digitalRead(RELAY_PIN) == relayEnergizeLevel()) ? F("<b>energized</b>") : F("idle");
   h += F("</td></tr><tr><th>Alarm</th><td>");
-  if (alarm) { h += F("<span class=bad>SIREN ON</span> ("); h += String((alarmUntilMs - now) / 1000); h += F(" s left)"); }
+  if (alarm) { h += F("<span class=bad>SIREN ON</span> ("); h += String(SIREN_S - (now - alarmStartMs) / 1000); h += F(" s left)"); }
   else h += F("<span class=dim>silent</span>");
   h += F(" &middot; vibration events ");
   h += String(vibeEvents);
@@ -512,17 +576,18 @@ void handleRoot() {
   } else h += F("<span class=dim>not connected</span>");
   h += F("</td></tr><tr><th>Uptime</th><td>");
   h += upStr;
-  h += F("</td></tr></table><p>");
-  h += F("<a class=btn href=/arm?pin=");   h += urlEnc(webPin); h += F(">[&#128274; Arm]</a>");
-  h += F("<a class=btn href=/disarm?pin="); h += urlEnc(webPin); h += F(">[&#128275; Disarm]</a>");
-  h += F("<a class=btn href=/panic?pin="); h += urlEnc(webPin); h += F(">[&#128680; Panic siren]</a>");
-  h += F("<a class=btn href=/test?pin=");  h += urlEnc(webPin); h += F(">[Test click+chirp]</a>");
-  h += F("<a class=btn href=/reboot?pin="); h += urlEnc(webPin); h += F(">[Restart]</a></p>");
+  h += F("</td></tr></table><p>"
+         "<form method=post action=/arm style=display:inline><button>&#128274; Arm</button></form> "
+         "<form method=post action=/disarm style=display:inline><button>&#128275; Disarm</button></form> "
+         "<form method=post action=/panic style=display:inline><button>&#128680; Panic siren</button></form> "
+         "<form method=post action=/test style=display:inline><button>Test click+chirp</button></form> "
+         "<form method=post action=/reboot style=display:inline><button>Restart</button></form></p>"
+         "<div class=row><form method=post action=/auth>"
+         "PIN <input name=pin type=password size=10 autocomplete=off> <button>Login</button></form>"
+         " <span class=dim>buttons need a one-time login (1 h) &mdash; or call endpoints with ?pin= as before</span></div>");
 
   h += F("<div class=row><b>Settings</b> (saved to NVS, kept across reboots)"
-         "<form method=post action=/cfg?pin=");
-  h += urlEnc(webPin);
-  h += F("><table style='box-shadow:none'>"
+         "<form method=post action=/cfg><table style='box-shadow:none'>"
          "<tr><th>Fob RSSI threshold</th><td><select name=rssi>");
   int opts[5] = {-70, -75, -80, -85, -90};
   for (int o : opts) {
@@ -555,7 +620,10 @@ void handleRoot() {
   h += F("> enable SW-420 on GPIO34 (wire it first!)</td></tr>"
          "<tr><th>Ignition sense wired</th><td><input type=checkbox name=ignwired value=1");
   if (ignSenseWired) h += F(" checked");
-  h += F("> divider on GPIO33 &mdash; <b>required before installing the E-LOCK cut</b>: blocks arming while the key is ON so a lost fob can never cut power in use</td></tr>"
+  h += F("> divider on GPIO33 &mdash; a power-cut mode will refuse to arm while the sense is UNKNOWN or the key is ON</td></tr>"
+         "<tr><th>Bench mode</th><td><input type=checkbox name=bench value=1");
+  if (benchMode) h += F(" checked");
+  h += F("> relay contacts are DISCONNECTED (bench/testing only) &mdash; relaxes the arm interlocks so you can test without the sense wire</td></tr>"
          "<tr><th>Master switch (saklar) wired</th><td><input type=checkbox name=masterwired value=1");
   if (masterWired) h += F(" checked");
   h += F("> latching switch on GPIO32 to GND &mdash; OFF suspends keyless: no arming, no siren, relay idle (bike stays usable)</td></tr>"
@@ -595,9 +663,13 @@ void handleState() {
   s += F("},\"graceLeftS\":");
   s += (now - bootMs < bootGraceS * 1000UL) ? String((bootGraceS * 1000UL - (now - bootMs)) / 1000 + 1) : String("0");
   s += F(",\"ign\":");
-  s += ignHotState ? "true" : "false";
-  s += F(",\"ignwired\":");
-  s += ignSenseWired ? "true" : "false";
+  s += ignNow == IGN_HOT ? "true" : "false";
+  s += F(",\"ignstate\":\"");
+  s += ignNow == IGN_HOT ? "hot" : (ignNow == IGN_COLD ? "cold" : "unknown");
+  s += F("\",\"bench\":");
+  s += benchMode ? "true" : "false";
+  s += F(",\"relaypin\":");
+  s += digitalRead(RELAY_PIN) == relayEnergizeLevel() ? "true" : "false";
   s += F(",\"master\":");
   s += masterOff ? "true" : "false";
   s += F(",\"uptimeS\":");
@@ -614,21 +686,21 @@ void redirectHome() {
 }
 
 void handlePanic() {
-  if (!pinOk()) { denyPin(); return; }
-  alarmUntilMs = millis() + SIREN_S * 1000UL;
+  if (!authed()) { denyAuth(); return; }
+  alarmStartMs = millis();
   playPattern(PAT_SIREN, true);
   applyRelay();
   redirectHome();
 }
 
 void handleTest() {
-  if (!pinOk()) { denyPin(); return; }
+  if (!authed()) { denyAuth(); return; }
   web.sendHeader("Location", "/");
   web.send(303);
-  if (armingCutsPower() && ignHotState) {
-    // clicks would pulse the E-LOCK/contact line while the bike is in use
+  int g = armGate();  // clicks pulse whatever the relay drives — same policy as arming
+  if (g) {
     playPattern(PAT_DENY, true);
-    Serial.println("[TEST] refused — ignition/key line is hot");
+    Serial.printf("[TEST] refused — %s\n", armGateText(g));
     return;
   }
   Serial.println("[TEST] relay clicks");
@@ -657,7 +729,7 @@ String sanitizeFob(const String &e) {
 }
 
 void handleFob() {
-  if (!pinOk()) { denyPin(); return; }
+  if (!authed()) { denyAuth(); return; }
   // add by MAC (?mac=AA:BB:..), add by advertised NAME (?name=xyz — survives
   // the phone's rotating BLE MAC), or remove (?del=<entry>)
   if (web.hasArg("del")) {
@@ -689,7 +761,7 @@ void handleFob() {
 
 void handleScan() {
   if (web.hasArg("go")) {
-    if (!pinOk()) { denyPin(); return; }
+    if (!authed()) { denyAuth(); return; }
     collectScan = true;
     scanCount = 0;
     web.sendHeader("Location", "/scan");
@@ -698,13 +770,11 @@ void handleScan() {
   }
   String h = String(PAGE_TOP);
   h += F("<tr><th>BLE scan</th><td>");
-  if (!scanCount) h += F("no devices captured yet &mdash; <a href='/scan?go=1&amp;pin=");
-  else {
-    h += String(scanCount);
-    h += F(" devices &mdash; <a href='/scan?go=1&amp;pin=");
-  }
-  h += urlEnc(webPin);
-  h += F("'>[rescan]</a></td></tr></table>");
+  if (!scanCount) h += F("no devices captured yet &mdash; ");
+  else h += String(scanCount) + F(" devices &mdash; ");
+  h += F("<form method=post action=/scan style='display:inline'>"
+         "<input type=hidden name=go value=1><button>[rescan]</button></form>");
+  h += F("</td></tr></table>");
   if (scanCount) {
     h += F("<table><tr><th>MAC</th><th>Name</th><th>RSSI</th><th>add as fob</th></tr>");
     for (int i = 0; i < scanCount; i++) {
@@ -713,11 +783,15 @@ void handleScan() {
       h += F("</td><td>"); h += String(scanList[i].rssi);
       h += F("</td><td>");
       if (scanList[i].name.length()) {
-        h += F("<a href='/fob?pin="); h += urlEnc(webPin);
-        h += F("&name="); h += urlEnc(scanList[i].name); h += F("'>[+ by name]</a> ");
+        h += F("<form method=post action=/fob style='display:inline'>"
+               "<input type=hidden name=name value='");
+        h += htmlEsc(scanList[i].name);
+        h += F("'><button>[+ by name]</button></form> ");
       }
-      h += F("<a href='/fob?pin="); h += urlEnc(webPin);
-      h += F("&mac="); h += scanList[i].mac; h += F("'>[+ by MAC]</a></td></tr>");
+      h += F("<form method=post action=/fob style='display:inline'>"
+             "<input type=hidden name=mac value='");
+      h += scanList[i].mac;
+      h += F("'><button>[+ by MAC]</button></form></td></tr>");
     }
     h += F("</table><table><tr><th>Learned fobs</th><td>");
     h += fobEntriesHtml(true);
@@ -728,29 +802,41 @@ void handleScan() {
 }
 
 void handleCfg() {
-  if (!pinOk()) { denyPin(); return; }
+  if (!authed()) { denyAuth(); return; }
   if (web.hasArg("rssi")) rssiThr = web.arg("rssi").toInt();
   if (web.hasArg("after")) armAfterS = constrain(web.arg("after").toInt(), 5, 600);
   if (web.hasArg("grace")) bootGraceS = constrain(web.arg("grace").toInt(), 10, 600);
   if (web.hasArg("hits")) presentHits = constrain(web.arg("hits").toInt(), 1, 4);
-  if (web.hasArg("mode")) relayMode = constrain(web.arg("mode").toInt(), 0, 2);
-  relayActiveLow = web.hasArg("actlow");
   vibeEnable = web.hasArg("vibe");
   ignSenseWired = web.hasArg("ignwired");
   masterWired = web.hasArg("masterwired");
+  benchMode = web.hasArg("bench");
+  // relay mode / polarity are live safety controls: applying them can change
+  // the coil state RIGHT NOW, so they pass the same central gate as arming
+  uint8_t newMode = web.hasArg("mode") ? constrain(web.arg("mode").toInt(), 0, 2) : relayMode;
+  bool newActlow = web.hasArg("actlow");
+  bool modeAffectsCut = newMode != relayMode || newActlow != relayActiveLow;
+  if (modeAffectsCut && armGate() != 0) {
+    int g = armGate();
+    playPattern(PAT_DENY, true);
+    Serial.printf("[CFG] relay mode/polarity change REFUSED — %s\n", armGateText(g));
+  } else {
+    relayMode = newMode;
+    relayActiveLow = newActlow;
+  }
   String np = web.arg("newpin");
   np.trim();
   if (np.length() >= 4 && np.length() <= 12) webPin = np;
   saveCfg();
   applyRelay();
-  Serial.printf("[CFG] rssi=%d after=%lus grace=%lus hits=%u mode=%u actlow=%d vibe=%d ignwired=%d masterwired=%d\n",
+  Serial.printf("[CFG] rssi=%d after=%lus grace=%lus hits=%u mode=%u actlow=%d vibe=%d ignwired=%d masterwired=%d bench=%d\n",
                 rssiThr, (unsigned long)armAfterS, (unsigned long)bootGraceS,
-                presentHits, relayMode, relayActiveLow, vibeEnable, ignSenseWired, masterWired);
+                presentHits, relayMode, relayActiveLow, vibeEnable, ignSenseWired, masterWired, benchMode);
   redirectHome();
 }
 
 void handleReboot() {
-  if (!pinOk()) { denyPin(); return; }
+  if (!authed()) { denyAuth(); return; }
   web.send(200, "text/html", "Rebooting...");
   delay(200);
   ESP.restart();
@@ -785,40 +871,48 @@ void setup() {
   Serial.printf("[WiFi] connecting to %s ...\n", WIFI_SSID);
 
   ArduinoOTA.setHostname("votol-keyless");
+#ifdef OTA_PASSWORD
+  ArduinoOTA.setPassword(OTA_PASSWORD);   // define in wifi_secrets.h
+#else
+  Serial.println("[OTA] WARNING: no OTA_PASSWORD in wifi_secrets.h — OTA is UNPROTECTED");
+#endif
   ArduinoOTA.begin();
   MDNS.begin("votol-keyless");
   MDNS.addService("http", "tcp", 80);
 
   web.on("/", handleRoot);
   web.on("/state.json", handleState);
-  web.on("/arm", HTTP_GET, []() {
-    if (!pinOk()) { denyPin(); return; }
-    tryArm(true, true);
-    redirectHome();
-  });
-  web.on("/disarm", HTTP_GET, []() {
-    if (!pinOk()) { denyPin(); return; }
-    setArmed(false, true);
-    redirectHome();
-  });
-  web.on("/panic", handlePanic);
-  web.on("/test", handleTest);
-  web.on("/fob", handleFob);
-  web.on("/scan", handleScan);
+  const char *hdrs[] = {"Cookie"};
+  web.collectHeaders(hdrs, 1);
+  authTok = esp_random();  // per-boot: rebooting the module logs browsers out
+  // machine API (any method, needs ?pin=) + browser session (POST + cookie)
+  auto armH = []() { if (!authed()) { denyAuth(); return; } tryArm(true, true); redirectHome(); };
+  auto disarmH = []() { if (!authed()) { denyAuth(); return; } setArmed(false, true); redirectHome(); };
+  web.on("/arm", HTTP_GET, armH);
+  web.on("/arm", HTTP_POST, armH);
+  web.on("/disarm", HTTP_GET, disarmH);
+  web.on("/disarm", HTTP_POST, disarmH);
+  web.on("/panic", HTTP_GET, handlePanic);
+  web.on("/panic", HTTP_POST, handlePanic);
+  web.on("/test", HTTP_GET, handleTest);
+  web.on("/test", HTTP_POST, handleTest);
+  web.on("/fob", HTTP_GET, handleFob);
+  web.on("/fob", HTTP_POST, handleFob);
+  web.on("/scan", HTTP_GET, handleScan);
+  web.on("/scan", HTTP_POST, handleScan);
+  web.on("/cfg", HTTP_GET, handleCfg);
   web.on("/cfg", HTTP_POST, handleCfg);
-  web.on("/reboot", handleReboot);
+  web.on("/auth", HTTP_GET, handleAuth);
+  web.on("/auth", HTTP_POST, handleAuth);
+  web.on("/reboot", HTTP_GET, handleReboot);
+  web.on("/reboot", HTTP_POST, handleReboot);
   // aliases so the dashboard uses one path scheme for standalone and combined
-  web.on("/k/arm", HTTP_GET, []() {
-    if (!pinOk()) { denyPin(); return; }
-    tryArm(true, true);
-    redirectHome();
-  });
-  web.on("/k/disarm", HTTP_GET, []() {
-    if (!pinOk()) { denyPin(); return; }
-    setArmed(false, true);
-    redirectHome();
-  });
-  web.on("/k/panic", handlePanic);
+  web.on("/k/arm", HTTP_GET, armH);
+  web.on("/k/arm", HTTP_POST, armH);
+  web.on("/k/disarm", HTTP_GET, disarmH);
+  web.on("/k/disarm", HTTP_POST, disarmH);
+  web.on("/k/panic", HTTP_GET, handlePanic);
+  web.on("/k/panic", HTTP_POST, handlePanic);
   web.begin();
   Serial.println("[WEB] VOTOL Keyless ready (disarmed, boot grace active)");
   playPattern(PAT_BOOT, true);  // ready chirp

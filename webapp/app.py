@@ -27,6 +27,10 @@ KEYLESS_HOST = ""
 # must match the keyless module's access PIN (settings page, default "1234")
 KEYLESS_KEY = "1234"
 HTTP_PORT = 8080
+# What the dashboard binds to. "0.0.0.0" = reachable from the LAN (phone on
+# WiFi) — the API is unauthenticated, so anyone on the LAN can send commands.
+# Use "127.0.0.1" for loopback-only operation.
+BIND_HOST = "0.0.0.0"
 MONITOR_PERIOD = 0.4
 WIRING_SVG = Path(__file__).resolve().parent.parent / "wiring-diagram.svg"
 
@@ -145,6 +149,7 @@ class VotolLink(threading.Thread):
         self.hexlog = []            # (t, dir, hex) newest last
         self.tx_count = 0           # frames sent to the bridge
         self.rx_count = 0           # valid frames received from the controller
+        self.last_rx_wall = 0.0     # wall time of the last VALID frame (staleness)
         self.connected = False
         self._rxbuf = bytearray()
 
@@ -257,6 +262,7 @@ class VotolLink(threading.Thread):
             del buf[: i + 24]
             i = 0
             self.rx_count += 1
+            self.last_rx_wall = time.time()
             if f[2] == 0x0D and f[3] == 0x59:          # telemetry frame
                 self.telemetry = decode_telemetry(f)
             elif f[2] == 0x05 and f[3] == 0x52:        # parameter packet 1..7
@@ -264,7 +270,9 @@ class VotolLink(threading.Thread):
                 if rows is not None:
                     if self.params is None:
                         self.params = []
-                    self.params = [r for r in self.params if r[0] != rows[0][0]] + rows
+                    # replace the WHOLE packet: rows are labeled "P<n> · ..."
+                    pk = rows[0][0].split(" ")[0]
+                    self.params = [r for r in self.params if not r[0].startswith(pk + " ")] + rows
 
 
 def decode_telemetry(f: bytes) -> dict:
@@ -909,8 +917,12 @@ function draw(s){
  el('conn').className='pill '+(s.connected?'ok':'bad');
  el('upd').textContent='updated '+new Date().toLocaleTimeString();
  el('stats').textContent=s.connected?('link ok · '+s.host+':'+s.port+' · sent '+s.tx+' frames · received '+s.rx+' frames'):'no link — press Connect';
- el('answer').textContent=s.connected?(s.rx?'✓ controller is answering':'controller not answering yet — check wiring & ignition'):'';
- el('answer').className=s.rx?'ok':'muted';
+ if(s.connected){
+  if(s.rx_age_s==null) el('answer').textContent='no valid frames yet — check wiring & ignition';
+  else if(s.monitor&&s.rx_age_s>10) el('answer').textContent='⚠ link up but no fresh frames for '+Math.round(s.rx_age_s)+' s — stalled?';
+  else el('answer').textContent='✓ controller answered · last valid frame '+Math.round(s.rx_age_s)+' s ago';
+  el('answer').className=(s.rx_age_s==null||(s.monitor&&s.rx_age_s>10))?'bad':'ok';
+ } else { el('answer').textContent=''; el('answer').className='muted'; }
  if(s.esp_uart){
   el('uartinfo').innerHTML='UART bridge → RX <b>GPIO'+s.esp_uart.rx+'</b> · TX <b>GPIO'+s.esp_uart.tx+
    '</b> · <b>'+s.esp_uart.baud+'</b> baud '+(s.esp_uart.rx!==18?'<span class=st bad>(swapped)</span>':'');
@@ -937,8 +949,9 @@ function draw(s){
     if(k.graceLeftS>0)info+=' · boot grace '+k.graceLeftS+' s';
     if(k.master)info+=' · <b style=color:#f59e0b>master switch OFF — keyless suspended</b>';
     if(k.ign)info+=' · <b style=color:#f59e0b>ignition ON — arm blocked</b>';
-    else if(!k.ignwired&&k.relay&&k.relay.mode!==2)
-      info+=' · <b style=color:#f59e0b>ignition sense not wired — do NOT install the E-LOCK cut yet</b>';
+    else if(k.ignstate==='unknown'&&(!k.relay||k.relay.mode!==2))
+      info+=k.bench?' · <b style=color:#f59e0b>bench mode — interlocks relaxed</b>'
+                   :' · <b style=color:#f59e0b>ignition sense UNKNOWN — arm blocked</b>';
     if(k.alarm)info+=' · <b style=color:#ef4444>SIREN ON</b>';
     el('kInfo').innerHTML=info;
     if(k.alarm&&!window.kPrevAlarm){
@@ -977,7 +990,7 @@ function draw(s){
  }
  setLock(!(s.connected&&s.params&&s.params.length));
  if(s.params&&s.params.length){
-  const changed=!lastParams||lastParams.length!==s.params.length;
+  const changed=!lastParams||JSON.stringify(lastParams)!==JSON.stringify(s.params);
   lastParams=s.params;
   if(changed)renderParams();
  }
@@ -1037,6 +1050,8 @@ class Handler(BaseHTTPRequestHandler):
                 "port": ln.port if ln else None,
                 "tx": ln.tx_count if ln else 0,
                 "rx": ln.rx_count if ln else 0,
+                "rx_age_s": (round(time.time() - ln.last_rx_wall, 1)
+                             if ln and ln.last_rx_wall else None),
                 "esp_uart": esp_uart_state(ln.host) if (ln and ln.connected) else None,
                 "keyless": keyless_state(),
                 "keyless_host": KEYLESS_HOST,
@@ -1105,7 +1120,8 @@ class Handler(BaseHTTPRequestHandler):
         elif ln and a == "reset":
             self._json({"ok": ln._send(cmd_reset())})
         elif ln and a == "hex":
-            self._json({"ok": ln.send_hex(req.get("hex", ""))})
+            ok, msg = ln.send_hex(req.get("hex", ""))
+            self._json({"ok": ok, "msg": msg})
         elif a in ("swap_pins", "set_pins"):
             host = (ln.host if ln else req.get("host", ESP_HOST))
             if a == "swap_pins":
@@ -1125,8 +1141,9 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    print(f"VOTOL dashboard: http://localhost:{HTTP_PORT}  (bridge {ESP_HOST}:{ESP_PORT})")
-    ThreadingHTTPServer(("0.0.0.0", HTTP_PORT), Handler).serve_forever()
+    print(f"VOTOL dashboard: http://{'localhost' if BIND_HOST == '127.0.0.1' else BIND_HOST}:{HTTP_PORT}"
+          f"  (bridge {ESP_HOST}:{ESP_PORT})")
+    ThreadingHTTPServer((BIND_HOST, HTTP_PORT), Handler).serve_forever()
 
 
 if __name__ == "__main__":

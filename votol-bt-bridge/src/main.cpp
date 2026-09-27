@@ -87,10 +87,16 @@ uint8_t relayMode = RM_IMMOBILIZER_NC;
 bool relayActiveLow = false;
 bool vibeEnable = false;   // OFF until an SW-420 is wired (GPIO34 floats)
 String kWebPin = "1234";   // access PIN for state-changing /k/* endpoints
-bool kIgnHotState = false; // ignition/key line hot (sampled each tick)
 bool kIgnSenseWired = false; // divider connected; REQUIRED before E-LOCK cut
+bool kBenchMode = false;     // relay contacts DISCONNECTED — relax interlocks (bench only)
 bool kMasterWired = false;  // saklar switch connected to GPIO32
 bool kMasterOff = false;    // saklar OFF: keyless suspended (bike stays usable)
+
+// Tri-state ignition: UNKNOWN (sense not wired/validated) is never treated as
+// "key off" — a cut command requires COLD, or benchMode.
+enum KIgnState : uint8_t { KIGN_UNKNOWN = 0, KIGN_COLD = 1, KIGN_HOT = 2 };
+KIgnState kIgnNow = KIGN_UNKNOWN;
+uint32_t kAuthTok = 0;      // per-boot browser-session token
 
 bool kArmed = false;
 bool kFobSeen = false;
@@ -102,7 +108,7 @@ uint32_t kLastSeenMs = 0;
 uint32_t kAbsentSinceMs = 0;
 uint32_t kBootMs = 0;
 uint32_t kArmedSinceMs = 0;
-uint32_t kAlarmUntilMs = 0;
+uint32_t kAlarmStartMs = 0;   // siren window START (elapsed math survives millis() wrap)
 uint16_t kVibeEvents = 0;
 uint32_t kLastVibeMs = 0;
 uint32_t kLastScanMs = 0;
@@ -131,7 +137,7 @@ bool kPatOn = false;
 uint8_t kPatIdx = 0;
 uint32_t kPatMs = 0;
 
-bool kSirenActive() { return kAlarmUntilMs && millis() < kAlarmUntilMs; }
+bool kSirenActive() { return kAlarmStartMs && millis() - kAlarmStartMs < K_SIREN_S * 1000UL; }
 
 void kPlayPattern(const KPattern &p, bool force = false) {
   if (!force && kSirenActive() && kPat.steps == KST_SIREN) return;
@@ -144,16 +150,15 @@ void kPlayPattern(const KPattern &p, bool force = false) {
 void kStopPattern() { kPat.steps = nullptr; digitalWrite(K_BUZZER_PIN, LOW); }
 void kPatternTick() {
   if (!kPat.steps) return;
-  if (kPat.steps == KST_SIREN && !kSirenActive()) { kAlarmUntilMs = 0; kStopPattern(); return; }
+  if (kPat.steps == KST_SIREN && !kSirenActive()) { kAlarmStartMs = 0; kStopPattern(); return; }
   uint32_t now = millis();
-  if (now - kPatMs < kPat.steps[kPatIdx]) return;
+  if (now - kPatMs < (uint32_t)kPat.steps[kPatIdx]) return;  // current slot not over
   kPatMs = now;
   kPatOn = !kPatOn;
   digitalWrite(K_BUZZER_PIN, kPatOn ? HIGH : LOW);
-  if (kPatOn) return;
-  uint8_t next = kPatIdx + 2;
+  uint8_t next = kPatIdx + 1;                       // advance EVERY slot: [on,off,on,off,...]
   if (next < kPat.n && kPat.steps[next] != 0) kPatIdx = next;
-  else if (kPat.repeat) kPatIdx = 0;
+  else if (kPat.repeat) { kPatIdx = 0; kPatOn = true; digitalWrite(K_BUZZER_PIN, HIGH); }
   else kStopPattern();
 }
 
@@ -166,12 +171,40 @@ bool kRelayShouldEnergize() {
     // old-sketch fob-follow contact, LATCHED while the key is ON: a dropped
     // fob scan can never open it mid-ride — releases when the key turns off,
     // the fob is absent with the key off, or the master switch opens.
-    case RM_IGNITION_NO:    return !kArmed && (kFobPresent || (kIgnSenseWired && kIgnHotState));
+    case RM_IGNITION_NO:    return !kArmed && (kFobPresent || kIgnNow == KIGN_HOT);
     case RM_ALARM_ONLY:     return kSirenActive();
   }
   return false;
 }
-void kApplyRelay() { digitalWrite(K_RELAY_PIN, kRelayShouldEnergize() ? kRelayEnergizeLevel() : kRelayIdleLevel()); }
+bool kRelayAppliedE = false;  // last GPIO level actually written
+void kApplyRelay() {
+  kRelayAppliedE = kRelayShouldEnergize();
+  digitalWrite(K_RELAY_PIN, kRelayAppliedE ? kRelayEnergizeLevel() : kRelayIdleLevel());
+}
+
+bool kArmingCutsPower();   // defined near kTryArm
+void kRedirectHome();      // defined with the /k/* handlers
+
+// ---- central safety gate: EVERY path that would newly energize the coil in a
+// power-cutting mode passes through kArmGate() — auto-arm, manual arm, relay
+// test, settings changes. 0 = allowed.
+//   1 master OFF · 2 ignition HOT · 3 ignition sense UNKNOWN
+int kArmGate() {
+  if (kMasterOff) return 1;
+  if (kBenchMode) return 0;
+  if (!kArmingCutsPower()) return 0;
+  if (kIgnNow == KIGN_HOT) return 2;
+  if (kIgnNow == KIGN_UNKNOWN) return 3;
+  return 0;
+}
+const char *kArmGateText(int g) {
+  switch (g) {
+    case 1: return "master switch (saklar) is OFF";
+    case 2: return "ignition/key line is hot";
+    case 3: return "ignition sense not validated (wire the divider, or tick bench mode)";
+    default: return "";
+  }
+}
 
 int kFindFob(const String &entry);
 int kMatchFob(const String &mac, const String &name);
@@ -217,6 +250,7 @@ void kLoadCfg() {
   vibeEnable     = kPrefs.getBool("vibe", false);
   kIgnSenseWired = kPrefs.getBool("ignwired", false);
   kMasterWired   = kPrefs.getBool("masterwired", false);
+  kBenchMode     = kPrefs.getBool("bench", false);
   kWebPin        = kPrefs.getString("pin", "1234");
   if (!kWebPin.length()) kWebPin = "1234";
   kPrefs.end();
@@ -248,6 +282,7 @@ void kSaveCfg() {
   kPrefs.putBool("vibe", vibeEnable);
   kPrefs.putBool("ignwired", kIgnSenseWired);
   kPrefs.putBool("masterwired", kMasterWired);
+  kPrefs.putBool("bench", kBenchMode);
   kPrefs.putString("pin", kWebPin);
   kPrefs.end();
 }
@@ -308,15 +343,13 @@ bool kArmingCutsPower() { return relayMode == RM_IMMOBILIZER_NC || relayMode == 
 // ARMING IS REFUSED while the ignition is hot: opening the cut with the bike
 // in use would kill propulsion. state.json exposes ign+ignwired for the UI.
 bool kTryArm(bool a, bool manual) {
-  if (a && kMasterOff) {
-    kPlayPattern(KPAT_DENY, true);
-    Serial.println("[KEY] arm REFUSED — master switch (saklar) is OFF");
-    return false;
-  }
-  if (a && kArmingCutsPower() && kIgnHotState) {
-    kPlayPattern(KPAT_DENY, true);
-    Serial.println("[KEY] arm REFUSED — ignition/key line is hot");
-    return false;
+  if (a) {
+    int g = kArmGate();
+    if (g) {
+      kPlayPattern(KPAT_DENY, true);
+      Serial.printf("[KEY] arm REFUSED — %s\n", kArmGateText(g));
+      return false;
+    }
   }
   kSetArmed(a, manual);
   return true;
@@ -345,14 +378,17 @@ void kTick() {
   if (kMasterOff) {
     // saklar OFF suspends everything: disarm, never arm, no siren
     if (kArmed) kSetArmed(false, false);
-    if (kSirenActive()) { kAlarmUntilMs = 0; kStopPattern(); }
+    if (kSirenActive()) { kAlarmStartMs = 0; kStopPattern(); }
     kAbsentSinceMs = now;
-    kIgnHotState = kIgnHot();
+    kIgnNow = KIGN_UNKNOWN;
+    kPatternTick();   // keep the suspend chirp playing (was skipped before: review #8)
     return;
   }
 
-  kIgnHotState = kIgnHot();
-  if (kIgnHotState) kAbsentSinceMs = now;  // key on: arm clock never runs while riding
+  kIgnNow = kIgnSenseWired ? (kIgnHot() ? KIGN_HOT : KIGN_COLD) : KIGN_UNKNOWN;
+  if (kIgnNow == KIGN_HOT) kAbsentSinceMs = now;  // key on: arm clock never runs while riding
+  if (kFobPresent) kAbsentSinceMs = now;          // hold the clock while the fob is here:
+                                                  // leaving must cost the FULL armAfter
 
   // scan scheduling: async 1 s scan every 2 s — never blocks the bridge
   if (kScan && !kScanning && now - kLastScanMs > 2000) {
@@ -371,7 +407,7 @@ void kTick() {
   else if (!kFobPresent && !kArmed) {
     bool graceOver = now - kBootMs > bootGraceS * 1000UL;
     bool goneEnough = now - kAbsentSinceMs > armAfterS * 1000UL;
-    if (!kIgnHotState && graceOver && goneEnough) kSetArmed(true, false);
+    if (graceOver && goneEnough && kArmGate() == 0) kSetArmed(true, false);
   }
   if (kFobPresent != wasPresent)
     Serial.printf("[KEY] fob %s (%d dBm)\n", kFobPresent ? "present" : "gone", kRssi);
@@ -380,12 +416,14 @@ void kTick() {
     if (digitalRead(K_VIBE_PIN) == HIGH) {
       kLastVibeMs = now;
       kVibeEvents++;
-      kAlarmUntilMs = now + K_SIREN_S * 1000UL;
+      kAlarmStartMs = now;
       kPlayPattern(KPAT_SIREN, true);
       Serial.printf("[ALARM] vibration #%u — siren %lus\n", kVibeEvents, (unsigned long)K_SIREN_S);
     }
   }
-  if (relayMode == RM_ALARM_ONLY) kApplyRelay();
+  // keep the GPIO glued to the computed state: in ignition-NO mode the relay
+  // depends on continuously-varying inputs, not just arming transitions
+  if (kRelayShouldEnergize() != kRelayAppliedE) kApplyRelay();
 
   // optional physical button: hold 2 s toggles
   static uint32_t kPressMs = 0;
@@ -401,8 +439,23 @@ void kTick() {
 // ---- keyless web endpoints (all under /k/*; /state.json for the dashboard) ----
 // state-changing endpoints require ?pin=<kWebPin> (default 1234). /state.json
 // and the status page stay open for monitoring.
-bool kPinOk() { return web.hasArg("pin") && web.arg("pin") == kWebPin; }
-void kDenyPin() { web.send(403, "text/plain", "wrong or missing ?pin="); }
+// machine API: ?pin= on any method (dashboard proxy). Browser session: cookie
+// from POST /k/auth (SameSite=Strict, HttpOnly, 1 h) — cookies only count on
+// POST. The PIN is never rendered into any page.
+bool kAuthByPin() { return web.hasArg("pin") && web.arg("pin") == kWebPin; }
+bool kAuthByCookie() {
+  if (!kAuthTok || web.method() != HTTP_POST) return false;
+  String c = web.header("Cookie");
+  return c.length() && c.indexOf("kauth=" + String(kAuthTok)) >= 0;
+}
+bool kPinOk() { return kAuthByPin() || kAuthByCookie(); }
+void kDenyPin() { web.send(403, "text/plain", "not authorized — POST /k/auth with pin=, or pass ?pin="); }
+void handleKAuth() {
+  if (!kAuthByPin()) { kDenyPin(); return; }
+  web.sendHeader("Set-Cookie",
+                 String("kauth=") + kAuthTok + "; Path=/; Max-Age=3600; SameSite=Strict; HttpOnly");
+  kRedirectHome();
+}
 
 void kRedirectHome() { web.sendHeader("Location", "/"); web.send(303); }
 
@@ -433,9 +486,15 @@ void handleKState() {
   s += F("},\"graceLeftS\":");
   s += (now - kBootMs < bootGraceS * 1000UL) ? String((bootGraceS * 1000UL - (now - kBootMs)) / 1000 + 1) : String("0");
   s += F(",\"ign\":");
-  s += kIgnHotState ? "true" : "false";
-  s += F(",\"ignwired\":");
+  s += kIgnNow == KIGN_HOT ? "true" : "false";
+  s += F(",\"ignstate\":\"");
+  s += kIgnNow == KIGN_HOT ? "hot" : (kIgnNow == KIGN_COLD ? "cold" : "unknown");
+  s += F("\",\"ignwired\":");
   s += kIgnSenseWired ? "true" : "false";
+  s += F(",\"bench\":");
+  s += kBenchMode ? "true" : "false";
+  s += F(",\"relaypin\":");
+  s += digitalRead(K_RELAY_PIN) == kRelayEnergizeLevel() ? "true" : "false";
   s += F(",\"master\":");
   s += kMasterOff ? "true" : "false";
   s += F(",\"uptimeS\":");
@@ -450,7 +509,7 @@ void handleKState() {
 
 void handleKPanic() {
   if (!kPinOk()) { kDenyPin(); return; }
-  kAlarmUntilMs = millis() + K_SIREN_S * 1000UL;
+  kAlarmStartMs = millis();
   kPlayPattern(KPAT_SIREN, true);
   kApplyRelay();
   kRedirectHome();
@@ -460,10 +519,10 @@ void handleKTest() {
   if (!kPinOk()) { kDenyPin(); return; }
   web.sendHeader("Location", "/");
   web.send(303);
-  if (kArmingCutsPower() && kIgnHotState) {
-    // clicks would pulse the E-LOCK/contact line while the bike is in use
+  int kg = kArmGate();  // clicks pulse whatever the relay drives — same policy as arming
+  if (kg) {
     kPlayPattern(KPAT_DENY, true);
-    Serial.println("[TEST] refused — ignition/key line is hot");
+    Serial.printf("[TEST] refused — %s\n", kArmGateText(kg));
     return;
   }
   for (int i = 0; i < 3; i++) {
@@ -539,22 +598,25 @@ void handleKScan() {
                       "th{background:#2c3e50;color:#fff}a{color:#2563eb}</style></head><body>"
                       "<h2>BLE scan — pick the fob</h2><table><tr><th>MAC</th><th>Name</th>"
                       "<th>RSSI</th><th>add as fob</th></tr>"));
-  if (!kScanCount) {
-    h += F("<tr><td colspan=4>no devices captured yet &mdash; <a href='/k/scan?go=1&amp;pin=");
-    h += kUrlEnc(kWebPin);
-    h += F("'>[scan 10 s]</a></td></tr>");
-  }
+  h += F("<tr><td colspan=4>");
+  h += kScanCount ? String(kScanCount) + F(" devices &mdash; ") : String(F("no devices captured yet &mdash; "));
+  h += F("<form method=post action=/k/scan style='display:inline'>"
+         "<input type=hidden name=go value=1><button>[scan 10 s]</button></form></td></tr>");
   for (int i = 0; i < kScanCount; i++) {
     h += F("<tr><td><code>"); h += kScanList[i].mac; h += F("</code></td><td>");
     if (kScanList[i].name.length()) h += kHtmlEsc(kScanList[i].name); else h += F("&mdash;");
     h += F("</td><td>"); h += String(kScanList[i].rssi);
     h += F("</td><td>");
     if (kScanList[i].name.length()) {
-      h += F("<a href='/k/fob?pin="); h += kUrlEnc(kWebPin);
-      h += F("&name="); h += kUrlEnc(kScanList[i].name); h += F("'>[+ by name]</a> ");
+      h += F("<form method=post action=/k/fob style='display:inline'>"
+             "<input type=hidden name=name value='");
+      h += kHtmlEsc(kScanList[i].name);
+      h += F("'><button>[+ by name]</button></form> ");
     }
-    h += F("<a href='/k/fob?pin="); h += kUrlEnc(kWebPin);
-    h += F("&mac="); h += kScanList[i].mac; h += F("'>[+ by MAC]</a></td></tr>");
+    h += F("<form method=post action=/k/fob style='display:inline'>"
+           "<input type=hidden name=mac value='");
+    h += kScanList[i].mac;
+    h += F("'><button>[+ by MAC]</button></form></td></tr>");
   }
   h += F("</table><p><b>Learned fobs</b> (");
   h += String(kFobCount);
@@ -565,8 +627,10 @@ void handleKScan() {
     if (i) h += F(" &middot; ");
     h += F("<code>"); h += kHtmlEsc(kFobs[i]); h += F("</code>");
     if (kFobPresent && i == kSeenIdx) h += F(" <span style=color:#0a7d15>&#10003;</span>");
-    h += F(" <a href='/k/fob?pin="); h += kUrlEnc(kWebPin);
-    h += F("&del="); h += kUrlEnc(kFobs[i]); h += F("'>&#10005;</a>");
+    h += F(" <form method=post action=/k/fob style='display:inline'>"
+           "<input type=hidden name=del value='");
+    h += kHtmlEsc(kFobs[i]);
+    h += F("'><button>&#10005;</button></form>");
   }
   if (!kFobCount) h += F("<i>none yet</i>");
   h += F("</p><p><a href=/>&#8592; back to bridge status</a></p></body></html>");
@@ -579,19 +643,29 @@ void handleKCfg() {
   if (web.hasArg("after")) armAfterS = constrain(web.arg("after").toInt(), 5, 600);
   if (web.hasArg("grace")) bootGraceS = constrain(web.arg("grace").toInt(), 10, 600);
   if (web.hasArg("hits")) presentHits = constrain(web.arg("hits").toInt(), 1, 4);
-  if (web.hasArg("mode")) relayMode = constrain(web.arg("mode").toInt(), 0, 2);
-  relayActiveLow = web.hasArg("actlow");
   vibeEnable = web.hasArg("vibe");
   kIgnSenseWired = web.hasArg("ignwired");
   kMasterWired = web.hasArg("masterwired");
+  kBenchMode = web.hasArg("bench");
+  // relay mode / polarity are live safety controls — same central gate as arming
+  uint8_t newMode = web.hasArg("mode") ? constrain(web.arg("mode").toInt(), 0, 2) : relayMode;
+  bool newActlow = web.hasArg("actlow");
+  if ((newMode != relayMode || newActlow != relayActiveLow) && kArmGate() != 0) {
+    int g = kArmGate();
+    kPlayPattern(KPAT_DENY, true);
+    Serial.printf("[KCFG] relay mode/polarity change REFUSED — %s\n", kArmGateText(g));
+  } else {
+    relayMode = newMode;
+    relayActiveLow = newActlow;
+  }
   String np = web.arg("newpin");
   np.trim();
   if (np.length() >= 4 && np.length() <= 12) kWebPin = np;
   kSaveCfg();
   kApplyRelay();
-  Serial.printf("[KCFG] rssi=%d after=%lu grace=%lu hits=%u mode=%u actlow=%d vibe=%d ignwired=%d masterwired=%d\n",
+  Serial.printf("[KCFG] rssi=%d after=%lu grace=%lu hits=%u mode=%u actlow=%d vibe=%d ignwired=%d masterwired=%d bench=%d\n",
                 rssiThr, (unsigned long)armAfterS, (unsigned long)bootGraceS,
-                presentHits, relayMode, relayActiveLow, vibeEnable, kIgnSenseWired, kMasterWired);
+                presentHits, relayMode, relayActiveLow, vibeEnable, kIgnSenseWired, kMasterWired, kBenchMode);
   kRedirectHome();
 }
 #endif  // WITH_KEYLESS
@@ -617,6 +691,30 @@ void handleBaud() {
 }
 
 void handlePins() {
+#ifdef WITH_KEYLESS
+  // never let UART config steal a keyless/safety pin (relay, buzzer, vibe,
+  // button, ignition sense, master switch)
+  auto pinBlocked = [](int p) {
+    return p == K_RELAY_PIN || p == K_BUZZER_PIN || p == K_VIBE_PIN ||
+           p == K_BUTTON_PIN || p == K_IGN_PIN || p == K_MASTER_PIN;
+  };
+  if (web.hasArg("rx") || web.hasArg("tx")) {
+    int r = web.arg("rx").toInt(), t = web.arg("tx").toInt();
+    if (pinBlocked(r) || pinBlocked(t)) {
+      Serial.printf("[UART] setpins REFUSED: rx=%d tx=%d collide with keyless pins\n", r, t);
+      web.sendHeader("Location", "/");
+      web.send(303);
+      return;
+    }
+  } else if (web.hasArg("swap")) {
+    if (pinBlocked(rxPin) || pinBlocked(txPin)) {
+      Serial.println("[UART] swap REFUSED: current pins collide with keyless pins");
+      web.sendHeader("Location", "/");
+      web.send(303);
+      return;
+    }
+  }
+#endif
   if (web.hasArg("swap")) {
     int tmp = rxPin;
     rxPin = txPin;
@@ -703,11 +801,12 @@ void handleRoot() {
     h += kArmed ? F("<span class=bad>&#128274; ARMED</span>") : F("<span class=ok>&#128275; disarmed</span>");
     if (kArmed && kSirenActive()) h += F(" <span class=bad>&#128680; SIREN</span>");
     if (kMasterOff) h += F(" <span class=bad>&#9888; master switch OFF &mdash; keyless suspended</span>");
-    if (kIgnHotState) h += F(" <span class=bad>&#9888; ignition ON &mdash; arming blocked</span>");
-    else if (kArmingCutsPower() && !kIgnSenseWired)
-      h += F(" <span class=bad>&#9888; ignition sense not wired &mdash; do NOT install the E-LOCK cut yet</span>");
-    if (relayMode == RM_IGNITION_NO && !kIgnSenseWired)
-      h += F(" <span class=bad>&#9888; ignition-NO mode needs the ignition sense wire for the ride latch</span>");
+    if (kIgnNow == KIGN_HOT) h += F(" <span class=bad>&#9888; ignition ON &mdash; arming blocked</span>");
+    else if (kIgnNow == KIGN_UNKNOWN && kArmingCutsPower())
+      h += kBenchMode ? F(" <span class=bad>&#9888; BENCH MODE &mdash; interlocks relaxed, contacts must be disconnected</span>")
+                      : F(" <span class=bad>&#9888; ignition sense UNKNOWN &mdash; arming blocked (wire divider or tick bench mode)</span>");
+    if (relayMode == RM_IGNITION_NO && kIgnNow != KIGN_COLD && !kBenchMode)
+      h += F(" <span class=bad>&#9888; ignition-NO mode needs a validated sense wire for the ride latch</span>");
     if (!kArmed && kn - kBootMs < bootGraceS * 1000UL) {
       h += String(F(" <span class=dim>(grace ")) + String((bootGraceS * 1000UL - (kn - kBootMs)) / 1000 + 1) + F(" s)</span>");
     }
@@ -717,16 +816,20 @@ void handleRoot() {
       if (kFobPresent && kSeenIdx >= 0) { h += F(" ("); h += kFobs[kSeenIdx]; h += F(", "); h += String(kRssi); h += F(" dBm)"); }
       else if (kLastSeenMs) { h += F(" (last "); h += String((kn - kLastSeenMs) / 1000); h += F(" s ago)"); }
     } else {
-      h += F("<br><span class=dim>no fobs learned — <a href='/k/scan?go=1'>scan</a></span>");
+      h += F("<br><span class=dim>no fobs learned</span>");
     }
     h += String(F("<br><span class=dim>relay idle</span></td></tr>"));  // kept minimal; /state.json has details
     h += String(F("<tr><th>Free heap</th><td>")) + String(ESP.getFreeHeap() / 1024) + F(" KB</td></tr>");
-    h += F("<tr><th>Keyless actions</th><td>");
-    h += F("<a href='/k/arm?pin=");    h += kUrlEnc(kWebPin); h += F("'><b>[&#128274; Arm]</b></a> ");
-    h += F("<a href='/k/disarm?pin="); h += kUrlEnc(kWebPin); h += F("'><b>[&#128275; Disarm]</b></a> ");
-    h += F("<a href='/k/panic?pin=");  h += kUrlEnc(kWebPin); h += F("'><b>[&#128680; Panic]</b></a> ");
-    h += F("<a href='/k/test?pin=");   h += kUrlEnc(kWebPin); h += F("'><b>[Relay test]</b></a> ");
-    h += F("<a href='/k/scan?go=1&amp;pin="); h += kUrlEnc(kWebPin); h += F("'><b>[Learn fob]</b></a></td></tr>");
+    h += F("<tr><th>Keyless actions</th><td>"
+           "<form method=post action=/k/arm style=display:inline><button>&#128274; Arm</button></form> "
+           "<form method=post action=/k/disarm style=display:inline><button>&#128275; Disarm</button></form> "
+           "<form method=post action=/k/panic style=display:inline><button>&#128680; Panic</button></form> "
+           "<form method=post action=/k/test style=display:inline><button>Relay test</button></form> "
+           "<form method=post action=/k/scan style=display:inline><input type=hidden name=go value=1>"
+           "<button>Learn fob</button></form> &middot; "
+           "login: <form method=post action=/k/auth style=display:inline>"
+           "<input name=pin type=password size=8><button>Go</button></form> "
+           "<span class=dim>1 h cookie, or endpoints accept ?pin=</span></td></tr>");
   }
 #endif
   h += F("</table><p>"
@@ -779,6 +882,11 @@ void setup() {
   Serial.println(String("[WiFi] connecting to ") + WIFI_SSID + " ...");
 
   ArduinoOTA.setHostname("votol-bt-bridge");
+#ifdef OTA_PASSWORD
+  ArduinoOTA.setPassword(OTA_PASSWORD);   // define in wifi_secrets.h
+#else
+  Serial.println("[OTA] WARNING: no OTA_PASSWORD in wifi_secrets.h — OTA is UNPROTECTED");
+#endif
   ArduinoOTA.begin();
   MDNS.addService("http", "tcp", 80);
 
@@ -812,21 +920,27 @@ void setup() {
   kScan->setAdvertisedDeviceCallbacks(new KScanCb());
   kScan->setActiveScan(true);
   web.on("/state.json", handleKState);
-  web.on("/k/arm", HTTP_GET, []() {
-    if (!kPinOk()) { kDenyPin(); return; }
-    kTryArm(true, true);
-    kRedirectHome();
-  });
-  web.on("/k/disarm", HTTP_GET, []() {
-    if (!kPinOk()) { kDenyPin(); return; }
-    kSetArmed(false, true);
-    kRedirectHome();
-  });
-  web.on("/k/panic", handleKPanic);
-  web.on("/k/test", handleKTest);
-  web.on("/k/fob", handleKFob);
-  web.on("/k/scan", handleKScan);
+  const char *kHdrs[] = {"Cookie"};
+  web.collectHeaders(kHdrs, 1);
+  kAuthTok = esp_random();  // per-boot: rebooting logs browsers out
+  // machine API (any method, ?pin=) + browser session (POST + cookie)
+  auto kArmH = []() { if (!kPinOk()) { kDenyPin(); return; } kTryArm(true, true); kRedirectHome(); };
+  auto kDisarmH = []() { if (!kPinOk()) { kDenyPin(); return; } kSetArmed(false, true); kRedirectHome(); };
+  web.on("/k/arm", HTTP_GET, kArmH);
+  web.on("/k/arm", HTTP_POST, kArmH);
+  web.on("/k/disarm", HTTP_GET, kDisarmH);
+  web.on("/k/disarm", HTTP_POST, kDisarmH);
+  web.on("/k/panic", HTTP_GET, handleKPanic);
+  web.on("/k/panic", HTTP_POST, handleKPanic);
+  web.on("/k/test", HTTP_GET, handleKTest);
+  web.on("/k/test", HTTP_POST, handleKTest);
+  web.on("/k/fob", HTTP_GET, handleKFob);
+  web.on("/k/fob", HTTP_POST, handleKFob);
+  web.on("/k/scan", HTTP_GET, handleKScan);
+  web.on("/k/scan", HTTP_POST, handleKScan);
   web.on("/k/cfg", HTTP_POST, handleKCfg);
+  web.on("/k/auth", HTTP_GET, handleKAuth);
+  web.on("/k/auth", HTTP_POST, handleKAuth);
   Serial.println("[KEY] keyless active (disarmed, boot grace; relay NC fail-safe)");
 #endif
 }

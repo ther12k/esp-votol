@@ -36,9 +36,14 @@ of them on consecutive pins `D21 · GND · D19 · D18` on the right column):
 Serial: **115200 8N1** (VOTOL standard; try 9600 only on older units —
 `Serial2.begin()` in the sketch / `baud_rate:` in the YAML).
 
-> If your board is a **WROVER** (PSRAM) module, GPIO18/19 are taken —
-> switch to GPIO16/17 (also adjacent) in `votol-bt-bridge/src/main.cpp`
-> or the YAML. Don't have USB and the VOTOL +5V connected at the same time.
+> Board pin caveats: on **WROVER (PSRAM) modules GPIO16/17 are reserved for
+> the PSRAM** — never move the UART there (the earlier note suggesting 16/17
+> as WROVER spares was backwards; WROOM boards like the ones used here can
+> use them). Don't have USB and the VOTOL +5V connected at the same time.
+> The ESP32 GPIO absolute max is 3.6 V: the table's "3.3 V TX is OK for the
+> VOTOL" is an assumption that held on this bench, not a datasheet guarantee
+> for your controller — measure the port's levels first and add a series
+> resistor / level check before trusting it long-term.
 
 ## Bluetooth variant (phone app — like the video)
 
@@ -52,7 +57,11 @@ solid = phone connected.
 resolves — with Bluetooth running, multicast is flaky, prefer the IP).
 Shows: phone-app connection state, WiFi/IP, uptime, **TX/RX byte counters
 of the controller link**, the last bytes from the controller in hex, and a
-"send test bytes" button. Reading the counters:
+"send test bytes" button. That button sends a raw `55 AA 55 AA` electrical
+probe — **it is NOT a valid controller request**: a missing reply to it says
+nothing about the controller link. Use the dashboard's framed commands
+(Read parameters / Monitor) as the real controller-response test. Reading
+the counters:
 
 - **RX > 0 while using the app** — wiring and baud are correct
 - **TX grows but RX stays 0** — TX/RX swapped, wrong baud, or missing GND
@@ -135,7 +144,7 @@ sniff" notes (GPL-3.0).
 Bench-test the whole stack without the bike:
 
 ```bash
-python3 research/fake_votol.py   # fake EM100s on 127.0.0.1:6638
+python3 tools/fake_votol.py      # fake EM100s on 127.0.0.1:6638 (self-contained)
 python3 webapp/app.py            # connect to 127.0.0.1:6638 in the UI
 ```
 
@@ -144,7 +153,7 @@ Web Serial only — can't reach a TCP bridge), VotolAIO's Windows tools +
 EM100s emulator (protocol source), bananu7/votol (RE notes).
 
 WiFi is configured to auto-connect to the home network at boot (SSID/password
-in `src/main.cpp`). If that network is unreachable for 3 minutes, the
+in the gitignored `src/wifi_secrets.h`). If that network is unreachable for 3 minutes, the
 **`VOTOL-BT-Setup`** hotspot opens so credentials can be changed without
 reflashing. Bluetooth keeps working regardless.
 
@@ -204,3 +213,17 @@ sudo usermod -aG dialout $USER                           # serial port access
   it finished booting (~10 s); the LED blinks when ready.
 - **Serial permission denied** — `sudo usermod -aG dialout $USER`, re-login,
   or prefix commands with `sg dialout -c "..."` as shown above.
+
+## Known limitations (tracked, not yet fixed)
+
+- **No exclusive UART ownership:** the bridge forwards TCP, Bluetooth and USB
+  serial to the controller concurrently — two clients can interleave partial
+  commands. Until fixed, use ONE client at a time (review recommendation:
+  single active writer + busy status).
+- **Dashboard API is unauthenticated** on whatever `BIND_HOST` allows — keep
+  it on a trusted LAN or set `BIND_HOST = "127.0.0.1"`.
+- **BLE presence is identification, not authentication** (MAC/name match);
+  the physical key remains the real security boundary.
+- Keyless firmware fixes are compile- and model-verified; relay behavior on
+  real hardware (boot, brownout, sensor faults) still needs bench validation
+  with the E-LOCK cut disconnected.

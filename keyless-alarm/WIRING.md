@@ -205,8 +205,10 @@ It's passive listening — only works with the page open, not a push service.
    rescan → **[+ by MAC]**. Add the phone beacon the same way (see the fobs
    section below). If you replace a tag, scan and add the new one.
 4. **[Test click+chirp]** — 3 relay clicks + beep. Check coil idles after.
-5. Bench-test the loop: fob near → page shows *present*; walk away (set
-   *arm after* to 5 s temporarily) → auto-ARM + long beep; return → auto-DISARM.
+5. Bench-test the loop (tick **Bench mode** in settings first — with no
+   sense wire, arming is otherwise refused): fob near → page shows *present*;
+   walk away (set *arm after* to 5 s temporarily) → auto-ARM + long beep;
+   return → auto-DISARM. Untick bench mode when done.
 6. Wire the ignition-sense divider (1 MΩ/27 kΩ, controller side of the future
    cut — or temporarily straight to the key-switched line), tick *Ignition
    sense wired* in settings, and verify: key off → no banner, key on →
@@ -229,7 +231,19 @@ the backend, like all other ESP actions.
 
 Arm/Disarm/Panic/fob/settings endpoints on the module require an **access PIN**
 (default `1234`, change it in the module's settings page and mirror it in
-`KEYLESS_KEY` in `webapp/app.py`). Status/state.json stays open for monitoring.
+`KEYLESS_KEY` in `webapp/app.py`). The PIN is never printed into any web
+page: browsers log in once with the PIN form (1-hour cookie,
+`SameSite=Strict`, POST-only actions), machine clients pass `?pin=`
+directly. Status/state.json stays open for monitoring, and OTA updates are
+password-protected from `OTA_PASSWORD` in `wifi_secrets.h`.
 This keeps casual LAN users (or a borrowed phone) from disarming the bike —
 it is not theft-proof: BLE presence fobs are spoofable by design and the web
 has no per-user auth, so keep the physical key as the real boundary.
+
+**Bench mode:** with the ignition sense unwired, the firmware treats the
+ignition as **UNKNOWN, not off** — arming, the relay self-test, and relay
+mode/polarity changes are refused in any power-cut mode until the divider is
+wired and ticked in settings (an unvalidated sensor must never authorize
+cutting power). To test arm/disarm/clicks on the bench with the relay
+contacts disconnected, tick *Bench mode* in settings — it relaxes those
+interlocks and is safe only while the contacts stay unconnected.
