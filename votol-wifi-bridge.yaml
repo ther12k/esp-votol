@@ -45,7 +45,8 @@ uart:
   baud_rate: 115200
   # Pins chosen for the easiest wiring on a DOIT ESP32 DevKit V1: GND, D19 and
   # D18 are three consecutive pins on the right column (D21-GND-D19-D18).
-  # On a WROVER (PSRAM) board GPIO18/19 are taken — use rx GPIO16 / tx GPIO17.
+  # NB: on a WROVER (PSRAM) board GPIO16/17 are RESERVED for the PSRAM — never
+  # move the UART there; pick another free pair (e.g. GPIO21/22) instead.
   rx_pin: GPIO18   # Votol TX (green wire) -> ESP32 RX, via 1k/2k divider
   tx_pin: GPIO19   # Votol RX (white wire) <- ESP32 TX
 

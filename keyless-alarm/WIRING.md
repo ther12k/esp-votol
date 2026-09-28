@@ -87,6 +87,22 @@ controller side of the E-LOCK+ cut (AFTER the relay NC contact)
 - Test it before the cut goes live: key OFF → state shows no "ignition ON";
   key ON (relay still bypassed) → "ignition ON — arm blocked" appears and Arm
   is refused with the deny chirp.
+- **Wire-break handling:** HOT→cold must persist **10 s** before the state
+  becomes COLD (a snapped sense wire mid-ride shows the same instant
+  cold reading — during the window the state is UNKNOWN and arming stays
+  blocked). Residual risk: a wire that stays broken longer than that plus the
+  arm-after delay could still be misread as key-off — route the sense wire
+  along the cut loom and inspect it with the rest of the wiring. A
+  fault-detectable (current-loop) sense input would remove this residual and
+  is a future hardware revision.
+- **Install-wiring check built in:** if the tap reads HOT while the NC cut is
+  OPEN (armed) — divider accidentally wired upstream of the relay, welded
+  contacts, or a short — the module logs a SENSE FAULT and **disarms itself**
+  (fail-safe: contact closes). If that ever fires, fix the wiring before
+  re-arming.
+- Enabling **bench mode** is refused while the key reads HOT, and changing
+  relay mode/polarity is gated against the *proposed* mode — on the bench,
+  tick bench mode and save BEFORE switching modes (two steps, on purpose).
 
 ## Master switch — the old build's "saklar" (optional, GPIO32)
 
@@ -234,8 +250,9 @@ Arm/Disarm/Panic/fob/settings endpoints on the module require an **access PIN**
 `KEYLESS_KEY` in `webapp/app.py`). The PIN is never printed into any web
 page: browsers log in once with the PIN form (1-hour cookie,
 `SameSite=Strict`, POST-only actions), machine clients pass `?pin=`
-directly. Status/state.json stays open for monitoring, and OTA updates are
-password-protected from `OTA_PASSWORD` in `wifi_secrets.h`.
+directly. Status/state.json stays open for monitoring. OTA is **disabled
+unless `OTA_PASSWORD` is set** in `wifi_secrets.h` (secure by default — no
+unauthenticated over-the-air flashing).
 This keeps casual LAN users (or a borrowed phone) from disarming the bike —
 it is not theft-proof: BLE presence fobs are spoofable by design and the web
 has no per-user auth, so keep the physical key as the real boundary.

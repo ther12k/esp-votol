@@ -227,3 +227,6 @@ sudo usermod -aG dialout $USER                           # serial port access
 - Keyless firmware fixes are compile- and model-verified; relay behavior on
   real hardware (boot, brownout, sensor faults) still needs bench validation
   with the E-LOCK cut disconnected.
+- The ignition-sense divider can still be defeated by a sense wire that stays
+  broken for >10 s while riding (mitigated, not eliminated — see WIRING.md
+  "Wire-break handling"); a current-loop sense input is the future fix.

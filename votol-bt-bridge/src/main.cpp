@@ -96,6 +96,11 @@ bool kMasterOff = false;    // saklar OFF: keyless suspended (bike stays usable)
 // "key off" — a cut command requires COLD, or benchMode.
 enum KIgnState : uint8_t { KIGN_UNKNOWN = 0, KIGN_COLD = 1, KIGN_HOT = 2 };
 KIgnState kIgnNow = KIGN_UNKNOWN;
+bool kIgnRawHot = false;          // instantaneous ADC reading (wired only)
+uint32_t kIgnColdSinceMs = 0;     // HOT->COLD must persist this long:
+#define K_IGN_COLD_CONFIRM_MS 10000UL  // a broken sense wire must not instantly
+                                       // masquerade as "key off" mid-ride
+uint32_t kIgnFaultMs = 0;         // sense HOT while the NC cut is OPEN = fault
 uint32_t kAuthTok = 0;      // per-boot browser-session token
 
 bool kArmed = false;
@@ -189,14 +194,15 @@ void kRedirectHome();      // defined with the /k/* handlers
 // power-cutting mode passes through kArmGate() — auto-arm, manual arm, relay
 // test, settings changes. 0 = allowed.
 //   1 master OFF · 2 ignition HOT · 3 ignition sense UNKNOWN
-int kArmGate() {
+int kGateFor(uint8_t mode, bool bench) {
   if (kMasterOff) return 1;
-  if (kBenchMode) return 0;
-  if (!kArmingCutsPower()) return 0;
+  if (bench) return 0;
+  if (mode != RM_IMMOBILIZER_NC && mode != RM_IGNITION_NO) return 0;
   if (kIgnNow == KIGN_HOT) return 2;
   if (kIgnNow == KIGN_UNKNOWN) return 3;
   return 0;
 }
+int kArmGate() { return kGateFor(relayMode, kBenchMode); }
 const char *kArmGateText(int g) {
   switch (g) {
     case 1: return "master switch (saklar) is OFF";
@@ -385,7 +391,31 @@ void kTick() {
     return;
   }
 
-  kIgnNow = kIgnSenseWired ? (kIgnHot() ? KIGN_HOT : KIGN_COLD) : KIGN_UNKNOWN;
+  kIgnRawHot = kIgnHot();
+  if (!kIgnSenseWired) { kIgnNow = KIGN_UNKNOWN; kIgnColdSinceMs = 0; }
+  else if (kIgnRawHot) { kIgnNow = KIGN_HOT; kIgnColdSinceMs = 0; }
+  else if (kIgnNow == KIGN_COLD) { /* stays confirmed while continuously cold */ }
+  else {
+    // HOT -> cold must persist: an open/broken sense wire while riding shows
+    // exactly this transition — during the window the state is UNKNOWN
+    // (blocks arming). Residual risk documented in WIRING.md.
+    if (!kIgnColdSinceMs) kIgnColdSinceMs = now;
+    kIgnNow = (now - kIgnColdSinceMs >= K_IGN_COLD_CONFIRM_MS) ? KIGN_COLD : KIGN_UNKNOWN;
+  }
+  // sense sanity: with the NC cut OPEN (armed + coil applied), the downstream
+  // tap MUST be cold. Hot = wired upstream / welded contacts / short —
+  // fail SAFE by disarming (contact closes).
+  if (kIgnSenseWired && kArmed && relayMode == RM_IMMOBILIZER_NC && kRelayAppliedE) {
+    if (kIgnRawHot) {
+      if (!kIgnFaultMs) kIgnFaultMs = now;
+      else if (now - kIgnFaultMs > 2000) {
+        Serial.println("[SENSE] FAULT: line HOT while NC cut is open — disarming (fail-safe)");
+        kPlayPattern(KPAT_DENY, true);
+        kSetArmed(false, false);
+        kIgnFaultMs = 0;
+      }
+    } else kIgnFaultMs = 0;
+  } else kIgnFaultMs = 0;
   if (kIgnNow == KIGN_HOT) kAbsentSinceMs = now;  // key on: arm clock never runs while riding
   if (kFobPresent) kAbsentSinceMs = now;          // hold the clock while the fob is here:
                                                   // leaving must cost the FULL armAfter
@@ -646,18 +676,31 @@ void handleKCfg() {
   vibeEnable = web.hasArg("vibe");
   kIgnSenseWired = web.hasArg("ignwired");
   kMasterWired = web.hasArg("masterwired");
-  kBenchMode = web.hasArg("bench");
-  // relay mode / polarity are live safety controls — same central gate as arming
+  // Relay mode / polarity are live safety controls: the gate evaluates the
+  // PROPOSED configuration (switching away from alarm-only must not skip the
+  // ignition check), and bench mode from the PREVIOUS save may not authorize
+  // this save's relay change.
   uint8_t newMode = web.hasArg("mode") ? constrain(web.arg("mode").toInt(), 0, 2) : relayMode;
   bool newActlow = web.hasArg("actlow");
-  if ((newMode != relayMode || newActlow != relayActiveLow) && kArmGate() != 0) {
-    int g = kArmGate();
-    kPlayPattern(KPAT_DENY, true);
-    Serial.printf("[KCFG] relay mode/polarity change REFUSED — %s\n", kArmGateText(g));
-  } else {
-    relayMode = newMode;
-    relayActiveLow = newActlow;
+  if (newMode != relayMode || newActlow != relayActiveLow) {
+    int g = kGateFor(newMode, kBenchMode);
+    if (g) {
+      kPlayPattern(KPAT_DENY, true);
+      Serial.printf("[KCFG] relay mode/polarity change REFUSED — %s\n", kArmGateText(g));
+    } else {
+      relayMode = newMode;
+      relayActiveLow = newActlow;
+    }
   }
+  // Enabling bench mode while the key is HOT is refused (bench work implies
+  // key off; a hot key here likely means the bike is in use).
+  bool benchReq = web.hasArg("bench");
+  if (benchReq && !kBenchMode && kIgnNow == KIGN_HOT) {
+    benchReq = false;
+    kPlayPattern(KPAT_DENY, true);
+    Serial.println("[KCFG] enabling bench mode REFUSED — ignition/key line is hot");
+  }
+  kBenchMode = benchReq;
   String np = web.arg("newpin");
   np.trim();
   if (np.length() >= 4 && np.length() <= 12) kWebPin = np;
@@ -884,10 +927,11 @@ void setup() {
   ArduinoOTA.setHostname("votol-bt-bridge");
 #ifdef OTA_PASSWORD
   ArduinoOTA.setPassword(OTA_PASSWORD);   // define in wifi_secrets.h
-#else
-  Serial.println("[OTA] WARNING: no OTA_PASSWORD in wifi_secrets.h — OTA is UNPROTECTED");
-#endif
   ArduinoOTA.begin();
+#else
+  // secure by default: no password configured = no OTA (flash via USB)
+  Serial.println("[OTA] DISABLED — set OTA_PASSWORD in wifi_secrets.h to enable");
+#endif
   MDNS.addService("http", "tcp", 80);
 
   web.on("/", handleRoot);

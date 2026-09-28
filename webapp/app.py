@@ -1100,13 +1100,17 @@ class Handler(BaseHTTPRequestHandler):
                 keyless_state.cache = (0, None)
                 if resp is None:
                     self._json({"ok": False, "msg": "keyless module unreachable", "keyless": None})
-                elif "wrong or missing" in resp:
+                elif "not authorized" in resp or "wrong or missing" in resp:
                     self._json({"ok": False, "msg": "wrong PIN — match KEYLESS_KEY to the module's access PIN", "keyless": keyless_state()})
                 else:
                     st = keyless_state()
                     if a == "keyless_arm" and st and not st.get("armed"):
                         # module reachable but refused (e.g. ignition ON interlock)
                         self._json({"ok": False, "msg": "arm refused by the module (ignition ON?)", "keyless": st})
+                    elif a == "keyless_disarm" and st and st.get("armed"):
+                        self._json({"ok": False, "msg": "disarm failed — module still reports ARMED", "keyless": st})
+                    elif a == "keyless_panic" and st and not st.get("alarm"):
+                        self._json({"ok": False, "msg": "siren did not start — module refused or unreachable state", "keyless": st})
                     else:
                         self._json({"ok": True, "keyless": st})
         elif ln and a == "monitor_on":
