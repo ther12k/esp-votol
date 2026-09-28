@@ -111,6 +111,11 @@ learn the fob from a live BLE scan, RSSI threshold, arm-after timeout, relay
 mode (immobilizer / ignition / alarm-only), vibration sensor on/off.
 Settings live in NVS.
 
+There is also a **TenunJS phone app** ([tenunjs `examples/votol`](https://github.com/ther12k/tenunjs/pull/215)):
+telemetry rings, parameter browser, and the same keyless panel as a
+display-list app, fed by this backend (`bun run votol:preview` in the
+tenunjs checkout).
+
 The web dashboard shows a 🔒/🔓 panel (fob RSSI, vibration events, Arm /
 Disarm / Panic) — set `KEYLESS_HOST` in `webapp/app.py` to the module's IP
 (separate build) **or the bridge IP** (one-chip build); empty keeps the panel
