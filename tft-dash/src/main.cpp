@@ -23,7 +23,8 @@
  * Bring-up over USB serial (115200): 'v' toggle film mapping variant,
  * 's' swap axes, 'f'/'g' flip x/y, 'w' save touch setup to NVS,
  * 'r' 6 s raw dump, 'p' send SHOW now, 'd' display on 2 min,
- * 'f <mac>' set fob, 'c <metres>' wheel circumference (RIDE km/h).
+ * 'f <mac>' set fob, 'c <metres>' wheel circumference (RIDE km/h),
+ * 'a'/'A' preview the ARM/DISARM animation.
  *
  * TELE has three panes (tap the content to page through): RIDE = one big
  * speed number (km/h once the wheel circumference is set, else motor rpm),
@@ -269,6 +270,7 @@ bool wifiPhase = true;
 char toastTxt[80] = "";
 uint16_t toastCol = 0;
 uint32_t toastAtMs = 0;
+uint8_t pendingAnim = 0;            // 1 = ARM animation, 2 = DISARM (played when dispOn)
 void toast(const char *t, uint16_t c) {
   strncpy(toastTxt, t, sizeof(toastTxt) - 1); toastTxt[sizeof(toastTxt) - 1] = 0;
   toastCol = c; toastAtMs = millis();
@@ -331,6 +333,7 @@ void setDisplay(bool on) {
   } else {
     // NOT panel DISPOFF: on these shields the always-on backlight shines
     // through an undriven panel as WHITE. Black fill = visually off.
+    pendingAnim = 0;                         // stale animation would be confusing
     tft.fillRect(0, 0, W, H, 0x0000);
   }
 }
@@ -357,11 +360,11 @@ void klTick() {
   if (now - bootMs < BOOT_GRACE_S * 1000UL) { absentSinceMs = now; return; }
   if (fobPresent()) {
     absentSinceMs = now;
-    if (klArmed) { klArmed = false; chirp(1); toast("DISARMED - fob back", cGood); }
+    if (klArmed) { klArmed = false; chirp(1); toast("DISARMED - fob back", cGood); pendingAnim = 2; }
   } else {
     if (absentSinceMs == 0) absentSinceMs = now;
     if (!klArmed && (now - absentSinceMs) > ARM_AFTER_S * 1000UL) {
-      klArmed = true; chirp(2); toast("ARMED - fob away", cWarn);
+      klArmed = true; chirp(2); toast("ARMED - fob away", cWarn); pendingAnim = 1;
     }
   }
 }
@@ -780,6 +783,40 @@ void drawCfg() {
             millis() - toastAtMs < 4000 ? toastTxt : "", toastCol, cBg);
 }
 
+/* =========================================================== arm/disarm animation */
+void animLock(uint16_t col, int shY) {   // padlock stage; shY = shackle top
+  tft.fillRect(0, 27, W, 250, cBg);      // (66 = open/raised, 92 = closed)
+  tft.fillRect(80, shY, 12, 144 - shY, col);    // left leg
+  tft.fillRect(148, shY, 12, 144 - shY, col);   // right leg
+  tft.fillRect(80, shY, 80, 12, col);           // top bridge
+  tft.fillRoundRect(70, 138, 100, 74, 10, col); // body
+  tft.fillCircle(120, 176, 10, cBg);            // keyhole
+  tft.fillRect(115, 162, 10, 18, cBg);
+}
+void playAnim(uint8_t kind) {            // 1 = ARM (close), 2 = DISARM (open)
+  Serial.printf("[anim] %s\n", kind == 1 ? "arm" : "disarm");
+  uint16_t col = kind == 1 ? cBad : cGood;
+  const char *txt = kind == 1 ? "ARMED" : "DISARMED";
+  const int ys[5] = {66, 73, 79, 86, 92};
+  if (kind == 1) {                       // shackle slides down, lock closes
+    for (uint8_t i = 0; i < 5; i++) { animLock(col, ys[i]); delay(70); }
+  } else {                               // shackle lifts, lock opens
+    for (int8_t i = 4; i >= 0; i--) { animLock(col, ys[i]); delay(70); }
+    for (int r = 52; r <= 116; r += 12) {       // "fob is back" sonar ping
+      tft.drawCircle(120, 150, r, col); delay(40);
+    }
+  }
+  for (uint8_t sz = 2; sz <= 4; sz++) {  // text zoom-in
+    tft.fillRect(0, 228, W, 40, cBg);
+    tft.setTextColor(col); tft.setTextSize(sz);
+    tft.setCursor(120 - (int)strlen(txt) * 3 * sz, 232);
+    tft.print(txt);
+    delay(110);
+  }
+  delay(350);                            // hold, then restore the page
+  uiInvalidate(); drawChrome();
+}
+
 /* =========================================================== wifi window */
 void handleWindowState() {
   char s[300];
@@ -871,6 +908,8 @@ void cliProcess(const char *line) {
       Serial.println("[cli] touch setup saved");
       break;
     case 'p': sendShow(); Serial.println("[cli] SHOW sent"); break;
+    case 'a': pendingAnim = 1; break;      // test the ARM animation
+    case 'A': pendingAnim = 2; break;      // test the DISARM animation
     case 'b': btPauseToggle(); break;
     case 'd':
       dispForceUntilMs = millis() + 120000UL;
@@ -1016,6 +1055,10 @@ void loop() {
   displayTick();
 
   if (dispOn) {
+    if (pendingAnim) {
+      uint8_t a = pendingAnim; pendingAnim = 0;
+      playAnim(a);
+    }
     handleTouch();
     if (page == PG_TELE) {         // riding locks RIDE; idle rotates ELEC/MOTOR
       if (riding && telePane != 0) { telePane = 0; uiInvalidate(); drawChrome(); }
