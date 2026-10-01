@@ -168,16 +168,19 @@ Module endpoints: `/state.json` (page, poll stats, RSSI), `/sethost?host=…&por
 (persisted in NVS), `/reboot`. OTA:
 `pio run -e votol-dash-ota -t upload --upload-port votol-dash.local`.
 
-## 5. Screens
+## 5. Screens (4 touch tabs)
 
 - **TELE** — battery V (big), current, computed power, RPM, gear,
   controller/motor temps, controller status + fault code, link freshness.
-  The dot top-right: green = frames < 5 s old, yellow = stale, red = link
-  down / webapp offline. Header blinks `!! ALARM !!` while the siren runs.
-- **KEYLESS** — ARMED/DISARMED hero, fob presence + RSSI, ignition state,
-  master-switch notice, ARM/DISARM touch buttons (result shows as a toast).
-- **SYS** — module IP/RSSI/heap/uptime, LCD ID, webapp host, poll stats,
-  touch mode. Change webapp host with `/sethost?host=…&port=…`.
+  The dot top-right: green = frames < 5 s old, yellow = stale, red = bad.
+- **KEYLESS** — ARMED/DISARMED hero (semantic red/green, not themeable),
+  fob presence + RSSI, PANIC/STOP siren button.
+- **SYS** — BT link state + rx/tx, touch raw values, uptime/heap,
+  "release BT for phone" button.
+- **CFG** — text size **S/M/L** (default M — smaller than the original
+  build), **value color** and **accent color** swatches (6 colors).
+  Selections apply live and auto-save to NVS. Fit guarantee: long values
+  (e.g. 120.1 V) auto-shrink a size so nothing ever overflows the layout.
 
 ## 6. Pin budget after LCD (touch unused)
 

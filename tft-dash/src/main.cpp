@@ -167,8 +167,8 @@ MCUFRIEND_kbv tft;
 uint16_t cBg, cBg2, cTxt, cDim, cAcc, cGood, cWarn, cBad;
 
 /* ---- pages ---- */
-enum Page : uint8_t { PG_TELE = 0, PG_KEYLESS = 1, PG_SYS = 2 };
-const char *PAGE_NAMES[3] = {"TELE", "KEYLESS", "SYS"};
+enum Page : uint8_t { PG_TELE = 0, PG_KEYLESS = 1, PG_SYS = 2, PG_CFG = 3 };
+const char *PAGE_NAMES[4] = {"TELE", "KEYL", "SYS", "CFG"};
 Page page = PG_TELE;
 
 /* ---- touch: film on shared LCD nets ----
@@ -330,6 +330,33 @@ void lcdRestore() {
   digitalWrite(33, LOW);            // CS active again
 }
 
+/* ---- UI settings (CFG page, NVS-persisted, live-applied) ---- */
+#define RGB565(r, g, b) ((((r) & 0xF8) << 8) | (((g) & 0xFC) << 3) | ((b) >> 3))
+const uint16_t PALETTE[6] = {
+  RGB565(0, 200, 255),   // cyan (default)
+  RGB565(0, 255, 120),   // green
+  RGB565(255, 200, 0),   // yellow
+  RGB565(255, 150, 40),  // orange
+  RGB565(235, 240, 245), // white
+  RGB565(240, 90, 220),  // pink
+};
+uint8_t uiScale = 1;                 // 0 small, 1 medium (default), 2 large
+uint16_t uiVal = RGB565(0, 200, 255);   // telemetry value color
+uint16_t uiAcc = RGB565(0, 200, 255);   // accent (tabs, highlights)
+void uiSave() {
+  prefs.putUChar("uiscale", uiScale);
+  prefs.putUShort("uival", uiVal);
+  prefs.putUShort("uiacc", uiAcc);
+}
+void uiLoad() {
+  uiScale = prefs.getUChar("uiscale", 1);
+  uiVal = prefs.getUShort("uival", RGB565(0, 200, 255));
+  uiAcc = prefs.getUShort("uiacc", RGB565(0, 200, 255));
+}
+uint8_t szBig()  { return uiScale == 0 ? 3 : uiScale == 1 ? 4 : 5; }
+uint8_t szMid()  { return uiScale == 2 ? 3 : 2; }
+uint8_t szHero() { return uiScale == 0 ? 3 : 4; }   // 5 would overflow DISARMED
+
 int median3(int a, int b, int c) {
   int mx = max(a, max(b, c)), mn = min(a, min(b, c));
   return a + b + c - mx - mn;
@@ -399,8 +426,19 @@ void handleTouch() {
   if (millis() - lastTapMs < 180) return;   // fast debounce — taps feel instant
   lastTapMs = millis(); lastTouchMs = millis();
   if (py >= 270) {                          // tab bar (+margin for finger size)
-    uint8_t np = px / 80;
-    if (np != page) { page = (Page)np; drawChrome(); toast(PAGE_NAMES[page], cAcc); }
+    uint8_t np = px / 60;
+    if (np != page) { page = (Page)np; drawChrome(); toast(PAGE_NAMES[page], uiAcc); }
+  } else if (page == PG_CFG) {
+    if (py >= 44 && py <= 84 && px >= 8) {          // size S/M/L
+      uiScale = px < 86 ? 0 : px < 154 ? 1 : 2;
+      uiSave(); drawChrome(); toast("size saved", uiAcc);
+    } else if (py >= 112 && py <= 140 && px >= 8 && px <= 230) {   // value color
+      uiVal = PALETTE[(px - 8) / 38];
+      uiSave(); drawChrome(); toast("value color saved", uiAcc);
+    } else if (py >= 168 && py <= 196 && px >= 8 && px <= 230) {   // accent color
+      uiAcc = PALETTE[(px - 8) / 38];
+      uiSave(); drawChrome(); toast("accent color saved", uiAcc);
+    }
   } else if (page == PG_SYS && py >= 168 && py <= 212 && px >= 8 && px <= 232) {
     btPauseToggle();                        // release BT for the phone app
   } else if (page == PG_KEYLESS && py >= 190 && py <= 250 && px >= 8 && px <= 232) {
@@ -411,16 +449,17 @@ void handleTouch() {
 }
 
 /* =========================================================== drawing */
+
 void drawTabBar() {
-  for (uint8_t i = 0; i < 3; i++) {
-    uint16_t x = i * 80;
+  for (uint8_t i = 0; i < 4; i++) {
+    uint16_t x = i * 60;
     bool act = (i == page);
-    tft.fillRect(x + 1, 278, 78, 40, act ? cAcc : cBg2);
-    tft.drawRect(x + 1, 278, 78, 40, cDim);
+    tft.fillRect(x + 1, 278, 58, 40, act ? uiAcc : cBg2);
+    tft.drawRect(x + 1, 278, 58, 40, cDim);
     tft.setTextSize(2);
     tft.setTextColor(act ? cBg : cTxt);
     uint16_t tw = strlen(PAGE_NAMES[i]) * 12;
-    tft.setCursor(x + (80 - tw) / 2, 293);
+    tft.setCursor(x + (60 - tw) / 2, 293);
     tft.print(PAGE_NAMES[i]);
   }
 }
@@ -444,7 +483,7 @@ void drawHeader() {
   char h[30];
   uint16_t col = cTxt;
   uint32_t age = tele.has ? (millis() - tele.atMs) / 1000 : 999;
-  if (wifiPhase)              snprintf(h, sizeof(h), "VOTOL setup window");
+  if (wifiPhase)             { snprintf(h, sizeof(h), "VOTOL setup window"); col = uiAcc; }
   else if (btPaused())        { snprintf(h, sizeof(h), "VOTOL  bt paused");  col = cAcc; }
   else if (!SerialBT.connected()) { snprintf(h, sizeof(h), "VOTOL  bt search"); col = cWarn; }
   else if (!tele.has || age > 10)  { snprintf(h, sizeof(h), "VOTOL  no data");   col = cWarn; }
@@ -467,17 +506,19 @@ void drawTelemetry() {
   char b[32];
   if (tele.has) {
     dtostrf(tele.v, 4, 1, b); strcat(b, "V");
-    slotPrint(sTeleBig, 8, 48, 150, 42, 5, b, cAcc, cBg);
+    uint8_t sb = szBig();
+    if (strlen(b) > 5 && sb > 4) sb = 4;   // auto-fit: 6+ chars never overflows
+    slotPrint(sTeleBig, 8, 48, 150, 42, sb, b, uiVal, cBg);
     dtostrf(tele.a, 4, 1, b); strcat(b, " A");
-    slotPrint(sTeleCur, 128, 48, 108, 26, 3, b, cTxt, cBg);
+    slotPrint(sTeleCur, 128, 48, 108, 26, szMid(), b, cTxt, cBg);
     snprintf(b, sizeof(b), "%ldW", (long)(tele.v * tele.a));
-    slotPrint(sTelePow, 8, 112, 108, 26, 3, b, cTxt, cBg);
+    slotPrint(sTelePow, 8, 112, 108, 26, szMid(), b, cTxt, cBg);
     snprintf(b, sizeof(b), "%c", tele.gear);
-    slotPrint(sTeleGear, 128, 112, 108, 26, 3, b, cTxt, cBg);
+    slotPrint(sTeleGear, 128, 112, 108, 26, szMid(), b, cTxt, cBg);
     snprintf(b, sizeof(b), "%ld", (long)tele.rpm);
-    slotPrint(sTeleRpm, 8, 174, 108, 26, 3, b, cTxt, cBg);
+    slotPrint(sTeleRpm, 8, 174, 108, 26, szMid(), b, cTxt, cBg);
     snprintf(b, sizeof(b), "%ld/%ld", (long)tele.tc, (long)tele.tm);
-    slotPrint(sTeleTc, 128, 174, 108, 26, 3, b, cTxt, cBg);
+    slotPrint(sTeleTc, 128, 174, 108, 26, szMid(), b, cTxt, cBg);
     if (tele.fault) snprintf(b, sizeof(b), "F:%04lX %.12s", (unsigned long)tele.fault,
                              CTL_STATUS[tele.status]);
     else            snprintf(b, sizeof(b), "%.16s", CTL_STATUS[tele.status]);
@@ -485,12 +526,12 @@ void drawTelemetry() {
   } else {
     const char *m = !SerialBT.connected() ? "bluetooth: searching bridge"
                                           : "linked — waiting for frames";
-    slotPrint(sTeleBig, 8, 48, 150, 42, 5, "--.-V", cDim, cBg);
-    slotPrint(sTeleCur, 128, 48, 108, 26, 3, "--", cDim, cBg);
-    slotPrint(sTelePow, 8, 112, 108, 26, 3, "--", cDim, cBg);
-    slotPrint(sTeleGear, 128, 112, 108, 26, 3, "-", cDim, cBg);
-    slotPrint(sTeleRpm, 8, 174, 108, 26, 3, "--", cDim, cBg);
-    slotPrint(sTeleTc, 128, 174, 108, 26, 3, "--", cDim, cBg);
+    slotPrint(sTeleBig, 8, 48, 150, 42, szBig(), "--.-V", cDim, cBg);
+    slotPrint(sTeleCur, 128, 48, 108, 26, szMid(), "--", cDim, cBg);
+    slotPrint(sTelePow, 8, 112, 108, 26, szMid(), "--", cDim, cBg);
+    slotPrint(sTeleGear, 128, 112, 108, 26, szMid(), "-", cDim, cBg);
+    slotPrint(sTeleRpm, 8, 174, 108, 26, szMid(), "--", cDim, cBg);
+    slotPrint(sTeleTc, 128, 174, 108, 26, szMid(), "--", cDim, cBg);
     slotPrint(sTeleStat, 8, 214, 224, 18, 2, m, cWarn, cBg);
   }
   uint32_t age = tele.has ? (millis() - tele.atMs) / 1000 : 0;
@@ -504,7 +545,7 @@ void drawTelemetry() {
 void drawKeyless() {
   char b[48], macs[24];
   if (fobMacLen != 6) {
-    slotPrint(sKlState, 8, 44, 224, 32, 4, "NO FOB", cDim, cBg);
+    slotPrint(sKlState, 8, 44, 224, 32, szHero(), "NO FOB", cDim, cBg);
     fobMacStr(macs, sizeof(macs));
     snprintf(b, sizeof(b), "learn: serial 'i' then 'f <mac>'");
     slotPrint(sKlFob, 8, 90, 224, 16, 1, b, cWarn, cBg);
@@ -515,7 +556,7 @@ void drawKeyless() {
   }
   bool grace = (millis() - bootMs) < BOOT_GRACE_S * 1000UL;
   snprintf(b, sizeof(b), "%s", klArmed ? "ARMED" : (grace ? "grace" : "DISARMED"));
-  slotPrint(sKlState, 8, 44, 224, 32, 4, b, klArmed ? cBad : cGood, cBg);
+  slotPrint(sKlState, 8, 44, 224, 32, szHero(), b, klArmed ? cBad : cGood, cBg);
   if (fobPresent()) snprintf(b, sizeof(b), "fob: near  %d dBm", fobRssi);
   else              snprintf(b, sizeof(b), "fob: away  %lds",
                              (long)((millis() - fobLastSeenMs) / 1000));
@@ -568,6 +609,37 @@ void drawSystem() {
     tft.setCursor(8 + (224 - strlen(t) * 12) / 2, 182);
     tft.print(t);
   }
+}
+
+void drawCfg() {
+  tft.setTextSize(1); tft.setTextColor(cDim);
+  tft.setCursor(8, 32); tft.print("TEXT SIZE  (live, auto-saved)");
+  const char *sz[3] = {"S", "M", "L"};
+  for (uint8_t i = 0; i < 3; i++) {
+    uint16_t x = 8 + i * 78;
+    bool act = (uiScale == i);
+    tft.fillRect(x, 44, 68, 40, act ? uiAcc : cBg2);
+    tft.drawRect(x, 44, 68, 40, act ? uiAcc : cDim);
+    tft.setTextSize(3); tft.setTextColor(act ? cBg : cTxt);
+    tft.setCursor(x + (68 - 18) / 2, 55);
+    tft.print(sz[i]);
+  }
+  tft.setTextSize(1); tft.setTextColor(cDim);
+  tft.setCursor(8, 100); tft.print("VALUE COLOR (telemetry numbers)");
+  tft.setCursor(8, 156); tft.print("ACCENT COLOR (tabs, highlights)");
+  for (uint8_t row = 0; row < 2; row++) {
+    uint16_t y = row == 0 ? 112 : 168;
+    uint16_t cur = row == 0 ? uiVal : uiAcc;
+    for (uint8_t i = 0; i < 6; i++) {
+      uint16_t x = 8 + i * 38;
+      tft.fillRect(x, y, 32, 28, PALETTE[i]);
+      if (PALETTE[i] == cur) tft.drawRect(x - 2, y - 2, 36, 32, cTxt);
+    }
+  }
+  tft.setTextSize(1); tft.setTextColor(cDim);
+  tft.setCursor(8, 210); tft.print("long values auto-shrink to fit the page");
+  slotPrint(sToast, 8, 232, 224, 16, 1,
+            millis() - toastAtMs < 4000 ? toastTxt : "", toastCol, cBg);
 }
 
 /* =========================================================== wifi window */
@@ -719,6 +791,7 @@ void setup() {
   tFlipX = prefs.getBool("tfx", false);
   tFlipY = prefs.getBool("tfy", false);
   fobLoad();
+  uiLoad();
   buzzInit();
 
   tft.fillScreen(cBg);
@@ -778,7 +851,7 @@ void loop() {
   // no-touch fallback: slow auto-cycle if the screen was never touched
   if (millis() - lastTouchMs > 60000 && millis() - lastCycleMs > 15000) {
     lastCycleMs = millis();
-    page = (Page)((page + 1) % 3);
+    page = (Page)((page + 1) % 4);
     drawChrome();
   }
 
@@ -787,6 +860,7 @@ void loop() {
     case PG_TELE:    drawTelemetry(); break;
     case PG_KEYLESS: drawKeyless();   break;
     case PG_SYS:     drawSystem();    break;
+    case PG_CFG:     drawCfg();       break;
   }
   delay(10);
 }
