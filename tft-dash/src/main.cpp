@@ -1246,10 +1246,13 @@ void drawStandby() {
   const int cx = 120, cy = 134, R = 98;
   for (int r = R; r > R - 14; r--)            // ~14px bold ring
     tft.drawCircle(cx, cy, r, cBad);
-  const int a = 68, t = 15;
-  for (int d = -t; d <= t; d++) {             // ~31px bold X inside the ring
-    tft.drawLine(cx - a + d, cy - a + d, cx + a + d, cy + a + d, cBad);
-    tft.drawLine(cx - a + d, cy + a - d, cx + a + d, cy - a + d, cBad);
+  // bold X: overlapping filled squares along each diagonal — offsetting
+  // drawLine by (d,d) slides ALONG a 45° line (hairline bug), so union
+  // squares instead: guaranteed solid ~34px strokes
+  const int a = 66, sq = 24;
+  for (int i = -a; i <= a; i += 2) {
+    tft.fillRect(cx + i - sq / 2, cy + i - sq / 2, sq, sq, cBad);   // "\" arm
+    tft.fillRect(cx + i - sq / 2, cy - i - sq / 2, sq, sq, cBad);   // "/" arm
   }
   tft.setTextColor(cBad); tft.setTextSize(4);
   tft.setCursor(120 - 5 * 24, 244);           // "ARMED"
