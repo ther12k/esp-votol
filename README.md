@@ -2,13 +2,14 @@
 
 Two firmwares for one job — connecting the official VOTOL software to the
 controller's 4-pin program socket without the USB cable — plus a standalone
-keyless & alarm module for the bike:
+keyless & alarm module for the bike, and a WiFi display pod:
 
 | Firmware | Type | Use when | Status |
 |---|---|---|---|
 | **`votol-bt-bridge/`** (PlatformIO/Arduino) | Bluetooth Classic SPP | you use the **VOTOL phone app**, like the HC-05 in the [video](https://www.youtube.com/watch?v=f4K75fIzMHE) | currently flashed |
 | `votol-wifi-bridge.yaml` (ESPHome) | WiFi TCP server (port 6638) + virtual COM | you use the **VOTOL PC software** on a laptop over WiFi | ready to flash |
 | **`keyless-alarm/`** (PlatformIO/Arduino) | BLE keyfob presence + immobilizer relay | you want **keyless arm/disarm + alarm**, like widely-used motorcycle units (evolution of `Keyless Motor/`) | ready to flash |
+| **`tft-dash/`** (PlatformIO/Arduino) | 2.4" TFT display pod (WEMOS D1 R32 + UNO shield) | you want **live telemetry + keyless panel on the bike**, no phone needed | ready to flash |
 
 ESPHome cannot do Bluetooth Classic (SPP) — only BLE — which is why the
 Bluetooth variant is an Arduino sketch instead. It still gets OTA updates
@@ -129,6 +130,31 @@ sg dialout -c "cd ~/Workspace/Learning/esp-votol/keyless-alarm && \
 ```
 
 OTA: `pio run -e votol-keyless-ota -t upload --upload-port votol-keyless.local`
+
+## Display pod (`tft-dash/`)
+
+A WEMOS D1 R32 (ESP32 in UNO form factor) with a 2.4" TFT touch shield
+mounted where you can see it. Display-first module: it only **reads** the
+system — polling the webapp's `/state.json` over WiFi — and mirrors it as
+three touch pages (telemetry / keyless / system). Its ARM & DISARM buttons
+call the same webapp API the phone dashboard uses, so nothing on the bike
+is wired to it. Without touch wiring it auto-cycles the pages.
+
+The UNO shield's control lines land on the D1 R32's input-only GPIOs, so
+running it needs **3 female-female jumper wires** (A2→IO15, A3→IO33,
+A4→IO32) — plus 4 more if the shield has an XPT2046 touch controller.
+Full guide, bring-up order and the diagnose firmware:
+**[tft-dash/WIRING.md](tft-dash/WIRING.md)**.
+
+```bash
+cd tft-dash && cp src/wifi_secrets.h.example src/wifi_secrets.h  # fill in
+pio run -e votol-dash-diag -t upload   # FIRST: hardware check (LCD ID)
+pio run -e votol-dash -t upload        # then the real firmware
+curl "http://votol-dash.local/sethost?host=<laptop-ip>&port=8080"
+```
+
+Future sensors are deliberately left off this board (free pins: GPIO22,
+GPIO5, GPIO39 — I2C fits on 22+5) — "display first, sensors later".
 
 ## Web dashboard (local app — control from a browser)
 
