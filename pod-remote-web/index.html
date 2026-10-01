@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VOTOL Pod Remote — UI/UX Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #07090D;
+      --card-bg-control: #161B27;
+      --card-bg-config: #11151F;
+      --card-border: #2A3242;
+      --text-main: #F5F7FB;
+      --text-muted: #9AA3B2;
+      --text-hint: #5A6474;
+      --accent-amber: #F59E0B;
+      --accent-green: #10B981;
+      --accent-red: #EF4444;
+      --accent-cyan: #00C8FF;
+      --btn-tonal: #1F2633;
+      --nav-bg: #0B0E14;
+      --nav-active-pill: rgba(245, 158, 11, 0.16);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #030407;
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 20px 10px;
+    }
+
+    /* Top interactive controls toolbar for testing & UI/UX design inspection */
+    .preview-toolbar {
+      background: #11151F;
+      border: 1px solid #2A3242;
+      border-radius: 16px;
+      padding: 10px 16px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+      z-index: 100;
+    }
+
+    .preview-toolbar-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent-amber);
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tool-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .tool-btn {
+      background: #1F2633;
+      border: 1px solid #2A3242;
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tool-btn:hover {
+      background: #2D3748;
+      border-color: #4A5568;
+    }
+
+    .tool-btn.active {
+      background: var(--accent-amber);
+      color: #07090D;
+      border-color: var(--accent-amber);
+    }
+
+    /* Mobile Phone Shell / Frame */
+    .phone-wrapper {
+      width: 390px;
+      height: 844px;
+      background: var(--bg-dark);
+      border-radius: 44px;
+      box-shadow: 0 0 0 10px #1E2430, 0 0 0 12px #0A0D14, 0 25px 60px rgba(0,0,0,0.9);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #2A3242;
+    }
+
+    /* Pure Viewport Mode (no phone bezel) */
+    .phone-wrapper.raw-viewport {
+      box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+      border-radius: 0;
+      border: 1px solid #2A3242;
+    }
+
+    /* Android Status Bar Mock */
+    .status-bar {
+      height: 38px;
+      padding: 8px 24px 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      z-index: 10;
+      user-select: none;
+    }
+
+    .status-bar .notch {
+      width: 80px;
+      height: 20px;
+      background: #000;
+      border-radius: 20px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .app-header {
+      padding: 12px 20px 10px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand-title {
+      color: var(--accent-amber);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+    }
+
+    .link-badge {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border: 1px solid #2A3242;
+      background: #11151F;
+    }
+
+    .badge-linked {
+      color: var(--accent-green);
+      border-color: rgba(16, 185, 129, 0.3);
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .badge-offline {
+      color: var(--text-muted);
+      border-color: #2A3242;
+      background: #161B27;
+    }
+
+    .badge-searching {
+      color: var(--accent-amber);
+      border-color: rgba(245, 158, 11, 0.3);
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    .page-title {
+      color: var(--text-main);
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    /* Scrollable Tab Content Container */
+    .tab-content-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 20px 16px 20px;
+      scrollbar-width: none;
+    }
+
+    .tab-content-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .view-tab {
+      display: none;
+      flex-direction: column;
+      animation: fadeIn 0.18s ease-out;
+    }
+
+    .view-tab.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Hero Status Card */
+    .status-card {
+      border-radius: 24px;
+      border: 1px solid var(--card-border);
+      padding: 20px;
+      margin-top: 4px;
+      transition: all 0.25s ease;
+    }
+
+    .status-card.armed {
+      background: #2A1115;
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+
+    .status-card.disarmed {
+      background: #10241C;
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+
+    .status-card.offline {
+      background: #161B27;
+      border-color: var(--card-border);
+    }
+
+    .hero-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .hero-icon {
+      font-size: 38px;
+      line-height: 1;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hero-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .state-text {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      line-height: 1.1;
+    }
+
+    .state-armed {
+      color: var(--accent-red);
+    }
+
+    .state-disarmed {
+      color: var(--accent-green);
+    }
+
+    .state-offline {
+      color: var(--text-muted);
+    }
+
+    .sub-text {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .hero-divider {
+      height: 1px;
+      background: #2A3242;
+      margin: 16px 0 12px 0;
+    }
+
+    .hero-tele-row {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .tele-col {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .tele-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .tele-val {
+      font-size: 17px;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .val-volt {
+      color: var(--accent-cyan);
+    }
+
+    .val-fob-near {
+      color: var(--accent-green);
+    }
+
+    .val-fob-away {
+      color: var(--accent-red);
+    }
+
+    .val-fob-none {
+      color: var(--text-muted);
+    }
+
+    /* Single Primary Security Toggle Button */
+    .toggle-security-btn {
+      width: 100%;
+      height: 76px;
+      border-radius: 20px;
+      font-size: 20px;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      transition: all 0.15s ease;
+      letter-spacing: 0.02em;
+    }
+
+    .toggle-security-btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-disarm-action {
+      background: var(--accent-green);
+      color: #07090D;
+    }
+
+    .btn-arm-action {
+      background: #2A1115;
+      color: var(--accent-red);
+      border: 2px solid var(--accent-red);
+    }
+
+    .btn-offline-action {
+      background: #1F2633;
+      color: var(--text-muted);
+      border: 1px solid #2A3242;
+      cursor: not-allowed;
+    }
+
+    /* Quick Actions Row */
+    .quick-actions-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .quick-btn {
+      flex: 1;
+      height: 60px;
+      border-radius: 16px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      border: 1px solid transparent;
+    }
+
+    .quick-btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-connect {
+      background: var(--btn-tonal);
+      color: var(--text-main);
+      border-color: #2A3242;
+    }
+
+    .btn-panic {
+      background: var(--accent-red);
+      color: #FFFFFF;
+    }
+
+    .reply-log {
+      margin-top: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+      min-height: 18px;
+    }
+
+    /* Config Tab Cards */
+    .config-card {
+      background: var(--card-bg-config);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-amber);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .card-status {
+      font-size: 14px;
+      color: var(--text-main);
+      margin-top: 4px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .text-input {
+      flex: 1;
+      background: #0B0E14;
+      border: 1px solid #2A3242;
+      border-radius: 12px;
+      padding: 10px 14px;
+      color: var(--text-main);
+      font-size: 14px;
+      outline: none;
+    }
+
+    .text-input:focus {
+      border-color: var(--accent-amber);
+    }
+
+    .btn-small {
+      background: var(--btn-tonal);
+      border: 1px solid #2A3242;
+      color: var(--text-main);
+      padding: 10px 18px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn-small:hover {
+      background: #2D3748;
+    }
+
+    .btn-outline-red {
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--accent-red);
+      color: var(--accent-red);
+      padding: 12px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .btn-outline-red:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .btn-group-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .btn-group-row .btn-small {
+      flex: 1;
+    }
+
+    /* Pairing Tab */
+    .scan-qr-btn {
+      width: 100%;
+      height: 64px;
+      background: var(--accent-amber);
+      color: #07090D;
+      border: none;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      margin-top: 16px;
+      box-shadow: 0 4px 16px rgba(245, 158, 11, 0.25);
+    }
+
+    .divider-text {
+      text-align: center;
+      position: relative;
+      margin: 18px 0 14px 0;
+    }
+
+    .divider-text::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 100%;
+      height: 1px;
+      background: #2A3242;
+      z-index: 1;
+    }
+
+    .divider-text span {
+      background: var(--card-bg-config);
+      padding: 0 12px;
+      position: relative;
+      z-index: 2;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+
+    /* Material 3 Bottom Navigation Bar */
+    .bottom-nav {
+      height: 72px;
+      background: var(--nav-bg);
+      border-top: 1px solid #161B27;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0 10px;
+      z-index: 20;
+      user-select: none;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      padding: 6px 0;
+      color: var(--text-muted);
+      transition: color 0.15s ease;
+    }
+
+    .nav-icon-container {
+      width: 52px;
+      height: 30px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .nav-icon {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+
+    .nav-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .nav-item.active {
+      color: var(--text-main);
+    }
+
+    .nav-item.active .nav-icon-container {
+      background: var(--nav-active-pill);
+      color: var(--accent-amber);
+    }
+
+    .nav-item.active .nav-label {
+      color: var(--accent-amber);
+      font-weight: 700;
+    }
+
+    /* ARM Confirmation Modal Mock */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 100;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+      animation: modalFade 0.15s ease-out;
+    }
+
+    @keyframes modalFade {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-card {
+      background: #161B27;
+      border: 1px solid #2A3242;
+      border-radius: 24px;
+      padding: 24px;
+      width: 100%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+    }
+
+    .modal-title {
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .modal-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn-modal-cancel {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 15px;
+      padding: 10px 16px;
+      cursor: pointer;
+    }
+
+    .btn-modal-confirm {
+      background: var(--accent-red);
+      border: none;
+      color: #FFFFFF;
+      font-weight: 700;
+      font-size: 15px;
+      padding: 10px 20px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    /* Screen Footer Notes for Designers */
+    .designer-notes {
+      margin-top: 24px;
+      max-width: 600px;
+      width: 100%;
+      background: #11151F;
+      border: 1px solid #2A3242;
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .designer-notes h4 {
+      color: var(--accent-amber);
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .designer-notes ul {
+      margin-left: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating State Switcher Toolbar -->
+  <div class="preview-toolbar" id="previewToolbar">
+    <div class="preview-toolbar-title">
+      <span>🎨 VOTOL POD REMOTE — UI/UX INTERACTIVE INSPECTOR</span>
+      <span style="color:#10B981; font-weight:600;">LIVE PREVIEW</span>
+    </div>
+
+    <div class="toolbar-group">
+      <span class="tool-label">State:</span>
+      <button class="tool-btn active" id="btnStateArmed" onclick="setState('ARMED')">🚫 ARMED</button>
+      <button class="tool-btn" id="btnStateDisarmed" onclick="setState('DISARMED')">🔓 DISARMED</button>
+      <button class="tool-btn" id="btnStateOffline" onclick="setState('OFFLINE')">📡 OFFLINE</button>
+    </div>
+
+    <div class="toolbar-group">
+      <span class="tool-label">Tab:</span>
+      <button class="tool-btn active" id="btnTabControl" onclick="switchTab('control')">Control</button>
+      <button class="tool-btn" id="btnTabConfig" onclick="switchTab('config')">Config</button>
+      <button class="tool-btn" id="btnTabPairing" onclick="switchTab('pairing')">Pairing</button>
+    </div>
+
+    <div class="toolbar-group">
+      <span class="tool-label">Fob:</span>
+      <button class="tool-btn active" id="btnFobNear" onclick="setFob(true)">Near</button>
+      <button class="tool-btn" id="btnFobAway" onclick="setFob(false)">Away</button>
+    </div>
+
+    <div class="toolbar-group">
+      <span class="tool-label">Frame:</span>
+      <button class="tool-btn" onclick="toggleFrame()">Toggle Phone Frame</button>
+    </div>
+  </div>
+
+  <!-- Mobile Phone Mockup -->
+  <div class="phone-wrapper" id="phoneWrapper">
+
+    <!-- Android Status Bar -->
+    <div class="status-bar">
+      <span>09:41</span>
+      <div class="notch"></div>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <span>5G</span>
+        <span>100%</span>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="app-header">
+      <div class="header-top">
+        <span class="brand-title">VOTOL POD</span>
+        <span class="link-badge badge-linked" id="linkBadge">LINKED</span>
+      </div>
+      <h1 class="page-title" id="pageTitle">Remote Control</h1>
+    </div>
+
+    <!-- Scrollable Content -->
+    <div class="tab-content-container">
+
+      <!-- ================= TAB 1: CONTROL ================= -->
+      <div class="view-tab active" id="viewControl">
+
+        <!-- Status Hero Card -->
+        <div class="status-card armed" id="statusCard">
+          <div class="hero-top">
+            <div class="hero-icon" id="heroIcon">🚫</div>
+            <div class="hero-info">
+              <span class="state-text state-armed" id="stateText">ARMED</span>
+              <span class="sub-text" id="subText">armed &amp; secured</span>
+            </div>
+          </div>
+
+          <div class="hero-divider"></div>
+
+          <div class="hero-tele-row">
+            <div class="tele-col">
+              <span class="tele-label">BATTERY</span>
+              <span class="tele-val val-volt" id="voltText">72.4 V</span>
+            </div>
+            <div class="tele-col">
+              <span class="tele-label">FOB</span>
+              <span class="tele-val val-fob-near" id="fobText">near</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Single Primary Security Toggle Button -->
+        <button class="toggle-security-btn btn-disarm-action" id="securityToggleBtn" onclick="handleSecurityToggle()">
+          <span>🔓</span> DISARM
+        </button>
+
+        <!-- Quick Actions Row: Connect + Panic -->
+        <div class="quick-actions-row">
+          <button class="quick-btn btn-connect" id="connectBtn" onclick="toggleConnect()">
+            Disconnect
+          </button>
+          <button class="quick-btn btn-panic" id="panicBtn" onclick="triggerPanic()">
+            🚨 PANIC
+          </button>
+        </div>
+
+        <!-- Monospace Reply Log -->
+        <div class="reply-log" id="replyText">pod replied: OK ARMED</div>
+
+      </div>
+
+      <!-- ================= TAB 2: CONFIG ================= -->
+      <div class="view-tab" id="viewConfig">
+
+        <!-- Fetch Config -->
+        <button class="btn-small" style="width:100%; margin-bottom:14px; padding:12px;" onclick="logReply('config loaded from pod')">
+          ⟳ Read Config from Pod
+        </button>
+
+        <!-- Security PIN Card -->
+        <div class="config-card">
+          <div class="card-title">SECURITY PIN</div>
+          <div class="card-status" id="cfgPinStatus">Current PIN: 1234</div>
+          <div class="input-row">
+            <input type="password" class="text-input" placeholder="New PIN (4-12 digits)" id="newPinInput">
+            <button class="btn-small" onclick="savePin()">Set</button>
+          </div>
+        </div>
+
+        <!-- Wheel Circumference Card -->
+        <div class="config-card">
+          <div class="card-title">SPEED CALIBRATION</div>
+          <div class="card-status" id="cfgWheelStatus">Wheel circumference: 2.05 m</div>
+          <div class="input-row">
+            <input type="text" class="text-input" placeholder="e.g. 2.05 (metres)" id="wheelInput" value="2.05">
+            <button class="btn-small" onclick="saveWheel()">Save</button>
+          </div>
+        </div>
+
+        <!-- Physical Fobs Card -->
+        <div class="config-card">
+          <div class="card-title">PHYSICAL FOBS (iTAG)</div>
+          <div class="card-status" id="cfgFobStatus">Registered iTag fobs: 1</div>
+          <button class="btn-outline-red" onclick="clearFobs()">Clear all registered fobs</button>
+        </div>
+
+        <!-- VOTOL Bridge BT Link Card -->
+        <div class="config-card">
+          <div class="card-title">VOTOL BRIDGE BT LINK</div>
+          <div class="card-status" id="cfgBtStatus">Bridge BT dial: OFF (CAN Bus mode)</div>
+          <div class="btn-group-row">
+            <button class="btn-small" onclick="setBt(false)">Turn OFF (CAN)</button>
+            <button class="btn-small" onclick="setBt(true)">Turn ON (BT)</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ================= TAB 3: PAIRING ================= -->
+      <div class="view-tab" id="viewPairing">
+
+        <div class="config-card" style="padding: 20px;">
+          <div class="card-title">PAIR WITH DISPLAY POD</div>
+          <div class="card-status" style="color:var(--text-muted); font-size:13px; margin-top:6px;">
+            Wake the screen, open SYS → SET, and tap Scan QR below.
+          </div>
+
+          <button class="scan-qr-btn" onclick="simulateScan()">
+            <span>📷</span> Scan QR Code
+          </button>
+
+          <div class="divider-text">
+            <span>OR ENTER KEY MANUALLY</span>
+          </div>
+
+          <input type="text" class="text-input" style="width:100%; font-family:'JetBrains Mono', monospace; font-size:13px;" placeholder="32-hex key or PIN" value="a1b2c3d4e5f60718293a4b5c6d7e8f90" id="keyInput">
+
+          <div class="btn-group-row" style="margin-top:12px;">
+            <button class="btn-small" style="flex:1;" onclick="logReply('pairing key saved')">Save Key</button>
+            <button class="btn-small" style="color:var(--accent-red); border-color:var(--accent-red);" onclick="logReply('key removed')">Forget</button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <div class="nav-item active" id="navItemControl" onclick="switchTab('control')">
+        <div class="nav-icon-container">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M18,8h-1V6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6v2H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10C20,8.9 19.1,8 18,8z M9,6c0,-1.66 1.34,-3 3,-3s3,1.34 3,3v2H9V6z M12,17c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2s2,0.9 2,2S13.1,17 12,17z"/>
+          </svg>
+        </div>
+        <span class="nav-label">Control</span>
+      </div>
+
+      <div class="nav-item" id="navItemConfig" onclick="switchTab('config')">
+        <div class="nav-icon-container">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M19.14,12.94c0.04,-0.3 0.06,-0.61 0.06,-0.94c0,-0.32 -0.02,-0.64 -0.07,-0.94l2.03,-1.58c0.18,-0.14 0.23,-0.41 0.12,-0.61l-1.92,-3.32c-0.12,-0.22 -0.37,-0.29 -0.59,-0.22l-2.39,0.96c-0.5,-0.38 -1.03,-0.7 -1.62,-0.94L14.4,2.81c-0.04,-0.24 -0.24,-0.41 -0.48,-0.41h-3.84c-0.24,0 -0.43,0.17 -0.47,0.41L9.25,5.35C8.66,5.59 8.12,5.92 7.63,6.29L5.24,5.33c-0.22,-0.08 -0.47,0 -0.59,0.22L2.74,8.87c-0.12,0.21 -0.08,0.47 0.12,0.61l2.03,1.58C4.84,11.36 4.8,11.69 4.8,12s0.02,0.64 0.07,0.94l-2.03,1.58c-0.18,0.14 -0.23,0.41 -0.12,0.61l1.92,3.32c0.12,0.22 0.37,0.29 0.59,0.22l2.39,-0.96c0.5,0.38 1.03,0.7 1.62,0.94l0.36,2.54c0.05,0.24 0.24,0.41 0.48,0.41h3.84c0.24,0 0.44,-0.17 0.47,-0.41l0.36,-2.54c0.59,-0.24 1.13,-0.56 1.62,-0.94l2.39,0.96c0.22,0.08 0.47,0 0.59,-0.22l1.92,-3.32c0.12,-0.22 0.07,-0.47 -0.12,-0.61L19.14,12.94z M12,15.6c-1.98,0 -3.6,-1.62 -3.6,-3.6s1.62,-3.6 3.6,-3.6s3.6,1.62 3.6,3.6S13.98,15.6 12,15.6z"/>
+          </svg>
+        </div>
+        <span class="nav-label">Config</span>
+      </div>
+
+      <div class="nav-item" id="navItemPairing" onclick="switchTab('pairing')">
+        <div class="nav-icon-container">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path d="M3,3h8v8H3V3z M5,5v4h4V5H5z M3,13h8v8H3V13z M5,15v4h4v-4H5z M13,3h8v8h-8V3z M15,5v4h4V5H15z M13,13h2v2h-2V13z M19,13h2v2h-2V13z M17,15h2v2h-2V15z M15,17h2v2h-2V17z M13,19h2v2h-2V19z M19,19h2v2h-2V19z"/>
+          </svg>
+        </div>
+        <span class="nav-label">Pairing</span>
+      </div>
+    </nav>
+
+    <!-- ARM Confirmation Dialog -->
+    <div class="modal-overlay" id="armModal">
+      <div class="modal-card">
+        <h3 class="modal-title">ARM the alarm?</h3>
+        <p class="modal-desc">Pod screen will enter armed standby mode.</p>
+        <div class="modal-actions">
+          <button class="btn-modal-cancel" onclick="closeArmModal()">Cancel</button>
+          <button class="btn-modal-confirm" onclick="confirmArm()">ARM</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Information notes for UI/UX Designer Agent -->
+  <div class="designer-notes">
+    <h4>📋 Specifications for UI/UX Designer:</h4>
+    <ul>
+      <li><strong>App Purpose:</strong> Mobile companion controller for motorcycle display pod &amp; keyless immobilizer.</li>
+      <li><strong>Primary Action:</strong> Single context-aware 76dp high toggle button. In ARMED state, it renders an Emerald Green <code>[ 🔓 DISARM ]</code> button. In DISARMED state, it renders a Crimson <code>[ 🔒 ARM ]</code> button with confirmation dialog.</li>
+      <li><strong>Hero Card:</strong> Displays real-time status (🚫 ARMED / 🔓 DISARMED / 📡 OFFLINE), high-contrast battery voltage (Cyan), and fob presence indicator.</li>
+      <li><strong>Bottom Navigation:</strong> Material 3 structure with 3 items: Control (Hero + Quick Actions), Config (Settings), and Pairing (QR Scanner &amp; Manual Key).</li>
+    </ul>
+  </div>
+
+  <script>
+    // State model
+    let currentState = 'ARMED'; // 'ARMED' | 'DISARMED' | 'OFFLINE'
+    let fobNear = true;
+    let isConnected = true;
+    let activeTab = 'control';
+
+    function setState(state) {
+      currentState = state;
+      document.querySelectorAll('#btnStateArmed, #btnStateDisarmed, #btnStateOffline').forEach(b => b.classList.remove('active'));
+      if (state === 'ARMED') document.getElementById('btnStateArmed').classList.add('active');
+      if (state === 'DISARMED') document.getElementById('btnStateDisarmed').classList.add('active');
+      if (state === 'OFFLINE') document.getElementById('btnStateOffline').classList.add('active');
+
+      const statusCard = document.getElementById('statusCard');
+      const heroIcon = document.getElementById('heroIcon');
+      const stateText = document.getElementById('stateText');
+      const subText = document.getElementById('subText');
+      const voltText = document.getElementById('voltText');
+      const fobText = document.getElementById('fobText');
+      const toggleBtn = document.getElementById('securityToggleBtn');
+      const linkBadge = document.getElementById('linkBadge');
+      const connectBtn = document.getElementById('connectBtn');
+      const replyText = document.getElementById('replyText');
+
+      if (state === 'OFFLINE') {
+        isConnected = false;
+        linkBadge.textContent = 'OFFLINE';
+        linkBadge.className = 'link-badge badge-offline';
+        connectBtn.textContent = 'Connect';
+
+        statusCard.className = 'status-card offline';
+        heroIcon.textContent = '📡';
+        stateText.textContent = 'OFFLINE';
+        stateText.className = 'state-text state-offline';
+        subText.textContent = 'not connected';
+        voltText.textContent = '--.- V';
+        fobText.textContent = '--';
+        fobText.className = 'tele-val val-fob-none';
+
+        toggleBtn.className = 'toggle-security-btn btn-offline-action';
+        toggleBtn.innerHTML = 'Connect to Control';
+        replyText.textContent = 'tap connect to scan pod';
+      } else if (state === 'ARMED') {
+        isConnected = true;
+        linkBadge.textContent = 'LINKED';
+        linkBadge.className = 'link-badge badge-linked';
+        connectBtn.textContent = 'Disconnect';
+
+        statusCard.className = 'status-card armed';
+        heroIcon.textContent = '🚫';
+        stateText.textContent = 'ARMED';
+        stateText.className = 'state-text state-armed';
+        subText.textContent = 'armed & secured';
+        voltText.textContent = '72.4 V';
+        updateFobDisplay();
+
+        toggleBtn.className = 'toggle-security-btn btn-disarm-action';
+        toggleBtn.innerHTML = '<span>🔓</span> DISARM';
+        replyText.textContent = 'pod replied: OK ARMED';
+      } else if (state === 'DISARMED') {
+        isConnected = true;
+        linkBadge.textContent = 'LINKED';
+        linkBadge.className = 'link-badge badge-linked';
+        connectBtn.textContent = 'Disconnect';
+
+        statusCard.className = 'status-card disarmed';
+        heroIcon.textContent = '🔓';
+        stateText.textContent = 'DISARMED';
+        stateText.className = 'state-text state-disarmed';
+        subText.textContent = 'keyless active';
+        voltText.textContent = '72.4 V';
+        updateFobDisplay();
+
+        toggleBtn.className = 'toggle-security-btn btn-arm-action';
+        toggleBtn.innerHTML = '<span>🔒</span> ARM';
+        replyText.textContent = 'pod replied: OK DISARM';
+      }
+    }
+
+    function setFob(near) {
+      fobNear = near;
+      document.getElementById('btnFobNear').classList.toggle('active', near);
+      document.getElementById('btnFobAway').classList.toggle('active', !near);
+      updateFobDisplay();
+    }
+
+    function updateFobDisplay() {
+      if (currentState === 'OFFLINE') return;
+      const fobText = document.getElementById('fobText');
+      if (fobNear) {
+        fobText.textContent = 'near';
+        fobText.className = 'tele-val val-fob-near';
+      } else {
+        fobText.textContent = 'away';
+        fobText.className = 'tele-val val-fob-away';
+      }
+    }
+
+    function handleSecurityToggle() {
+      if (!isConnected) {
+        setState('ARMED');
+        return;
+      }
+      if (currentState === 'ARMED') {
+        setState('DISARMED');
+      } else {
+        document.getElementById('armModal').classList.add('show');
+      }
+    }
+
+    function closeArmModal() {
+      document.getElementById('armModal').classList.remove('show');
+    }
+
+    function confirmArm() {
+      closeArmModal();
+      setState('ARMED');
+    }
+
+    function toggleConnect() {
+      if (isConnected) {
+        setState('OFFLINE');
+      } else {
+        setState('ARMED');
+      }
+    }
+
+    function triggerPanic() {
+      document.getElementById('replyText').textContent = 'pod replied: OK PANIC (chirping)';
+    }
+
+    function switchTab(tab) {
+      activeTab = tab;
+      document.querySelectorAll('.view-tab').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('#btnTabControl, #btnTabConfig, #btnTabPairing').forEach(el => el.classList.remove('active'));
+
+      const titles = {
+        control: 'Remote Control',
+        config: 'Configuration',
+        pairing: 'Device Pairing'
+      };
+
+      document.getElementById('pageTitle').textContent = titles[tab];
+
+      if (tab === 'control') {
+        document.getElementById('viewControl').classList.add('active');
+        document.getElementById('navItemControl').classList.add('active');
+        document.getElementById('btnTabControl').classList.add('active');
+      } else if (tab === 'config') {
+        document.getElementById('viewConfig').classList.add('active');
+        document.getElementById('navItemConfig').classList.add('active');
+        document.getElementById('btnTabConfig').classList.add('active');
+      } else if (tab === 'pairing') {
+        document.getElementById('viewPairing').classList.add('active');
+        document.getElementById('navItemPairing').classList.add('active');
+        document.getElementById('btnTabPairing').classList.add('active');
+      }
+    }
+
+    function toggleFrame() {
+      document.getElementById('phoneWrapper').classList.toggle('raw-viewport');
+    }
+
+    function logReply(msg) {
+      document.getElementById('replyText').textContent = msg;
+    }
+
+    function savePin() {
+      const pin = document.getElementById('newPinInput').value;
+      if (pin) {
+        document.getElementById('cfgPinStatus').textContent = `Current PIN: ${pin}`;
+        document.getElementById('newPinInput').value = '';
+        logReply('PIN updated to ' + pin);
+      }
+    }
+
+    function saveWheel() {
+      const val = document.getElementById('wheelInput').value;
+      document.getElementById('cfgWheelStatus').textContent = `Wheel circumference: ${val} m`;
+      logReply('Wheel circumference updated to ' + val);
+    }
+
+    function clearFobs() {
+      document.getElementById('cfgFobStatus').textContent = 'Registered iTag fobs: 0';
+      logReply('all fobs cleared');
+    }
+
+    function setBt(on) {
+      document.getElementById('cfgBtStatus').textContent = `Bridge BT dial: ${on ? 'ON (Bluetooth)' : 'OFF (CAN Bus mode)'}`;
+      logReply(`BT dial turned ${on ? 'ON' : 'OFF'}`);
+    }
+
+    function simulateScan() {
+      alert("QR Scanner Simulator: Pointing phone camera to display screen SYS -> SET tab. Key paired successfully!");
+      logReply('paired via QR scan: a1b2c3d4e5f60718293a4b5c6d7e8f90');
+    }
+
+    // Initialize from URL parameters if provided
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paramState = urlParams.get('state');
+      const paramTab = urlParams.get('tab');
+      const paramFrame = urlParams.get('frame');
+      const paramModal = urlParams.get('modal');
+      const hideToolbar = urlParams.get('hideToolbar');
+
+      if (paramFrame === 'raw') {
+        document.body.style.padding = '0';
+        document.body.style.background = '#07090D';
+        document.body.style.justifyContent = 'flex-start';
+        const tb = document.getElementById('previewToolbar');
+        if (tb) tb.style.display = 'none';
+        const pw = document.getElementById('phoneWrapper');
+        if (pw) {
+          pw.classList.add('raw-viewport');
+          pw.style.width = '100vw';
+          pw.style.height = '100vh';
+          pw.style.maxHeight = '100vh';
+          pw.style.border = 'none';
+          pw.style.boxShadow = 'none';
+          pw.style.borderRadius = '0';
+        }
+        const descNotes = document.querySelector('.designer-notes');
+        if (descNotes) descNotes.style.display = 'none';
+      } else if (hideToolbar === '1') {
+        const tb = document.getElementById('previewToolbar');
+        if (tb) tb.style.display = 'none';
+        const descNotes = document.querySelector('.designer-notes');
+        if (descNotes) descNotes.style.display = 'none';
+      }
+
+      if (paramState) {
+        setState(paramState.toUpperCase());
+      } else {
+        setState('ARMED');
+      }
+
+      if (paramTab) {
+        switchTab(paramTab.toLowerCase());
+      }
+
+      if (paramModal === 'arm') {
+        setState('DISARMED');
+        const modal = document.getElementById('armModal');
+        if (modal) modal.classList.add('show');
+      }
+    });
+  </script>
+</body>
+</html>

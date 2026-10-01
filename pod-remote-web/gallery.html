@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VOTOL Pod Remote — UI/UX Screen Designs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: #030407;
+      color: #F5F7FB;
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 30px 20px;
+    }
+    .header {
+      max-width: 1400px;
+      margin: 0 auto 30px auto;
+      border-bottom: 1px solid #2A3242;
+      padding-bottom: 20px;
+    }
+    .brand {
+      color: #F59E0B;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 8px 0;
+      font-size: 28px;
+      font-weight: 800;
+    }
+    .desc {
+      color: #9AA3B2;
+      font-size: 15px;
+      line-height: 1.5;
+      max-width: 900px;
+    }
+    .nav-links {
+      margin-top: 14px;
+      display: flex;
+      gap: 12px;
+    }
+    .nav-links a {
+      color: #F59E0B;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      background: #11151F;
+      border: 1px solid #2A3242;
+      padding: 8px 16px;
+      border-radius: 8px;
+    }
+    .nav-links a:hover {
+      background: #1F2633;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 30px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #11151F;
+      border: 1px solid #2A3242;
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .card-header {
+      padding: 16px 20px;
+      background: #161B27;
+      border-bottom: 1px solid #2A3242;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #F5F7FB;
+    }
+    .card-tag {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 10px;
+      text-transform: uppercase;
+    }
+    .tag-armed { background: rgba(239, 68, 68, 0.2); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .tag-disarmed { background: rgba(16, 185, 129, 0.2); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .tag-offline { background: rgba(154, 163, 178, 0.2); color: #9AA3B2; border: 1px solid #2A3242; }
+    .tag-config { background: rgba(245, 158, 11, 0.2); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .tag-pairing { background: rgba(0, 200, 255, 0.2); color: #00C8FF; border: 1px solid rgba(0, 200, 255, 0.4); }
+
+    .card-body {
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      background: #07090D;
+    }
+    .card-body img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid #2A3242;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    }
+    .card-footer {
+      padding: 16px 20px;
+      font-size: 13px;
+      color: #9AA3B2;
+      line-height: 1.4;
+      border-top: 1px solid #2A3242;
+    }
+    .specs-box {
+      max-width: 1400px;
+      margin: 40px auto 0 auto;
+      background: #11151F;
+      border: 1px solid #2A3242;
+      border-radius: 20px;
+      padding: 24px;
+    }
+    .specs-box h2 {
+      color: #F59E0B;
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+    .specs-box ul {
+      margin-left: 20px;
+      line-height: 1.8;
+      color: #9AA3B2;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="brand">VOTOL Pod Remote</div>
+    <h1>UI/UX Design Gallery &amp; Screenshots</h1>
+    <div class="desc">
+      Pixel-accurate renders of the native Android companion controller app for the VOTOL Display Pod &amp; Keyless Alarm. Use these screenshots to design new themes, improve layouts, or conduct UI/UX design reviews.
+    </div>
+    <div class="nav-links">
+      <a href="/" target="_blank">🚀 Open Interactive Web App (Port 8096)</a>
+      <a href="/?tab=control&state=armed" target="_blank">🎮 Control Tab</a>
+      <a href="/?tab=config" target="_blank">⚙️ Config Tab</a>
+      <a href="/?tab=pairing" target="_blank">🔗 Pairing Tab</a>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- Screen 1: Control Armed -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">1. Control Tab — Armed State</div>
+        <div class="card-tag tag-armed">ARMED</div>
+      </div>
+      <div class="card-body">
+        <img src="/screenshots/01_control_armed_mobile.png" alt="Control Armed">
+      </div>
+      <div class="card-footer">
+        Shows prohibited 🚫 symbol hero card in crimson (#2A1115), battery voltage in cyan (72.4 V), fob status, and large single contextual toggle action: <strong>[ 🔓 DISARM ]</strong> emerald button.
+      </div>
+    </div>
+
+    <!-- Screen 2: Control Disarmed -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">2. Control Tab — Disarmed State</div>
+        <div class="card-tag tag-disarmed">DISARMED</div>
+      </div>
+      <div class="card-body">
+        <img src="/screenshots/02_control_disarmed_mobile.png" alt="Control Disarmed">
+      </div>
+      <div class="card-footer">
+        Shows unlocked 🔓 symbol hero card in dark emerald (#10241C), battery voltage, and primary contextual toggle action: <strong>[ 🔒 ARM ]</strong> crimson button.
+      </div>
+    </div>
+
+    <!-- Screen 3: ARM Confirmation Dialog -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">3. Arm Confirmation Modal</div>
+        <div class="card-tag tag-armed">SECURITY GATE</div>
+      </div>
+      <div class="card-body">
+        <img src="/screenshots/04_arm_confirm_modal_mobile.png" alt="Arm Confirmation Modal">
+      </div>
+      <div class="card-footer">
+        Modal sheet asking "ARM the alarm? Pod screen will enter armed standby mode." with Cancel and ARM buttons to prevent accidental arming.
+      </div>
+    </div>
+
+    <!-- Screen 4: Control Offline -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">4. Control Tab — Offline State</div>
+        <div class="card-tag tag-offline">OFFLINE</div>
+      </div>
+      <div class="card-body">
+        <img src="/screenshots/03_control_offline_mobile.png" alt="Control Offline">
+      </div>
+      <div class="card-footer">
+        When Bluetooth LE link is disconnected. Shows 📡 OFFLINE hero card and disabled toggle button ("Connect to Control").
+      </div>
+    </div>
+
+    <!-- Screen 5: Config Tab -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">5. Configuration Tab</div>
+        <div class="card-tag tag-config">CONFIG</div>
+      </div>
+      <div class="card-body">
+        <img src="/screenshots/05_config_tab_mobile.png" alt="Configuration Tab">
+      </div>
+      <div class="card-footer">
+        Read config button, Security PIN update, Speed calibration (wheel circumference in metres), Physical iTag fobs clear, and VOTOL Bridge BT Link toggle (CAN vs BT mode).
+      </div>
+    </div>
+
+    <!-- Screen 6: Pairing Tab -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">6. Device Pairing Tab</div>
+        <div class="card-tag tag-pairing">PAIRING</div>
+      </div>
+      <div class="card-body">
+        <img src="/screenshots/06_pairing_tab_mobile.png" alt="Pairing Tab">
+      </div>
+      <div class="card-footer">
+        "Pair with Display Pod" card featuring prominent 📷 Scan QR Code camera button (to scan pod's SYS → SET screen), and fallback 32-hex manual key entry.
+      </div>
+    </div>
+
+  </div>
+
+  <div class="specs-box">
+    <h2>📐 Design System Specifications for Designer Agent</h2>
+    <ul>
+      <li><strong>Target Device:</strong> Android Smartphone (390×844 to 412×915 viewport), Material 3 Dark theme.</li>
+      <li><strong>Background:</strong> <code>#07090D</code> (Deep obsidian black).</li>
+      <li><strong>Card Surfaces:</strong> <code>#161B27</code> (Control Hero card), <code>#11151F</code> (Config/Pairing cards), with 1dp border <code>#2A3242</code>.</li>
+      <li><strong>Typography:</strong> Clean geometric sans-serif (Inter / Roboto) + Monospace (JetBrains Mono) for status replies and keys.</li>
+      <li><strong>Accent Colors:</strong> Amber <code>#F59E0B</code> (Brand &amp; Badges), Emerald <code>#10B981</code> (Disarmed &amp; Safe), Crimson <code>#EF4444</code> (Armed &amp; Panic), Cyan <code>#00C8FF</code> (Battery Voltage).</li>
+      <li><strong>Primary CTA:</strong> 76dp height, corner radius 20dp, context-aware toggle button on the Control tab.</li>
+      <li><strong>Navigation:</strong> Material 3 Bottom Navigation Bar (72dp height, background <code>#0B0E14</code>, active pill indicator).</li>
+    </ul>
+  </div>
+
+</body>
+</html>
