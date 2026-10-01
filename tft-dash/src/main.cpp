@@ -168,7 +168,7 @@ uint16_t cBg, cBg2, cTxt, cDim, cAcc, cGood, cWarn, cBad;
 
 /* ---- pages ---- */
 enum Page : uint8_t { PG_TELE = 0, PG_KEYLESS = 1, PG_SETUP = 2 };
-const char *PAGE_NAMES[3] = {"TELE", "KEYLESS", "SYS"};
+const char *PAGE_NAMES[3] = {"TELE", "LOCK", "SYS"};   // LOCK: "KEYLESS" clips in 80px
 uint8_t setupTab = 0;               // SYS page sub-tab: 0=STATUS 1=CONFIG
 Page page = PG_TELE;
 
@@ -471,7 +471,7 @@ void handleTouch() {
   if (py >= 270) {                          // tab bar (+margin for finger size)
     uint8_t np = px / 80;
     if (np != page) { page = (Page)np; drawChrome(); toast(PAGE_NAMES[page], uiAcc); }
-  } else if (page == PG_SETUP && py >= 30 && py <= 62) {   // sub-tabs
+  } else if (page == PG_SETUP && py >= 24 && py <= 74) {   // sub-tabs (+margin)
     uint8_t nt = px < 120 ? 0 : 1;
     if (nt != setupTab) { setupTab = nt; drawChrome(); }
   } else if (page == PG_SETUP && setupTab == 1) {          // CONFIG content
@@ -503,10 +503,11 @@ void drawTabBar() {
     bool act = (i == page);
     tft.fillRect(x + 1, 278, 78, 40, act ? uiAcc : cBg2);
     tft.drawRect(x + 1, 278, 78, 40, cDim);
-    tft.setTextSize(2);
+    uint8_t ts = strlen(PAGE_NAMES[i]) * 12 > 76 ? 1 : 2;   // never clip
+    tft.setTextSize(ts);
     tft.setTextColor(act ? cBg : cTxt);
-    uint16_t tw = strlen(PAGE_NAMES[i]) * 12;
-    tft.setCursor(x + (80 - tw) / 2, 293);
+    uint16_t tw = strlen(PAGE_NAMES[i]) * 6 * ts;
+    tft.setCursor(x + (80 - tw) / 2, ts == 2 ? 293 : 297);
     tft.print(PAGE_NAMES[i]);
   }
 }
@@ -516,12 +517,12 @@ void drawSubTabs() {                // SYS page: STATUS / CONFIG
   for (uint8_t i = 0; i < 2; i++) {
     uint16_t x = 8 + i * 116;
     bool act = (setupTab == i);
-    tft.fillRect(x, 30, 108, 32, act ? uiAcc : cBg2);
-    tft.drawRect(x, 30, 108, 32, cDim);
+    tft.fillRect(x, 28, 108, 40, act ? uiAcc : cBg2);
+    tft.drawRect(x, 28, 108, 40, cDim);
     tft.setTextSize(2);
     tft.setTextColor(act ? cBg : cTxt);
     uint16_t tw = strlen(names[i]) * 12;
-    tft.setCursor(x + (108 - tw) / 2, 37);
+    tft.setCursor(x + (108 - tw) / 2, 40);
     tft.print(names[i]);
   }
 }
@@ -645,7 +646,7 @@ void drawSystem() {
   char b[48];
   snprintf(b, sizeof(b), "bt %s %s", SerialBT.connected() ? "LINKED" : "search",
            BT_SERVER_NAME);
-  slotPrint(sSys[0], 8, 74, 224, 18, 2, b, SerialBT.connected() ? cGood : cDim, cBg);
+  slotPrint(sSys[0], 8, 80, 224, 18, 2, b, SerialBT.connected() ? cGood : cDim, cBg);
   snprintf(b, sizeof(b), "rx %lu tx %lu", (unsigned long)rxCount, (unsigned long)txCount);
   slotPrint(sSys[1], 8, 96, 224, 18, 2, b, cTxt, cBg);
   snprintf(b, sizeof(b), "touch v%d %s%s%s", touchVariant, tSwapXY ? "SW" : "",
