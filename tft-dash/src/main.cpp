@@ -456,6 +456,7 @@ bool btLinkOn = true;               // false = don't dial VOTOL-BT (bridge now t
 bool klArmed = false;               // declared early: display logic reads them
 uint32_t absentSinceMs = 0;
 bool manualDisarmed = false;        // phone/PIN disarm: stays disarmed until phone ARM
+uint32_t armConfirmUntilMs = 0;     // device ARM: two-tap confirmation window
 bool wifiPhase = true;
 char toastTxt[80] = "";
 uint16_t toastCol = 0;
@@ -589,6 +590,22 @@ void panicToggle() {
   if (millis() < panicUntilMs) { panicUntilMs = 0; toast("siren stopped", cGood); }
   else if (klArmed) { panicUntilMs = millis() + PANIC_S * 1000UL; toast("SIREN 30s", cBad); }
   else toast("arm first (fob away)", cWarn);
+}
+/* device ARM — two-tap confirmation so a stray touch can never arm */
+void armConfirmTap() {
+  if (fobCount == 0) { toast("no fob registered", cDim); return; }
+  if (fobPresent()) { toast("fob near - it would disarm", cDim); return; }
+  if (millis() < armConfirmUntilMs) {          // second tap inside the window
+    armConfirmUntilMs = 0;
+    klArmed = true; manualDisarmed = false; absentSinceMs = millis();
+    chirp(2); pendingAnim = 1;
+    Serial.println("[kl] armed from device (confirmed)");
+  } else {                                     // first tap: ask again
+    armConfirmUntilMs = millis() + 3000;
+    toast("tap again to ARM", cWarn);
+    Serial.println("[kl] arm confirm window 3 s");
+  }
+  btnCache = -1;                               // repaint the button now
 }
 
 /* ---- riding detection: sustained wheel rpm locks TELE to the RIDE pane ---- */
@@ -740,7 +757,8 @@ void handleTouch() {
              py >= 212 && py <= 256 && px >= 8 && px <= 232) {
     btPauseToggle();                        // release BT for the phone app
   } else if (page == PG_KEYLESS && py >= 190 && py <= 250 && px >= 8 && px <= 232) {
-    panicToggle();                          // siren on/off
+    if (klArmed) panicToggle();               // siren on/off
+    else         armConfirmTap();             // two-tap ARM when disarmed
   } else if (page == PG_TELE && py >= 30) {
     telePane = (telePane + 1) % 3;          // tap content: RIDE -> ELEC -> MOTOR
     lastCycleMs = millis();
@@ -1000,16 +1018,27 @@ void drawKeyless() {
   }
 
   bool panic = millis() < panicUntilMs;
-  int8_t st = (klArmed ? 1 : 0) | (panic ? 2 : 0);
+  bool armCfm = !klArmed && millis() < armConfirmUntilMs;
+  int8_t st = (klArmed ? 1 : 0) | (panic ? 2 : 0) | (armCfm ? 4 : 0);
   if (st != btnCache) {
     btnCache = st;
     tft.fillRect(8, 190, 224, 60, cBg2);
-    tft.drawRect(8, 190, 224, 60, panic ? cGood : cBad);
-    tft.setTextSize(3);
-    tft.setTextColor(panic ? cGood : cBad);
-    const char *t = panic ? "STOP" : "PANIC";
-    tft.setCursor(8 + (224 - strlen(t) * 18) / 2, 208);
-    tft.print(t);
+    if (klArmed) {
+      tft.drawRect(8, 190, 224, 60, panic ? cGood : cBad);
+      tft.setTextSize(3);
+      tft.setTextColor(panic ? cGood : cBad);
+      const char *t = panic ? "STOP" : "PANIC";
+      tft.setCursor(8 + (224 - strlen(t) * 18) / 2, 208);
+      tft.print(t);
+    } else {                       // disarmed: ARM with two-tap confirmation
+      tft.drawRect(8, 190, 224, 60, armCfm ? cWarn : cDim);
+      uint8_t ts = armCfm ? 2 : 3;
+      tft.setTextSize(ts);
+      tft.setTextColor(armCfm ? cWarn : cTxt);
+      const char *t = armCfm ? "TAP AGAIN: ARM" : "ARM";
+      tft.setCursor(8 + (224 - strlen(t) * 6 * ts) / 2, armCfm ? 212 : 208);
+      tft.print(t);
+    }
   }
 }
 
