@@ -23,7 +23,9 @@
  * Bring-up over USB serial (115200): 'v' toggle film mapping variant,
  * 's' swap axes, 'f'/'g' flip x/y, 'w' save touch setup to NVS,
  * 'r' 6 s raw dump, 'p' send SHOW now, 'd' display on 2 min,
- * 'f <mac>' set fob, 'c <metres>' wheel circumference (RIDE km/h),
+ * 'f <mac>' add iTag fob, 'f N:<name>' add phone fob (by advertised
+ * name — Android rotates its MAC), 'L' list fobs, 'x <n>' remove fob,
+ * 'M' clear all, 'c <metres>' wheel circumference (RIDE km/h),
  * 'a'/'A' preview the ARM/DISARM animation, 'B' BT link on/off
  * (off while the bridge talks CAN to the VOTOL instead of BT SPP).
  *
@@ -68,11 +70,12 @@ void btConnectTask(void *) {
   vTaskDelete(nullptr);
 }
 
-/* ---- iTag keyless (BLE) ----
- * The fob is a BLE advertiser; presence = seen within FOB_TTL_S.
- * BLE scan runs in its own task, coexisting with the SPP client
- * (same Bluedroid stack as the one-chip bridge build). Buzzer on IO5
- * = the reserved "alarm out 1" pin (active-buzzer friendly square wave). */
+/* ---- keyless fobs (BLE) — up to 4: iTag by MAC, phone by NAME ----
+ * Phones rotate their BLE MAC (Android ~15 min / BT restart), so phone
+ * fobs match by advertised NAME ("N:<name>" entries) — the phone must be
+ * advertising (Android advertiser app; iOS can't in background). Presence
+ * = ANY entry heard within FOB_TTL_S. Buzzer on IO5 = the reserved
+ * "alarm out 1" pin (active-buzzer friendly square wave). */
 #include <BLEDevice.h>
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
@@ -83,7 +86,10 @@ void btConnectTask(void *) {
 #define BUZZ_PIN        5
 #define BUZZ_CH         4
 
-uint8_t fobMac[6]; int fobMacLen = 0;
+struct Fob { uint8_t mac[6]; char name[14]; };   // name[0]==0 => MAC entry
+Fob fobs[4];
+uint8_t fobCount = 0;
+char fobLastLabel[20] = "";              // entry heard last (LOCK page)
 volatile int fobRssi = -128;
 volatile uint32_t fobLastSeenMs = 0;
 volatile bool bleScanDump = false;      // CLI 'i': print next scan's devices
@@ -102,8 +108,27 @@ class FobCb : public BLEAdvertisedDeviceCallbacks {
     uint8_t mac[6];
     for (int i = 0; i < 6; i++)
       mac[i] = (uint8_t)strtoul(s.substr(i * 3, 2).c_str(), nullptr, 16);
-    bool match = (fobMacLen == 6 && memcmp(mac, fobMac, 6) == 0);
-    if (!match && bleLearn && dev.haveName()) {
+    for (uint8_t i = 0; i < fobCount; i++) {
+      bool hit = false;
+      if (fobs[i].name[0] == 0) {
+        hit = (memcmp(mac, fobs[i].mac, 6) == 0);
+      } else if (dev.haveName()) {       // name entries: case-insensitive
+        std::string n = dev.getName();
+        for (auto &ch : n) ch = tolower((unsigned char)ch);
+        hit = (n.find(fobs[i].name) != std::string::npos);
+      }
+      if (hit) {
+        fobRssi = dev.getRSSI(); fobLastSeenMs = millis();
+        if (fobs[i].name[0])
+          snprintf(fobLastLabel, sizeof(fobLastLabel), "N:%s", fobs[i].name);
+        else
+          snprintf(fobLastLabel, sizeof(fobLastLabel),
+                   "%02X:%02X:%02X:%02X:%02X:%02X",
+                   fobs[i].mac[0], fobs[i].mac[1], fobs[i].mac[2],
+                   fobs[i].mac[3], fobs[i].mac[4], fobs[i].mac[5]);
+      }
+    }
+    if (bleLearn && dev.haveName()) {
       std::string n = dev.getName();
       for (auto &ch : n) ch = tolower((unsigned char)ch);
       if (n.find("itag") != std::string::npos && dev.getRSSI() > learnRssi) {
@@ -111,7 +136,6 @@ class FobCb : public BLEAdvertisedDeviceCallbacks {
         learnRssi = dev.getRSSI(); learnAtMs = millis();
       }
     }
-    if (match) { fobRssi = dev.getRSSI(); fobLastSeenMs = millis(); }
   }
 };
 FobCb fobCb;
@@ -129,21 +153,75 @@ void bleTask(void *) {
   }
 }
 
-void fobSave() {
-  prefs.putBytes("fob", fobMac, 6);
-  prefs.putUChar("foblen", fobMacLen);
+void macStr(char *out, const uint8_t *m) {
+  snprintf(out, 18, "%02X:%02X:%02X:%02X:%02X:%02X",
+           m[0], m[1], m[2], m[3], m[4], m[5]);
+}
+bool fobAddMac(const uint8_t *mac) {
+  if (fobCount >= 4) return false;
+  for (uint8_t i = 0; i < fobCount; i++)
+    if (fobs[i].name[0] == 0 && memcmp(fobs[i].mac, mac, 6) == 0) return false;
+  Fob &f = fobs[fobCount++];
+  memcpy(f.mac, mac, 6); f.name[0] = 0;
+  return true;
+}
+bool fobAddName(const char *nm) {
+  if (fobCount >= 4) return false;
+  char clean[14]; uint8_t n = 0;
+  for (; *nm && n < 13; nm++)
+    if (isalnum((unsigned char)*nm) || *nm == ' ' || *nm == '-' || *nm == '_')
+      clean[n++] = tolower((unsigned char)*nm);
+  clean[n] = 0;
+  if (n == 0) return false;
+  for (uint8_t i = 0; i < fobCount; i++)
+    if (fobs[i].name[0] && strcmp(fobs[i].name, clean) == 0) return false;
+  strcpy(fobs[fobCount++].name, clean);
+  return true;
+}
+void fobLabel(char *out, size_t n, uint8_t i) {
+  if (fobs[i].name[0]) snprintf(out, n, "N:%.12s", fobs[i].name);
+  else                 macStr(out, fobs[i].mac);
+}
+void fobSave() {                    // NVS "fobs": comma-joined labels
+  char all[90] = "";
+  for (uint8_t i = 0; i < fobCount; i++) {
+    if (i) strcat(all, ",");
+    char lb[20]; fobLabel(lb, sizeof(lb), i);
+    strcat(all, lb);
+  }
+  prefs.putString("fobs", all);
 }
 void fobLoad() {
-  fobMacLen = 0;
-  if (prefs.getBytesLength("fob") == 6) {
-    prefs.getBytes("fob", fobMac, 6);
-    fobMacLen = prefs.getUChar("foblen", 0);
+  fobCount = 0;
+  String s = prefs.getString("fobs", "");
+  int from = 0;
+  while (s.length() && fobCount < 4) {
+    int comma = s.indexOf(',', from);
+    String e = comma < 0 ? s.substring(from) : s.substring(from, comma);
+    e.trim();
+    if (e.length() >= 2 && (e[0] == 'N' || e[0] == 'n') && e[1] == ':') {
+      fobAddName(e.substring(2).c_str());
+    } else if (e.length() == 17) {
+      uint8_t mac[6]; int n = 0; const char *p = e.c_str();
+      while (*p && n < 6) {
+        if (*p == ':' || *p == '-') { p++; continue; }
+        char hb[3] = {p[0], p[1], 0};
+        if (!isxdigit((unsigned char)p[0]) || !isxdigit((unsigned char)p[1])) break;
+        mac[n++] = (uint8_t)strtoul(hb, nullptr, 16);
+        p += 2;
+      }
+      if (n == 6) fobAddMac(mac);
+    }
+    if (comma < 0) break;
+    from = comma + 1;
   }
-}
-void fobMacStr(char *out, size_t n) {
-  if (fobMacLen != 6) { snprintf(out, n, "not set"); return; }
-  snprintf(out, n, "%02X:%02X:%02X:%02X:%02X:%02X",
-           fobMac[0], fobMac[1], fobMac[2], fobMac[3], fobMac[4], fobMac[5]);
+  if (fobCount == 0 && prefs.getBytesLength("fob") == 6) {  // v3 single-fob NVS
+    uint8_t mac[6];
+    prefs.getBytes("fob", mac, 6);
+    fobAddMac(mac);
+    fobSave();
+    Serial.println("[fob] migrated single-fob entry");
+  }
 }
 
 /* ---- buzzer ---- */
@@ -307,13 +385,13 @@ void slotPrint(Slot &s, uint16_t x, uint16_t y, uint16_t w, uint16_t h,
 }
 Slot sTeleBig, sTeleCur, sTelePow, sTeleRpm, sTeleGear, sTeleTc, sTeleStat, sTeleLink;
 Slot sSys[8], sToast, sHeader;
-Slot sKlState, sKlFob, sKlInfo;
+Slot sKlState, sKlFob, sKlInfo, sKlEnt[4];
 int8_t btnCache = -1;
 
 bool fobPresent() {
   // lastSeen==0 means "never seen since boot" — without the guard the pod
   // thinks the fob is present for the first FOB_TTL_S after every power-on
-  return fobMacLen == 6 && fobLastSeenMs != 0 &&
+  return fobCount != 0 && fobLastSeenMs != 0 &&
          (millis() - fobLastSeenMs) < FOB_TTL_S * 1000UL;
 }
 
@@ -330,6 +408,7 @@ void drawChrome();                                   // fwd
 void uiInvalidate() {
   Slot *all[] = {&sTeleBig, &sTeleCur, &sTelePow, &sTeleRpm, &sTeleGear, &sTeleTc,
                  &sTeleStat, &sTeleLink, &sKlState, &sKlFob, &sKlInfo,
+                 sKlEnt, sKlEnt + 1, sKlEnt + 2, sKlEnt + 3,
                  &sToast, &sHeader, sSys, sSys + 1, sSys + 2, sSys + 3,
                  sSys + 4, sSys + 5, sSys + 6, sSys + 7};
   for (Slot *s : all) { s->last[0] = 1; s->last[1] = 0; s->lastCol = 0xFFFF; }
@@ -352,12 +431,12 @@ void setDisplay(bool on) {
 void displayTick() {
   // screen follows the fob from the very first boot second — the wifi/OTA
   // window runs headless unless the fob (or an override) is present
-  bool want = (fobMacLen != 6) ||
+  bool want = (fobCount == 0) ||
               (millis() < dispForceUntilMs) || fobPresent();
   if (want != dispOn) {
     setDisplay(want);
     Serial.printf("[disp] %s (%s)\n", dispOn ? "on" : "off",
-                  fobMacLen != 6 ? "no fob registered" :
+                  fobCount == 0 ? "no fob registered" :
                   millis() < dispForceUntilMs ? "override" :
                   fobPresent() ? "fob near" : "fob away");
   }
@@ -367,7 +446,7 @@ void displayTick() {
 bool klArmed = false;
 uint32_t absentSinceMs = 0;
 void klTick() {
-  if (fobMacLen != 6) return;                 // no fob learned yet
+  if (fobCount == 0) return;                  // no fob learned yet
   uint32_t now = millis();
   if (now - bootMs < BOOT_GRACE_S * 1000UL) { absentSinceMs = now; return; }
   if (fobPresent()) {
@@ -723,14 +802,11 @@ void drawTelemetry() {
 }
 
 void drawKeyless() {
-  char b[48], macs[24];
-  if (fobMacLen != 6) {
+  char b[48];
+  if (fobCount == 0) {
     slotPrint(sKlState, 8, 44, 224, 32, szHero(), "NO FOB", cDim, cBg);
-    fobMacStr(macs, sizeof(macs));
-    snprintf(b, sizeof(b), "learn: serial 'i' then 'f <mac>'");
-    slotPrint(sKlFob, 8, 90, 224, 16, 1, b, cWarn, cBg);
-    snprintf(b, sizeof(b), "now: %s", macs);
-    slotPrint(sKlInfo, 8, 108, 224, 16, 1, b, cDim, cBg);
+    slotPrint(sKlFob, 8, 90, 224, 16, 1, "add fobs over USB serial:", cWarn, cBg);
+    slotPrint(sKlInfo, 8, 108, 224, 16, 1, "'m' iTag / 'f <mac>' / 'f N:<name>' phone", cWarn, cBg);
     tft.fillRect(8, 190, 224, 60, cBg);
     return;
   }
@@ -742,9 +818,16 @@ void drawKeyless() {
                                    (long)((millis() - fobLastSeenMs) / 1000));
   else              snprintf(b, sizeof(b), "fob: no signal");
   slotPrint(sKlFob, 8, 90, 224, 18, 2, b, fobPresent() ? cGood : cDim, cBg);
-  fobMacStr(macs, sizeof(macs));
-  snprintf(b, sizeof(b), "%.23s", macs);
+  snprintf(b, sizeof(b), "heard: %.19s", fobLastLabel);
   slotPrint(sKlInfo, 8, 112, 224, 14, 1, b, cDim, cBg);
+  for (uint8_t i = 0; i < 4; i++) {           // registered fob list
+    char lb[22] = "";
+    if (i < fobCount) {
+      lb[0] = '1' + i; lb[1] = ' ';
+      fobLabel(lb + 2, sizeof(lb) - 2, i);
+    }
+    slotPrint(sKlEnt[i], 8, 130 + i * 14, 224, 14, 1, lb, cDim, cBg);
+  }
 
   bool panic = millis() < panicUntilMs;
   int8_t st = (klArmed ? 1 : 0) | (panic ? 2 : 0);
@@ -922,23 +1005,45 @@ void wifiWindowRun() {          // returns when the window is over
 char cliLine[24]; uint8_t cliLen = 0;
 void cliProcess(const char *line) {
   if (line[0] == 'f' && (line[1] == ' ' || line[1] == '=')) {
-    // 'f AA:BB:CC:DD:EE:FF' or 'f AABBCCDDEEFF' — set fob MAC
-    uint8_t mac[6]; int n = 0; const char *p = line + 2;
-    while (*p && n < 6) {
-      if (*p == ':' || *p == '-') { p++; continue; }
-      char hb[3] = {p[0], p[1], 0};
-      if (!isxdigit((unsigned char)p[0]) || !isxdigit((unsigned char)p[1])) {
+    const char *arg = line + 2;
+    if ((arg[0] == 'N' || arg[0] == 'n') && arg[1] == ':') {
+      // 'f N:galaxy' — phone fob, matched by advertised NAME (Android
+      // rotates its BLE MAC; the phone must run an advertiser app)
+      if (fobAddName(arg + 2)) {
+        fobSave();
+        char lb[20]; snprintf(lb, sizeof(lb), "N:%s", fobs[fobCount - 1].name);
+        Serial.printf("[cli] fob added %s\n", lb);
+        toast("fob added", cGood);
+      } else Serial.println("[cli] name empty/duplicate or list full");
+      return;
+    }
+    // 'f AA:BB:CC:DD:EE:FF' — MAC fob (iTags have static MACs)
+    uint8_t mac[6]; int n = 0;
+    while (*arg && n < 6) {
+      if (*arg == ':' || *arg == '-') { arg++; continue; }
+      char hb[3] = {arg[0], arg[1], 0};
+      if (!isxdigit((unsigned char)arg[0]) || !isxdigit((unsigned char)arg[1])) {
         Serial.println("[cli] bad mac"); return;
       }
       mac[n++] = (uint8_t)strtoul(hb, nullptr, 16);
-      p += 2;
+      arg += 2;
     }
     if (n != 6) { Serial.println("[cli] need 6 bytes"); return; }
-    memcpy(fobMac, mac, 6); fobMacLen = 6; fobLastSeenMs = 0; absentSinceMs = 0;
-    fobSave();
-    char ms[24]; fobMacStr(ms, sizeof(ms));
-    Serial.printf("[cli] fob set %s\n", ms);
-    toast("fob saved", cGood);
+    if (fobAddMac(mac)) {
+      fobSave();
+      char lb[20]; macStr(lb, mac);
+      Serial.printf("[cli] fob added %s\n", lb);
+      toast("fob added", cGood);
+    } else Serial.println("[cli] duplicate or list full");
+    return;
+  }
+  if (line[0] == 'x' && line[1] == ' ') {          // 'x 2' — remove fob #2
+    int n = atoi(line + 2);
+    if (n >= 1 && n <= fobCount) {
+      memmove(&fobs[n - 1], &fobs[n], (fobCount - n) * sizeof(Fob));
+      fobCount--; fobSave();
+      Serial.println("[cli] fob removed");
+    } else Serial.println("[cli] bad index — 'L' lists fobs");
     return;
   }
   if (line[0] == 'c' && (line[1] == ' ' || line[1] == '=')) {
@@ -985,9 +1090,18 @@ void cliProcess(const char *line) {
       bleLearn = true; learnRssi = -128;
       break;
     case 'M':
-      fobMacLen = 0; prefs.putUChar("foblen", 0);
-      Serial.println("[cli] fob cleared");
+      fobCount = 0;
+      prefs.putString("fobs", "");
+      Serial.println("[cli] all fobs cleared");
       break;
+    case 'L': {
+      Serial.printf("[cli] fobs %d/4\n", fobCount);
+      for (uint8_t i = 0; i < fobCount; i++) {
+        char lb[20]; fobLabel(lb, sizeof(lb), i);
+        Serial.printf("  %d  %s\n", i + 1, lb);
+      }
+      break;
+    }
     case 'r': {
       Serial.println("[cli] raw dump 6 s — press the panel");
       uint32_t t0 = millis();
@@ -1008,8 +1122,8 @@ void serialCli() {
       if (cliLen) { cliLine[cliLen] = 0; cliProcess(cliLine); cliLen = 0; }
     } else if (cliLen < sizeof(cliLine) - 1) {
       // single-letter commands fire immediately (no newline needed);
-      // 'f <mac>' and 'c <metres>' wait for the newline
-      if (c != ' ' && cliLen == 0 && c != 'f' && c != 'c') {
+      // 'f <mac|N:name>', 'c <metres>' and 'x <n>' wait for the newline
+      if (c != ' ' && cliLen == 0 && c != 'f' && c != 'c' && c != 'x') {
         char one[2] = {c, 0};
         cliProcess(one);
       } else cliLine[cliLen++] = c;
@@ -1046,16 +1160,17 @@ void setup() {
   fobLoad();
   uiLoad();
   buzzInit();
-  {
-    char ms[24]; fobMacStr(ms, sizeof(ms));
-    Serial.printf("[tft-dash] fob: %s\n", ms);
+  Serial.printf("[tft-dash] fobs: %d\n", fobCount);
+  for (uint8_t i = 0; i < fobCount; i++) {
+    char lb[20]; fobLabel(lb, sizeof(lb), i);
+    Serial.printf("[tft-dash]   %d %s\n", i + 1, lb);
   }
 
   wheelCircM = prefs.getFloat("wcirc", 0);
   btLinkOn = prefs.getBool("btlink", true);
 
   // boot follows the fob: dark from the first second when registered+away
-  dispOn = (fobMacLen != 6);
+  dispOn = (fobCount == 0);
   if (dispOn) { tft.fillScreen(cBg); drawChrome(); }
   else         tft.fillScreen(0x0000);
   Serial.printf("[tft-dash] boot display %s\n",
@@ -1106,12 +1221,12 @@ void loop() {
   // learn-mode completion: adopt the strongest ITAG seen
   if (bleLearn && learnRssi > -128 && millis() - learnAtMs > 2000) {
     bleLearn = false;
-    memcpy(fobMac, learnMac, 6); fobMacLen = 6;
-    fobLastSeenMs = 0; absentSinceMs = 0;
-    fobSave();
-    char ms[24]; fobMacStr(ms, sizeof(ms));
-    Serial.printf("[ble] fob learned: %s (rssi %d)\n", ms, learnRssi);
-    toast("fob learned", cGood);
+    if (fobAddMac(learnMac)) {
+      fobSave();
+      char lb[20]; macStr(lb, learnMac);
+      Serial.printf("[ble] fob learned: %s (rssi %d)\n", lb, learnRssi);
+      toast("fob learned", cGood);
+    } else Serial.println("[ble] duplicate or list full");
   }
 
   klTick();

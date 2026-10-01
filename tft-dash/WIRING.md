@@ -183,11 +183,18 @@ Module endpoints: `/state.json` (page, poll stats, RSSI), `/sethost?host=…&por
     (rpm ≥ 50 for 2 s) locks the page to TELE + RIDE; parked, it rotates
     ELEC ↔ MOTOR every 8 s.
 - **LOCK** — ARMED/DISARMED hero (semantic red/green, not themeable),
-  fob presence + RSSI, PANIC/STOP siren button (manual 30 s wail —
-  armed only; tap STOP or any tap to silence). Every arm/disarm
-  transition plays a short padlock animation (red lock closes + "ARMED"
-  / green lock opens with a sonar ping + "DISARMED"); preview over
-  serial with `a` (arm) / `A` (disarm).
+  fob presence + RSSI, registered-fob list, PANIC/STOP siren button
+  (manual 30 s wail — armed only; tap STOP or any tap to silence).
+  Every arm/disarm transition plays a short padlock animation (red lock
+  closes + "ARMED" / green lock opens with a sonar ping + "DISARMED");
+  preview over serial with `a` (arm) / `A` (disarm).
+  **Fobs (up to 4):** iTags by static MAC, **phones by advertised NAME**
+  (Android rotates its BLE MAC, so MAC entries break — the phone must
+  run a BLE advertiser app, e.g. nRF Connect → Advertiser, with a
+  unique name; iOS cannot advertise in the background). Serial:
+  `m` learn iTag · `f <mac>` add iTag · `f N:<name>` add phone ·
+  `L` list · `x <n>` remove · `M` clear all. ANY fob near = disarmed +
+  display on; all gone = armed + display off.
 - **SYS** — two sub-tabs at the top of the page:
   - **STATUS** — BT link state + rx/tx, touch raw values, uptime/heap,
     wheel-calibration line, "release BT for phone" button.
