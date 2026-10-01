@@ -228,7 +228,8 @@ Module endpoints: `/state.json` (page, poll stats, RSSI), `/sethost?host=…&por
 - **No fob registered** → display always on (you can never be locked out).
 - **Fob registered** (NVS `fobs`): display **on while any fob is near**
   (BLE sighting within 12 s), **ARMED idle shows a still FULL-SCREEN
-  standby image** — closed lock + ARMED + battery voltage, no header,
+  standby image** — a **huge red X** ("not allowed", readable from a
+  distance) + ARMED + battery voltage, no header,
   no tab menu (the backlight can't be switched off on this shield, so
   armed idle is informative, not black; no animation while idle).
   **Double-tap the standby screen → PIN keypad (edge-to-edge, big

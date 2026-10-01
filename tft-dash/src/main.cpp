@@ -1238,20 +1238,18 @@ void playAnim(uint8_t kind) {            // 1 = ARM (close), 2 = DISARM (open)
 
 /* ---- armed standby screen: STILL image, FULL screen ----
  * The backlight can't be turned off on this shield, so armed idle shows
- * a static lock + battery instead of black — and it takes the whole
- * display (no header, no tab menu). Double-tap wakes the PIN gate. */
+ * a huge red X — readable from a distance: NOT ALLOWED / do not turn on.
+ * Double-tap wakes the PIN gate. */
 void drawStandby() {
   pinScreen = false;
   tft.fillRect(0, 0, W, H, cBg);
-  const int oy = 4;                    // lock pose (closed), vertically centered
-  tft.fillRect(80, 92 + oy, 12, 52, cBad);             // left leg
-  tft.fillRect(148, 92 + oy, 12, 52, cBad);            // right leg
-  tft.fillRect(80, 92 + oy, 80, 12, cBad);             // bridge
-  tft.fillRoundRect(70, 138 + oy, 100, 74, 10, cBad); // body
-  tft.fillCircle(120, 176 + oy, 10, cBg);             // keyhole
-  tft.fillRect(115, 162 + oy, 10, 18, cBg);
+  const int x0 = 45, x1 = 195, y0 = 60, y1 = 210, t = 13;
+  for (int d = -t; d <= t; d++) {          // thick 45° diagonals (perpendicular offsets)
+    tft.drawLine(x0 + d, y0 + d, x1 + d, y1 + d, cBad);
+    tft.drawLine(x0 + d, y1 - d, x1 + d, y0 - d, cBad);
+  }
   tft.setTextColor(cBad); tft.setTextSize(4);
-  tft.setCursor(120 - 5 * 24, 236);                   // "ARMED"
+  tft.setCursor(120 - 5 * 24, 236);        // "ARMED"
   tft.print("ARMED");
   tft.setTextSize(2); tft.setTextColor(cTxt);
   char b[24];
