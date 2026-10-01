@@ -781,18 +781,18 @@ void handleTouch() {
     uint8_t nt = px < 84 ? 0 : px < 160 ? 1 : 2;
     if (nt != setupTab) { setupTab = nt; uiInvalidate(); drawChrome(); }
   } else if (page == PG_SETUP && setupTab == 1) {          // CONFIG content
-    // zones match the DRAWN widgets (size y44-84, value y112-140,
-    // accent y168-196, CHANGE PIN y216-250) with finger margins
-    if (py >= 40 && py <= 92 && px >= 8) {                 // size S/M/L
+    // zones match the DRAWN widgets (size y84-124, value y134-162,
+    // accent y180-208, CHANGE PIN y232-266) with finger margins
+    if (py >= 78 && py <= 130 && px >= 8) {                // size S/M/L
       uiScale = px < 86 ? 0 : px < 154 ? 1 : 2;
       uiSave(); drawChrome(); toast("size saved", uiAcc);
-    } else if (py >= 106 && py <= 146 && px >= 8 && px <= 230) {   // value color
+    } else if (py >= 128 && py <= 168 && px >= 8 && px <= 230) {   // value color
       uiVal = PALETTE[(px - 8) / 38];
       uiSave(); drawChrome(); toast("value color saved", uiAcc);
-    } else if (py >= 162 && py <= 202 && px >= 8 && px <= 230) {   // accent color
+    } else if (py >= 174 && py <= 214 && px >= 8 && px <= 230) {   // accent color
       uiAcc = PALETTE[(px - 8) / 38];
       uiSave(); drawChrome(); toast("accent color saved", uiAcc);
-    } else if (py >= 210 && py <= 256 && px >= 8 && px <= 232) {   // change PIN
+    } else if (py >= 226 && py <= 274 && px >= 8 && px <= 232) {   // change PIN
       pinEntryMode = 1;
       drawPinScreen();
       Serial.println("[pin] PIN change started");
@@ -1112,24 +1112,25 @@ void drawSystem() {
 }
 
 void drawCfg() {
+  // content starts BELOW the sub-tab band (y28-68): nothing may paint there
   tft.setTextSize(1); tft.setTextColor(cDim);
-  tft.setCursor(8, 32); tft.print("TEXT SIZE  (live, auto-saved)");
+  tft.setCursor(8, 72); tft.print("TEXT SIZE");
   const char *sz[3] = {"S", "M", "L"};
   for (uint8_t i = 0; i < 3; i++) {
     uint16_t x = 8 + i * 78;
     bool act = (uiScale == i);
-    tft.fillRect(x, 44, 68, 40, act ? uiAcc : cBg2);
-    tft.drawRect(x, 44, 68, 40, act ? uiAcc : cDim);
+    tft.fillRect(x, 84, 68, 40, act ? uiAcc : cBg2);
+    tft.drawRect(x, 84, 68, 40, act ? uiAcc : cDim);
     tft.setTextSize(3); tft.setTextColor(act ? cBg : cTxt);
-    tft.setCursor(x + (68 - 18) / 2, 55);
+    tft.setCursor(x + (68 - 18) / 2, 95);
     tft.print(sz[i]);
   }
-  tft.setTextSize(1); tft.setTextColor(cDim);
-  tft.setCursor(8, 100); tft.print("VALUE COLOR (telemetry numbers)");
-  tft.setCursor(8, 156); tft.print("ACCENT COLOR (tabs, highlights)");
-  for (uint8_t row = 0; row < 2; row++) {
-    uint16_t y = row == 0 ? 112 : 168;
+  for (uint8_t row = 0; row < 2; row++) {        // value then accent swatches
+    uint16_t y = row == 0 ? 134 : 180;
     uint16_t cur = row == 0 ? uiVal : uiAcc;
+    tft.setTextSize(1); tft.setTextColor(cDim);
+    tft.setCursor(8, y - 12);
+    tft.print(row == 0 ? "VALUE COLOR" : "ACCENT COLOR");
     for (uint8_t i = 0; i < 6; i++) {
       uint16_t x = 8 + i * 38;
       tft.fillRect(x, y, 32, 28, PALETTE[i]);
@@ -1137,13 +1138,13 @@ void drawCfg() {
     }
   }
   tft.setTextSize(1); tft.setTextColor(cDim);
-  tft.setCursor(8, 206); tft.print("SECURITY");
-  tft.fillRect(8, 216, 224, 34, cBg2);
-  tft.drawRect(8, 216, 224, 34, cDim);
+  tft.setCursor(8, 222); tft.print("SECURITY");
+  tft.fillRect(8, 232, 224, 34, cBg2);
+  tft.drawRect(8, 232, 224, 34, cDim);
   tft.setTextSize(2); tft.setTextColor(cTxt);
-  tft.setCursor(8 + (224 - 10 * 12) / 2, 225);
+  tft.setCursor(8 + (224 - 10 * 12) / 2, 241);
   tft.print("CHANGE PIN");
-  slotPrint(sToast, 8, 256, 224, 16, 1,
+  slotPrint(sToast, 8, 270, 224, 14, 1,
             millis() - toastAtMs < 4000 ? toastTxt : "", toastCol, cBg);
 }
 
@@ -1376,34 +1377,33 @@ void pinOk() {
 
 /* ---- SET page: pairing QR for the phone app ---- */
 void drawQr(const char *text) {
-  static uint8_t qr[qrcodegen_BUFFER_LEN_FOR_VERSION(10)];
-  static uint8_t tmp[qrcodegen_BUFFER_LEN_FOR_VERSION(10)];
-  if (!qrcodegen_encodeText(text, tmp, qr, qrcodegen_Ecc_MEDIUM,
-                            qrcodegen_VERSION_MIN, 10, qrcodegen_Mask_AUTO, true)) {
+  // bare 32-hex at ECC LOW -> version 2 (25 modules): fewer, bigger
+  // modules scan far more easily from a 2.4" glass than v4@6px did
+  static uint8_t qr[qrcodegen_BUFFER_LEN_FOR_VERSION(4)];
+  static uint8_t tmp[qrcodegen_BUFFER_LEN_FOR_VERSION(4)];
+  if (!qrcodegen_encodeText(text, tmp, qr, qrcodegen_Ecc_LOW,
+                            2, 4, qrcodegen_Mask_AUTO, true)) {
     Serial.println("[qr] encode failed");
     return;
   }
   int n = qrcodegen_getSize(qr);
-  int sc = 200 / n; if (sc > 6) sc = 6;
+  int sc = 175 / n; if (sc > 7) sc = 7;      // 25*7=175 fits below the sub-tabs
   int px = n * sc;
-  int ox = (W - px) / 2, oy = 48;
-  tft.fillRect(ox - 6, oy - 6, px + 12, px + 12, 0xFFFF);   // white + quiet zone
+  int ox = (W - (px + 16)) / 2, oy = 72;     // +16 = white quiet border
+  tft.fillRect(ox, oy, px + 16, px + 16, 0xFFFF);
   for (int y = 0; y < n; y++)
     for (int x = 0; x < n; x++)
       if (qrcodegen_getModule(qr, x, y))
-        tft.fillRect(ox + x * sc, oy + y * sc, sc, sc, 0x0000);
+        tft.fillRect(ox + 8 + x * sc, oy + 8 + y * sc, sc, sc, 0x0000);
   Serial.printf("[qr] drawn %dx%d scale %d\n", n, n, sc);
 }
 void drawSet() {
-  tft.setTextSize(1); tft.setTextColor(cDim);
-  tft.setCursor(8, 34); tft.print("PAIRING - scan this QR in the app");
   char kh[33]; pairKeyHex(kh);
   uint32_t h = 0x9E3779B9;                 // redraw only when key/screen changed
   for (int i = 0; i < 16; i++) h = (h << 5) ^ (h >> 27) ^ pairKey[i];
-  if (h != qrStamp) { qrStamp = h; drawQr((std::string("VOTOL:") + kh).c_str()); }
-  slotPrint(sSys[6], 8, 244, 224, 14, 1, kh, cTxt, cBg);
-  slotPrint(sSys[7], 8, 258, 224, 14, 1,
-            "serial: K new key - P <pin> set pin", cDim, cBg);
+  if (h != qrStamp) { qrStamp = h; drawQr(kh); }
+  // the key itself, centered — both QR and text carry the same secret
+  slotPrint(sSys[6], 22, 268, 196, 12, 1, kh, cTxt, cBg);
 }
 
 /* =========================================================== wifi window */

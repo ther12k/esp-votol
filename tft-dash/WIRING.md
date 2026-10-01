@@ -211,7 +211,7 @@ Module endpoints: `/state.json` (page, poll stats, RSSI), `/sethost?host=…&por
   `P off` disables). `K` regenerates the key. Manual DISARM holds
   auto re-arm for 10 min; ARM refuses while a fob is near; 3 bad
   secrets = 15 s lockout. Test today with nRF Connect (write text);
-  a real app can come later (QR content: `VOTOL:<32-hex-key>`).
+  a real app can come later (QR content: the bare 32-hex key).
   v1 caveat: no BLE bonding — the secret rides the unencrypted link
   (acceptable for a bike alarm; bonding can be added later).
 - **SYS** — two sub-tabs at the top of the page:
