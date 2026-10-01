@@ -368,11 +368,14 @@ void klTick() {
     if (klArmed) { klArmed = false; chirp(1); toast("DISARMED - fob back", cGood); pendingAnim = 2; }
   } else {
     if (absentSinceMs == 0) absentSinceMs = now;
-    if (!klArmed && (now - absentSinceMs) > ARM_AFTER_S * 1000UL) {
+    // arm counted from the LAST SIGHTING: fires the moment the 12s fob
+    // TTL lapses — BEFORE the display would sleep — so the sequence is
+    // animation FIRST, screen off ~6s later (same 12s of silence needed
+    // as before; no robustness change)
+    if (!klArmed && (now - fobLastSeenMs) > ARM_AFTER_S * 1000UL) {
       klArmed = true; chirp(2); toast("ARMED - fob away", cWarn); pendingAnim = 1;
-      // arming happens ~8s AFTER the display already slept (12s fob TTL) —
-      // wake it briefly so the ARM animation is actually seen
-      if (!dispOn) dispForceUntilMs = now + 6000;
+      dispForceUntilMs = now + 6000;      // keep the screen lit through it (also from sleep)
+      absentSinceMs = now;
     }
   }
 }
