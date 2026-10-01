@@ -27,7 +27,14 @@
  * name — Android rotates its MAC), 'L' list fobs, 'x <n>' remove fob,
  * 'M' clear all, 'c <metres>' wheel circumference (RIDE km/h),
  * 'a'/'A' preview the ARM/DISARM animation, 'B' BT link on/off
- * (off while the bridge talks CAN to the VOTOL instead of BT SPP).
+ * (off while the bridge talks CAN to the VOTOL instead of BT SPP),
+ * 'k'/'K' show/regenerate the app pair key, 'P <pin>' app PIN.
+ *
+ * Phone-app link (BLE GATT server, service c9d01402-…): write
+ * "ARM:SECRET" / "DISARM:SECRET" / "PANIC:SECRET" / "STAT:SECRET".
+ * SECRET = 128-bit pair key (QR shown in SYS->SET) or the PIN.
+ * Any BLE phone works (Android AND iPhone — this is a connection, not
+ * the Android-only fob advertising). 3 bad keys = 15 s lockout.
  *
  * TELE has three panes (tap the content to page through): RIDE = one big
  * speed number (km/h once the wheel circumference is set, else motor rpm),
@@ -61,6 +68,10 @@ BluetoothSerial SerialBT;
 #define BT_SERVER_PIN  "1234"
 volatile bool btConnecting = false;
 uint8_t btFailCount = 0;
+/* BLE GATT UUIDs for the phone-app command link ("CMD:SECRET" writes) */
+#define BLE_SVC_UUID  "c9d01402-a1b2-4c3d-8e9f-aabbccddeeff"
+#define BLE_CMD_UUID  "c9d01403-a1b2-4c3d-8e9f-aabbccddeeff"
+#define BLE_STAT_UUID "c9d01404-a1b2-4c3d-8e9f-aabbccddeeff"
 void btConnectTask(void *) {
   Serial.println("[bt] connecting " BT_SERVER_NAME " ...");
   bool ok = SerialBT.connect(BT_SERVER_NAME);
@@ -79,6 +90,10 @@ void btConnectTask(void *) {
 #include <BLEDevice.h>
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
+#include <BLEServer.h>
+#include <BLEUtils.h>
+#include <BLE2902.h>
+#include "vendor/qrcodegen.h"
 #define FOB_TTL_S       12     // absent if silent this long
 #define ARM_AFTER_S     8      // sustained absence before ARM chirp
 #define BOOT_GRACE_S    45
@@ -97,8 +112,76 @@ volatile bool bleLearn = false;         // CLI 'm': adopt strongest ITAG-named d
 uint8_t learnMac[6]; int learnRssi = -128;
 uint32_t learnAtMs = 0;
 
-class FobCb : public BLEAdvertisedDeviceCallbacks {
-  void onResult(BLEAdvertisedDevice dev) override {
+/* ---- phone-app command link (BLE GATT) ----
+ * The pod also runs a GATT server: an app connects, writes
+ * "CMD:SECRET" (ARM/DISARM/PANIC/STAT) and reads status. SECRET =
+ * the 128-bit pair key (QR in SYS->SET) or the optional short PIN.
+ * v1 caveat: no BLE bonding — the secret rides the (unencrypted) link,
+ * guarded by a 3-strike 15 s lockout. */
+uint8_t pairKey[16];
+char pairPin[13] = "";                 // optional weaker manual secret
+BLEServer *bleServer = nullptr;
+BLECharacteristic *statChr = nullptr;
+volatile bool bleConnected = false;
+volatile bool bleCmdPending = false;
+char bleCmdBuf[80], bleReply[40] = "";
+void pairKeyGen() {
+  for (int i = 0; i < 16; i++) pairKey[i] = (uint8_t)esp_random();
+  prefs.putBytes("pairkey", pairKey, 16);
+}
+void pairKeyLoad() {
+  if (prefs.getBytesLength("pairkey") == 16) prefs.getBytes("pairkey", pairKey, 16);
+  else pairKeyGen();
+}
+void pairKeyHex(char *out) {           // 32 hex chars
+  for (int i = 0; i < 16; i++) sprintf(out + i * 2, "%02X", pairKey[i]);
+}
+uint8_t authFails = 0; uint32_t authLockUntilMs = 0;
+bool authOk(const char *sec) {
+  if (millis() < authLockUntilMs) return false;
+  bool ok = false;
+  if (strlen(sec) == 32) {             // pair key, case-insensitive
+    char kh[33]; pairKeyHex(kh);
+    ok = true;
+    for (int i = 0; i < 32; i++)
+      if (toupper((unsigned char)sec[i]) != kh[i]) { ok = false; break; }
+  }
+  if (!ok && pairPin[0] && !strcmp(sec, pairPin)) ok = true;
+  if (ok) authFails = 0;
+  else if (++authFails >= 3) {
+    authLockUntilMs = millis() + 15000; authFails = 0;
+    Serial.println("[ble] auth locked 15 s (3 bad keys)");
+  }
+  return ok;
+}
+bool fobPresent();                     // fwd (defined with display state)
+extern bool klArmed;                   // fwd (keyless state machine)
+class SrvCb : public BLEServerCallbacks {
+  void onConnect(BLEServer *s) override { bleConnected = true; Serial.println("[ble] app connected"); }
+  void onDisconnect(BLEServer *s) override {
+    bleConnected = false; Serial.println("[ble] app gone");
+    s->getAdvertising()->start();
+  }
+};
+class CmdCb : public BLECharacteristicCallbacks {
+  void onWrite(BLECharacteristic *c) override {
+    std::string v = c->getValue();
+    if (v.size() > 70) return;
+    memcpy(bleCmdBuf, v.data(), v.size());
+    bleCmdBuf[v.size()] = 0;
+    bleCmdPending = true;              // loop() executes it (chirp/draw safe there)
+  }
+};
+class StatCb : public BLECharacteristicCallbacks {
+  void onRead(BLECharacteristic *c) override {
+    char st[32];
+    snprintf(st, sizeof(st), "%s %s", klArmed ? "ARMED" : "DISARMED",
+             fobPresent() ? "FON" : "FOFF");
+    c->setValue((uint8_t *)st, strlen(st));
+  }
+};
+
+class FobCb : public BLEAdvertisedDeviceCallbacks {  void onResult(BLEAdvertisedDevice dev) override {
     if (bleScanDump) {
       Serial.printf("[ble] %s  rssi %d  name \"%s\"\n",
                     dev.getAddress().toString().c_str(), dev.getRSSI(),
@@ -142,7 +225,23 @@ FobCb fobCb;
 BLEScan *bleScan = nullptr;
 
 void bleTask(void *) {
-  BLEDevice::init("");
+  BLEDevice::init("votol-dash");
+  // GATT server: phone app writes "CMD:SECRET", reads status
+  bleServer = BLEDevice::createServer();
+  bleServer->setCallbacks(new SrvCb());
+  BLEService *svc = bleServer->createService(BLE_SVC_UUID);
+  BLECharacteristic *cmd = svc->createCharacteristic(
+      BLE_CMD_UUID, BLECharacteristic::PROPERTY_WRITE);
+  cmd->setCallbacks(new CmdCb());
+  statChr = svc->createCharacteristic(
+      BLE_STAT_UUID, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
+  statChr->addDescriptor(new BLE2902());
+  svc->start();
+  BLEAdvertising *adv = BLEDevice::getAdvertising();
+  adv->addServiceUUID(BLE_SVC_UUID);
+  adv->setScanResponse(true);
+  bleServer->startAdvertising();
+  Serial.println("[ble] GATT server up (app link)");
   bleScan = BLEDevice::getScan();
   bleScan->setAdvertisedDeviceCallbacks(&fobCb, false);
   bleScan->setActiveScan(true);         // active: fetch names (iTag identifies itself)
@@ -387,6 +486,7 @@ Slot sTeleBig, sTeleCur, sTelePow, sTeleRpm, sTeleGear, sTeleTc, sTeleStat, sTel
 Slot sSys[8], sToast, sHeader;
 Slot sKlState, sKlFob, sKlInfo, sKlEnt[4];
 int8_t btnCache = -1;
+uint32_t qrStamp = 0;               // SET page: QR redraw cache key
 
 bool fobPresent() {
   // lastSeen==0 means "never seen since boot" — without the guard the pod
@@ -445,15 +545,18 @@ void displayTick() {
 /* ---- keyless state machine ---- */
 bool klArmed = false;
 uint32_t absentSinceMs = 0;
+uint32_t disarmHoldUntilMs = 0;       // app DISARM: hold auto re-arm 10 min
 void klTick() {
   if (fobCount == 0) return;                  // no fob learned yet
   uint32_t now = millis();
   if (now - bootMs < BOOT_GRACE_S * 1000UL) { absentSinceMs = now; return; }
   if (fobPresent()) {
     absentSinceMs = now;
+    disarmHoldUntilMs = 0;                    // owner is here again
     if (klArmed) { klArmed = false; chirp(1); toast("DISARMED - fob back", cGood); pendingAnim = 2; }
   } else {
     if (absentSinceMs == 0) absentSinceMs = now;
+    if (now < disarmHoldUntilMs) absentSinceMs = now;   // app disarm holds
     // arm counted from the LAST SIGHTING: fires the moment the 12s fob
     // TTL lapses — BEFORE the display would sleep — so the sequence is
     // animation FIRST, screen off ~6s later (same 12s of silence needed
@@ -608,7 +711,7 @@ void handleTouch() {
     uint8_t np = px / 80;
     if (np != page) { page = (Page)np; uiInvalidate(); drawChrome(); toast(PAGE_NAMES[page], uiAcc); }
   } else if (page == PG_SETUP && py >= 24 && py <= 74) {   // sub-tabs (+margin)
-    uint8_t nt = px < 120 ? 0 : 1;
+    uint8_t nt = px < 84 ? 0 : px < 160 ? 1 : 2;
     if (nt != setupTab) { setupTab = nt; uiInvalidate(); drawChrome(); }
   } else if (page == PG_SETUP && setupTab == 1) {          // CONFIG content
     if (py >= 84 && py <= 124 && px >= 8) {                // size S/M/L
@@ -652,17 +755,17 @@ void drawTabBar() {
   }
 }
 
-void drawSubTabs() {                // SYS page: STATUS / CONFIG
-  const char *names[2] = {"STATUS", "CONFIG"};
-  for (uint8_t i = 0; i < 2; i++) {
-    uint16_t x = 8 + i * 116;
+void drawSubTabs() {                // SYS page: STATUS / CONFIG / SET
+  const char *names[3] = {"STAT", "CFG", "SET"};
+  for (uint8_t i = 0; i < 3; i++) {
+    uint16_t x = 8 + i * 76;
     bool act = (setupTab == i);
-    tft.fillRect(x, 28, 108, 40, act ? uiAcc : cBg2);
-    tft.drawRect(x, 28, 108, 40, cDim);
+    tft.fillRect(x, 28, 72, 40, act ? uiAcc : cBg2);
+    tft.drawRect(x, 28, 72, 40, cDim);
     tft.setTextSize(2);
     tft.setTextColor(act ? cBg : cTxt);
     uint16_t tw = strlen(names[i]) * 12;
-    tft.setCursor(x + (108 - tw) / 2, 40);
+    tft.setCursor(x + (72 - tw) / 2, 40);
     tft.print(names[i]);
   }
 }
@@ -687,6 +790,7 @@ void drawChrome() {
     }
   }
   btnCache = -1;
+  qrStamp = 0;                       // SET page QR must repaint after chrome
 }
 
 void drawHeader() {
@@ -909,6 +1013,51 @@ void drawCfg() {
             millis() - toastAtMs < 4000 ? toastTxt : "", toastCol, cBg);
 }
 
+/* ---- phone-app command execution (runs in loop context) ---- */
+void bleExec(const char *cmd, const char *sec) {
+  if (!authOk(sec)) {
+    snprintf(bleReply, sizeof(bleReply), "ERR KEY");
+    Serial.printf("[ble] cmd %s: BAD KEY\n", cmd);
+    return;
+  }
+  if (!strcmp(cmd, "ARM")) {
+    if (fobPresent()) { snprintf(bleReply, sizeof(bleReply), "ERR FOB NEAR"); return; }
+    klArmed = true; disarmHoldUntilMs = 0; chirp(2);
+    toast("ARMED - app", cWarn);
+    if (dispOn) pendingAnim = 1;
+    snprintf(bleReply, sizeof(bleReply), "OK ARMED");
+  } else if (!strcmp(cmd, "DISARM")) {
+    klArmed = false; disarmHoldUntilMs = millis() + 600000UL; chirp(1);
+    toast("DISARMED - app", cGood);
+    if (dispOn) pendingAnim = 2;
+    snprintf(bleReply, sizeof(bleReply), "OK DISARM");
+  } else if (!strcmp(cmd, "PANIC")) {
+    panicUntilMs = millis() + PANIC_S * 1000UL;
+    snprintf(bleReply, sizeof(bleReply), "OK PANIC");
+  } else if (!strcmp(cmd, "STAT")) {
+    snprintf(bleReply, sizeof(bleReply), "%s %s", klArmed ? "ARMED" : "DISARMED",
+             fobPresent() ? "FON" : "FOFF");
+  } else {
+    snprintf(bleReply, sizeof(bleReply), "ERR CMD");
+    return;
+  }
+  Serial.printf("[ble] cmd %s -> %s\n", cmd, bleReply);
+}
+void bleProcessPending() {
+  if (!bleCmdPending) return;
+  char line[80];
+  strncpy(line, bleCmdBuf, sizeof(line) - 1); line[sizeof(line) - 1] = 0;
+  bleCmdPending = false;
+  char *sep = strpbrk(line, ":|");
+  if (sep) *sep = 0;
+  for (char *p = line; *p; p++) *p = toupper((unsigned char)*p);
+  bleExec(line, sep ? sep + 1 : "");
+  if (bleConnected && statChr) {
+    statChr->setValue((uint8_t *)bleReply, strlen(bleReply));
+    statChr->notify();
+  }
+}
+
 /* =========================================================== arm/disarm animation */
 void animLock(uint16_t col, int shY, int rLeg) {
   // padlock stage. shY = shackle bridge top (66 raised = open, 92 = closed);
@@ -951,6 +1100,38 @@ void playAnim(uint8_t kind) {            // 1 = ARM (close), 2 = DISARM (open)
     return;
   }
   uiInvalidate(); drawChrome();          // restore the page underneath
+}
+
+/* ---- SET page: pairing QR for the phone app ---- */
+void drawQr(const char *text) {
+  static uint8_t qr[qrcodegen_BUFFER_LEN_FOR_VERSION(10)];
+  static uint8_t tmp[qrcodegen_BUFFER_LEN_FOR_VERSION(10)];
+  if (!qrcodegen_encodeText(text, tmp, qr, qrcodegen_Ecc_MEDIUM,
+                            qrcodegen_VERSION_MIN, 10, qrcodegen_Mask_AUTO, true)) {
+    Serial.println("[qr] encode failed");
+    return;
+  }
+  int n = qrcodegen_getSize(qr);
+  int sc = 200 / n; if (sc > 6) sc = 6;
+  int px = n * sc;
+  int ox = (W - px) / 2, oy = 48;
+  tft.fillRect(ox - 6, oy - 6, px + 12, px + 12, 0xFFFF);   // white + quiet zone
+  for (int y = 0; y < n; y++)
+    for (int x = 0; x < n; x++)
+      if (qrcodegen_getModule(qr, x, y))
+        tft.fillRect(ox + x * sc, oy + y * sc, sc, sc, 0x0000);
+  Serial.printf("[qr] drawn %dx%d scale %d\n", n, n, sc);
+}
+void drawSet() {
+  tft.setTextSize(1); tft.setTextColor(cDim);
+  tft.setCursor(8, 34); tft.print("PAIRING - scan this QR in the app");
+  char kh[33]; pairKeyHex(kh);
+  uint32_t h = 0x9E3779B9;                 // redraw only when key/screen changed
+  for (int i = 0; i < 16; i++) h = (h << 5) ^ (h >> 27) ^ pairKey[i];
+  if (h != qrStamp) { qrStamp = h; drawQr((std::string("VOTOL:") + kh).c_str()); }
+  slotPrint(sSys[6], 8, 244, 224, 14, 1, kh, cTxt, cBg);
+  slotPrint(sSys[7], 8, 258, 224, 14, 1,
+            "serial: K new key - P <pin> set pin", cDim, cBg);
 }
 
 /* =========================================================== wifi window */
@@ -1055,6 +1236,23 @@ void cliProcess(const char *line) {
     toast("wheel saved", cGood);
     return;
   }
+  if (line[0] == 'P' && (line[1] == ' ' || line[1] == '=')) {
+    // 'P 1234' — optional short PIN for the app link; 'P off' disables
+    const char *p = line + 2;
+    if (!strncasecmp(p, "off", 3) || !strcmp(p, "-")) {
+      pairPin[0] = 0; prefs.remove("pin");
+      Serial.println("[cli] pin disabled");
+    } else {
+      int n = strlen(p);
+      if (n < 4 || n > 12) { Serial.println("[cli] pin needs 4-12 chars"); return; }
+      for (int i = 0; i < n; i++)
+        if (!isalnum((unsigned char)p[i])) { Serial.println("[cli] alnum only"); return; }
+      strncpy(pairPin, p, 12); pairPin[12] = 0;
+      prefs.putString("pin", pairPin);
+      Serial.println("[cli] pin saved");
+    }
+    return;
+  }
   switch (line[0]) {
     case 'v': touchVariant ^= 1; Serial.printf("[cli] variant=%d\n", touchVariant); break;
     case 's': tSwapXY = !tSwapXY; Serial.printf("[cli] swap=%d\n", tSwapXY); break;
@@ -1068,6 +1266,18 @@ void cliProcess(const char *line) {
     case 'p': sendShow(); Serial.println("[cli] SHOW sent"); break;
     case 'a': pendingAnim = 1; break;      // test the ARM animation
     case 'A': pendingAnim = 2; break;      // test the DISARM animation
+    case 'K': {                            // regenerate the app pair key
+      pairKeyGen();
+      char kh[33]; pairKeyHex(kh);
+      Serial.printf("[cli] NEW pair key: %s\n", kh);
+      toast("new pair key", cAcc);
+      break;
+    }
+    case 'k': {
+      char kh[33]; pairKeyHex(kh);
+      Serial.printf("[cli] pair key: %s\n", kh);
+      break;
+    }
     case 'b': btPauseToggle(); break;
     case 'B':                               // VOTOL link moved to CAN — BT dial on/off
       btLinkOn = !btLinkOn;
@@ -1122,8 +1332,8 @@ void serialCli() {
       if (cliLen) { cliLine[cliLen] = 0; cliProcess(cliLine); cliLen = 0; }
     } else if (cliLen < sizeof(cliLine) - 1) {
       // single-letter commands fire immediately (no newline needed);
-      // 'f <mac|N:name>', 'c <metres>' and 'x <n>' wait for the newline
-      if (c != ' ' && cliLen == 0 && c != 'f' && c != 'c' && c != 'x') {
+      // 'f <mac|N:name>', 'c <metres>', 'x <n>' and 'P <pin>' wait for newline
+      if (c != ' ' && cliLen == 0 && c != 'f' && c != 'c' && c != 'x' && c != 'P') {
         char one[2] = {c, 0};
         cliProcess(one);
       } else cliLine[cliLen++] = c;
@@ -1168,6 +1378,9 @@ void setup() {
 
   wheelCircM = prefs.getFloat("wcirc", 0);
   btLinkOn = prefs.getBool("btlink", true);
+  pairKeyLoad();
+  { String pin = prefs.getString("pin", "");
+    strncpy(pairPin, pin.c_str(), 12); pairPin[12] = 0; }
 
   // boot follows the fob: dark from the first second when registered+away
   dispOn = (fobCount == 0);
@@ -1179,7 +1392,7 @@ void setup() {
   wifiWindowSetup();
   SerialBT.begin("votol-dash", true);   // true = master/SPP-client mode
   SerialBT.setPin(BT_SERVER_PIN);
-  xTaskCreate(bleTask, "ble", 6144, nullptr, 1, nullptr);
+  xTaskCreate(bleTask, "ble", 8192, nullptr, 1, nullptr);
   Serial.printf("[tft-dash] wifi window %ds, then BT->%s + iTag BLE\n",
                 WIFI_WINDOW_S, BT_SERVER_NAME);
 }
@@ -1229,6 +1442,7 @@ void loop() {
     } else Serial.println("[ble] duplicate or list full");
   }
 
+  bleProcessPending();
   klTick();
   buzzTick();
   ridingTick();
@@ -1254,7 +1468,8 @@ void loop() {
     switch (page) {
       case PG_TELE:    drawTelemetry(); break;
       case PG_KEYLESS: drawKeyless();   break;
-      case PG_SETUP:   setupTab ? drawCfg() : drawSystem(); break;
+      case PG_SETUP:   setupTab == 0 ? drawSystem() :
+                       setupTab == 1 ? drawCfg() : drawSet(); break;
   }
   }
   delay(10);
