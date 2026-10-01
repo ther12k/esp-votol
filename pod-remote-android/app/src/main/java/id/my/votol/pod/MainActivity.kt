@@ -29,6 +29,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import java.util.UUID
 
 /**
@@ -81,6 +83,7 @@ class MainActivity : AppCompatActivity() {
         adapter = (getSystemService(BLUETOOTH_SERVICE) as BluetoothManager).adapter
 
         findViewById<MaterialButton>(R.id.saveKeyBtn).setOnClickListener { saveKey() }
+        findViewById<MaterialButton>(R.id.scanBtn).setOnClickListener { launchQrScan() }
         connectBtn.setOnClickListener { connectOrDisconnect() }
         findViewById<MaterialButton>(R.id.disarmBtn).setOnClickListener { send("DISARM") }
         findViewById<MaterialButton>(R.id.armBtn).setOnClickListener { send("ARM") }
@@ -97,6 +100,24 @@ class MainActivity : AppCompatActivity() {
         val m = Regex("^VOTOL:([0-9A-F]{32})$").find(t)
         if (m != null) return m.groupValues[1]
         return if (Regex("^[0-9A-F]{32}$").matches(t)) t else null
+    }
+
+    /** QR scan: pod's SYS → SET tab shows VOTOL:<32hex>; scan fills + saves. */
+    private val scanLauncher = registerForActivityResult(ScanContract()) { result ->
+        val contents = result.contents
+        if (contents.isNullOrBlank()) return@registerForActivityResult
+        keyInput.setText(contents)
+        saveKey()
+    }
+
+    private fun launchQrScan() {
+        scanLauncher.launch(
+            ScanOptions()
+                .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                .setPrompt("point at the pod's QR — SYS → SET")
+                .setBeepEnabled(false)
+                .setOrientationLocked(true)
+        )
     }
 
     private fun saveKey() {
