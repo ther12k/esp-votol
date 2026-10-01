@@ -168,19 +168,21 @@ Module endpoints: `/state.json` (page, poll stats, RSSI), `/sethost?host=…&por
 (persisted in NVS), `/reboot`. OTA:
 `pio run -e votol-dash-ota -t upload --upload-port votol-dash.local`.
 
-## 5. Screens (4 touch tabs)
+## 5. Screens (3 fat tabs — easier touch)
 
 - **TELE** — battery V (big), current, computed power, RPM, gear,
   controller/motor temps, controller status + fault code, link freshness.
   The dot top-right: green = frames < 5 s old, yellow = stale, red = bad.
 - **KEYLESS** — ARMED/DISARMED hero (semantic red/green, not themeable),
   fob presence + RSSI, PANIC/STOP siren button.
-- **SYS** — BT link state + rx/tx, touch raw values, uptime/heap,
-  "release BT for phone" button.
-- **CFG** — text size **S/M/L** (default M — smaller than the original
-  build), **value color** and **accent color** swatches (6 colors).
-  Selections apply live and auto-save to NVS. Fit guarantee: long values
-  (e.g. 120.1 V) auto-shrink a size so nothing ever overflows the layout.
+- **SYS** — two sub-tabs at the top of the page:
+  - **STATUS** — BT link state + rx/tx, touch raw values, uptime/heap,
+    "release BT for phone" button.
+  - **CONFIG** — text size **S/M/L** (default M — smaller than the
+    original build), **value color** and **accent color** swatches
+    (6 colors). Selections apply live and auto-save to NVS. Fit
+    guarantee: long values (e.g. 120.1 V) auto-shrink a size so nothing
+    ever overflows the layout.
 
 ## 5b. Display power — follows the registered iTag
 

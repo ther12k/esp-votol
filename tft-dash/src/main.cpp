@@ -167,8 +167,9 @@ MCUFRIEND_kbv tft;
 uint16_t cBg, cBg2, cTxt, cDim, cAcc, cGood, cWarn, cBad;
 
 /* ---- pages ---- */
-enum Page : uint8_t { PG_TELE = 0, PG_KEYLESS = 1, PG_SYS = 2, PG_CFG = 3 };
-const char *PAGE_NAMES[4] = {"TELE", "KEYL", "SYS", "CFG"};
+enum Page : uint8_t { PG_TELE = 0, PG_KEYLESS = 1, PG_SETUP = 2 };
+const char *PAGE_NAMES[3] = {"TELE", "KEYLESS", "SYS"};
+uint8_t setupTab = 0;               // SYS page sub-tab: 0=STATUS 1=CONFIG
 Page page = PG_TELE;
 
 /* ---- touch: film on shared LCD nets ----
@@ -468,20 +469,24 @@ void handleTouch() {
   if (millis() - lastTapMs < 180) return;   // fast debounce — taps feel instant
   lastTapMs = millis(); lastTouchMs = millis();
   if (py >= 270) {                          // tab bar (+margin for finger size)
-    uint8_t np = px / 60;
+    uint8_t np = px / 80;
     if (np != page) { page = (Page)np; drawChrome(); toast(PAGE_NAMES[page], uiAcc); }
-  } else if (page == PG_CFG) {
-    if (py >= 44 && py <= 84 && px >= 8) {          // size S/M/L
+  } else if (page == PG_SETUP && py >= 30 && py <= 62) {   // sub-tabs
+    uint8_t nt = px < 120 ? 0 : 1;
+    if (nt != setupTab) { setupTab = nt; drawChrome(); }
+  } else if (page == PG_SETUP && setupTab == 1) {          // CONFIG content
+    if (py >= 84 && py <= 124 && px >= 8) {                // size S/M/L
       uiScale = px < 86 ? 0 : px < 154 ? 1 : 2;
       uiSave(); drawChrome(); toast("size saved", uiAcc);
-    } else if (py >= 112 && py <= 140 && px >= 8 && px <= 230) {   // value color
+    } else if (py >= 146 && py <= 174 && px >= 8 && px <= 230) {   // value color
       uiVal = PALETTE[(px - 8) / 38];
       uiSave(); drawChrome(); toast("value color saved", uiAcc);
-    } else if (py >= 168 && py <= 196 && px >= 8 && px <= 230) {   // accent color
+    } else if (py >= 198 && py <= 226 && px >= 8 && px <= 230) {   // accent color
       uiAcc = PALETTE[(px - 8) / 38];
       uiSave(); drawChrome(); toast("accent color saved", uiAcc);
     }
-  } else if (page == PG_SYS && py >= 168 && py <= 212 && px >= 8 && px <= 232) {
+  } else if (page == PG_SETUP && setupTab == 0 &&
+             py >= 212 && py <= 256 && px >= 8 && px <= 232) {
     btPauseToggle();                        // release BT for the phone app
   } else if (page == PG_KEYLESS && py >= 190 && py <= 250 && px >= 8 && px <= 232) {
     panicToggle();                          // siren on/off
@@ -493,22 +498,38 @@ void handleTouch() {
 /* =========================================================== drawing */
 
 void drawTabBar() {
-  for (uint8_t i = 0; i < 4; i++) {
-    uint16_t x = i * 60;
+  for (uint8_t i = 0; i < 3; i++) {
+    uint16_t x = i * 80;
     bool act = (i == page);
-    tft.fillRect(x + 1, 278, 58, 40, act ? uiAcc : cBg2);
-    tft.drawRect(x + 1, 278, 58, 40, cDim);
+    tft.fillRect(x + 1, 278, 78, 40, act ? uiAcc : cBg2);
+    tft.drawRect(x + 1, 278, 78, 40, cDim);
     tft.setTextSize(2);
     tft.setTextColor(act ? cBg : cTxt);
     uint16_t tw = strlen(PAGE_NAMES[i]) * 12;
-    tft.setCursor(x + (60 - tw) / 2, 293);
+    tft.setCursor(x + (80 - tw) / 2, 293);
     tft.print(PAGE_NAMES[i]);
+  }
+}
+
+void drawSubTabs() {                // SYS page: STATUS / CONFIG
+  const char *names[2] = {"STATUS", "CONFIG"};
+  for (uint8_t i = 0; i < 2; i++) {
+    uint16_t x = 8 + i * 116;
+    bool act = (setupTab == i);
+    tft.fillRect(x, 30, 108, 32, act ? uiAcc : cBg2);
+    tft.drawRect(x, 30, 108, 32, cDim);
+    tft.setTextSize(2);
+    tft.setTextColor(act ? cBg : cTxt);
+    uint16_t tw = strlen(names[i]) * 12;
+    tft.setCursor(x + (108 - tw) / 2, 37);
+    tft.print(names[i]);
   }
 }
 
 void drawChrome() {
   tft.fillRect(0, 27, W, 250, cBg);
   drawTabBar();
+  if (page == PG_SETUP) drawSubTabs();
   if (page == PG_TELE) {
     tft.setTextSize(2); tft.setTextColor(cDim);
     tft.setCursor(8, 32);   tft.print("BATTERY");
@@ -624,30 +645,30 @@ void drawSystem() {
   char b[48];
   snprintf(b, sizeof(b), "bt %s %s", SerialBT.connected() ? "LINKED" : "search",
            BT_SERVER_NAME);
-  slotPrint(sSys[0], 8, 34, 224, 18, 2, b, SerialBT.connected() ? cGood : cDim, cBg);
+  slotPrint(sSys[0], 8, 74, 224, 18, 2, b, SerialBT.connected() ? cGood : cDim, cBg);
   snprintf(b, sizeof(b), "rx %lu tx %lu", (unsigned long)rxCount, (unsigned long)txCount);
-  slotPrint(sSys[1], 8, 56, 224, 18, 2, b, cTxt, cBg);
+  slotPrint(sSys[1], 8, 96, 224, 18, 2, b, cTxt, cBg);
   snprintf(b, sizeof(b), "touch v%d %s%s%s", touchVariant, tSwapXY ? "SW" : "",
            tFlipX ? "FX" : "", tFlipY ? "FY" : "");
-  slotPrint(sSys[2], 8, 78, 224, 18, 2, b, cTxt, cBg);
+  slotPrint(sSys[2], 8, 118, 224, 18, 2, b, cTxt, cBg);
   snprintf(b, sizeof(b), "raw %4d %4d %4d", lastRawX, lastRawY, lastRawZ);
-  slotPrint(sSys[3], 8, 100, 224, 18, 2, b, cDim, cBg);
+  slotPrint(sSys[3], 8, 140, 224, 18, 2, b, cDim, cBg);
   snprintf(b, sizeof(b), "up %lus  heap %ukB", (unsigned long)((millis() - bootMs) / 1000),
            (unsigned)(ESP.getFreeHeap() / 1024));
-  slotPrint(sSys[4], 8, 122, 224, 18, 2, b, cTxt, cBg);
+  slotPrint(sSys[4], 8, 162, 224, 18, 2, b, cTxt, cBg);
   snprintf(b, sizeof(b), "lcd 0x%04X  wifi %ds@boot", (unsigned)0, WIFI_WINDOW_S);
-  slotPrint(sSys[5], 8, 144, 224, 18, 2, b, cDim, cBg);
+  slotPrint(sSys[5], 8, 184, 224, 18, 2, b, cDim, cBg);
 
   // BT release button (lets the phone's VOTOL app take the link)
   int8_t st = btPaused() ? 1 : 0;
   if (st != btnCache) {
     btnCache = st;
-    tft.fillRect(8, 168, 224, 44, cBg2);
-    tft.drawRect(8, 168, 224, 44, btPaused() ? cGood : cAcc);
-    tft.setTextSize(2); tft.setTextColor(btPaused() ? cGood : cAcc);
+    tft.fillRect(8, 212, 224, 44, cBg2);
+    tft.drawRect(8, 212, 224, 44, btPaused() ? cGood : uiAcc);
+    tft.setTextSize(2); tft.setTextColor(btPaused() ? cGood : uiAcc);
     const char *t = btPaused() ? "BT paused - tap to resume"
                                : "release BT for phone";
-    tft.setCursor(8 + (224 - strlen(t) * 12) / 2, 182);
+    tft.setCursor(8 + (224 - strlen(t) * 12) / 2, 226);
     tft.print(t);
   }
 }
@@ -903,16 +924,15 @@ void loop() {
     // no-touch fallback: slow auto-cycle if the screen was never touched
     if (millis() - lastTouchMs > 60000 && millis() - lastCycleMs > 15000) {
       lastCycleMs = millis();
-      page = (Page)((page + 1) % 4);
+      page = (Page)((page + 1) % 3);
       drawChrome();
     }
     drawHeader();
     switch (page) {
       case PG_TELE:    drawTelemetry(); break;
       case PG_KEYLESS: drawKeyless();   break;
-      case PG_SYS:     drawSystem();    break;
-      case PG_CFG:     drawCfg();       break;
-    }
+      case PG_SETUP:   setupTab ? drawCfg() : drawSystem(); break;
+  }
   }
   delay(10);
 }
