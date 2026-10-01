@@ -195,6 +195,18 @@ Module endpoints: `/state.json` (page, poll stats, RSSI), `/sethost?host=…&por
   `m` learn iTag · `f <mac>` add iTag · `f N:<name>` add phone ·
   `L` list · `x <n>` remove · `M` clear all. ANY fob near = disarmed +
   display on; all gone = armed + display off.
+  **Phone-app command link (BLE GATT, any phone incl. iPhone):** the
+  pod advertises service `c9d01402-…`; an app connects and writes
+  `ARM:SECRET` / `DISARM:SECRET` / `PANIC:SECRET` / `STAT:SECRET`
+  (write char `c9d01403-…`, status read/notify `c9d01404-…`).
+  SECRET = the **128-bit pair key shown as a QR in SYS → SET** (scan it
+  in the app; text shown too) or the optional PIN (serial `P <pin>`,
+  `P off` disables). `K` regenerates the key. Manual DISARM holds
+  auto re-arm for 10 min; ARM refuses while a fob is near; 3 bad
+  secrets = 15 s lockout. Test today with nRF Connect (write text);
+  a real app can come later (QR content: `VOTOL:<32-hex-key>`).
+  v1 caveat: no BLE bonding — the secret rides the unencrypted link
+  (acceptable for a bike alarm; bonding can be added later).
 - **SYS** — two sub-tabs at the top of the page:
   - **STATUS** — BT link state + rx/tx, touch raw values, uptime/heap,
     wheel-calibration line, "release BT for phone" button.
