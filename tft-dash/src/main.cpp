@@ -22,7 +22,13 @@
  *
  * Bring-up over USB serial (115200): 'v' toggle film mapping variant,
  * 's' swap axes, 'f'/'g' flip x/y, 'w' save touch setup to NVS,
- * 'r' 6 s raw dump, 'p' send SHOW now.
+ * 'r' 6 s raw dump, 'p' send SHOW now, 'd' display on 2 min,
+ * 'f <mac>' set fob, 'c <metres>' wheel circumference (RIDE km/h).
+ *
+ * TELE has three panes (tap the content to page through): RIDE = one big
+ * speed number (km/h once the wheel circumference is set, else motor rpm),
+ * ELEC = V/A/W/gear, MOTOR = rpm/gear/temps/status. Riding (rpm >= 50 for
+ * 2 s) locks TELE+RIDE; idle rotates ELEC<->MOTOR every 8 s.
  */
 
 #include <Arduino.h>
@@ -171,6 +177,8 @@ enum Page : uint8_t { PG_TELE = 0, PG_KEYLESS = 1, PG_SETUP = 2 };
 const char *PAGE_NAMES[3] = {"TELE", "LOCK", "SYS"};   // LOCK: "KEYLESS" clips in 80px
 uint8_t setupTab = 0;               // SYS page sub-tab: 0=STATUS 1=CONFIG
 Page page = PG_TELE;
+uint8_t telePane = 1;               // TELE panes: 0=RIDE 1=ELEC 2=MOTOR
+const char *PANE_NAMES[3] = {"RIDE", "ELEC", "MOTOR"};
 
 /* ---- touch: film on shared LCD nets ----
  * variant 0 (MCUFRIEND classic, XP=D6 XM=A2 YP=A1 YM=D7):
@@ -213,6 +221,7 @@ struct Tele {
 } tele;
 const char *CTL_STATUS[8] = {"IDLE","INIT","START","RUN","STOP","BRAKE","WAIT","FAULT"};
 const char *GEARS = "LMHS";
+float wheelCircM = 0;   // tyre circumference m; >0 => RIDE pane km/h = rpm*circ*0.06
 
 uint8_t rxbuf[512];
 int rxlen = 0;
@@ -326,13 +335,14 @@ void setDisplay(bool on) {
   }
 }
 void displayTick() {
-  bool want = (fobMacLen != 6) || wifiPhase ||
+  // screen follows the fob from the very first boot second — the wifi/OTA
+  // window runs headless unless the fob (or an override) is present
+  bool want = (fobMacLen != 6) ||
               (millis() < dispForceUntilMs) || fobPresent();
   if (want != dispOn) {
     setDisplay(want);
     Serial.printf("[disp] %s (%s)\n", dispOn ? "on" : "off",
                   fobMacLen != 6 ? "no fob registered" :
-                  wifiPhase ? "setup window" :
                   millis() < dispForceUntilMs ? "override" :
                   fobPresent() ? "fob near" : "fob away");
   }
@@ -359,6 +369,27 @@ void panicToggle() {
   if (millis() < panicUntilMs) { panicUntilMs = 0; toast("siren stopped", cGood); }
   else if (klArmed) { panicUntilMs = millis() + PANIC_S * 1000UL; toast("SIREN 30s", cBad); }
   else toast("arm first (fob away)", cWarn);
+}
+
+/* ---- riding detection: sustained wheel rpm locks TELE to the RIDE pane ---- */
+bool riding = false;
+uint32_t rideStartMs = 0, haltStartMs = 0;
+void ridingTick() {
+  bool spinning = tele.has && (millis() - tele.atMs) < 3000 && tele.rpm >= 50;
+  if (spinning) {
+    haltStartMs = 0;
+    if (!rideStartMs) rideStartMs = millis();
+    if (!riding && millis() - rideStartMs > 2000) {
+      riding = true;
+      page = PG_TELE; telePane = 0;         // riding: speed-maximized pane
+      if (dispOn) { uiInvalidate(); drawChrome(); }
+      Serial.println("[tele] riding — RIDE pane");
+    }
+  } else {
+    rideStartMs = 0;
+    if (!haltStartMs) haltStartMs = millis();
+    if (riding && millis() - haltStartMs > 5000) riding = false;   // stopped
+  }
 }
 
 /* =========================================================== touch */
@@ -470,10 +501,10 @@ void handleTouch() {
   lastTapMs = millis(); lastTouchMs = millis();
   if (py >= 270) {                          // tab bar (+margin for finger size)
     uint8_t np = px / 80;
-    if (np != page) { page = (Page)np; drawChrome(); toast(PAGE_NAMES[page], uiAcc); }
+    if (np != page) { page = (Page)np; uiInvalidate(); drawChrome(); toast(PAGE_NAMES[page], uiAcc); }
   } else if (page == PG_SETUP && py >= 24 && py <= 74) {   // sub-tabs (+margin)
     uint8_t nt = px < 120 ? 0 : 1;
-    if (nt != setupTab) { setupTab = nt; drawChrome(); }
+    if (nt != setupTab) { setupTab = nt; uiInvalidate(); drawChrome(); }
   } else if (page == PG_SETUP && setupTab == 1) {          // CONFIG content
     if (py >= 84 && py <= 124 && px >= 8) {                // size S/M/L
       uiScale = px < 86 ? 0 : px < 154 ? 1 : 2;
@@ -490,6 +521,10 @@ void handleTouch() {
     btPauseToggle();                        // release BT for the phone app
   } else if (page == PG_KEYLESS && py >= 190 && py <= 250 && px >= 8 && px <= 232) {
     panicToggle();                          // siren on/off
+  } else if (page == PG_TELE && py >= 30) {
+    telePane = (telePane + 1) % 3;          // tap content: RIDE -> ELEC -> MOTOR
+    lastCycleMs = millis();
+    uiInvalidate(); drawChrome();
   } else if (klArmed) {
     panicUntilMs = 0;                       // any tap elsewhere silences the wail
   }
@@ -533,12 +568,18 @@ void drawChrome() {
   if (page == PG_SETUP) drawSubTabs();
   if (page == PG_TELE) {
     tft.setTextSize(2); tft.setTextColor(cDim);
-    tft.setCursor(8, 32);   tft.print("BATTERY");
-    tft.setCursor(128, 32); tft.print("CURRENT");
-    tft.setCursor(8, 96);   tft.print("POWER");
-    tft.setCursor(128, 96); tft.print("GEAR");
-    tft.setCursor(8, 158);  tft.print("RPM");
-    tft.setCursor(128, 158);tft.print("CTRL/MOT C");
+    if (telePane == 0) {                    // RIDE
+      tft.setCursor(8, 34);   tft.print("SPEED");
+    } else if (telePane == 1) {             // ELEC
+      tft.setCursor(8, 32);   tft.print("BATTERY");
+      tft.setCursor(128, 32); tft.print("CURRENT");
+      tft.setCursor(8, 96);   tft.print("POWER");
+      tft.setCursor(128, 96); tft.print("GEAR");
+    } else {                                 // MOTOR
+      tft.setCursor(8, 32);   tft.print("RPM");
+      tft.setCursor(128, 32); tft.print("GEAR");
+      tft.setCursor(8, 100);  tft.print("CTRL/MOT C");
+    }
   }
   btnCache = -1;
 }
@@ -551,7 +592,8 @@ void drawHeader() {
   else if (btPaused())        { snprintf(h, sizeof(h), "VOTOL  bt paused");  col = cAcc; }
   else if (!SerialBT.connected()) { snprintf(h, sizeof(h), "VOTOL  bt search"); col = cWarn; }
   else if (!tele.has || age > 10)  { snprintf(h, sizeof(h), "VOTOL  no data");   col = cWarn; }
-  else                        snprintf(h, sizeof(h), "VOTOL %s", PAGE_NAMES[page]);
+  else snprintf(h, sizeof(h), "VOTOL %s",
+                page == PG_TELE ? PANE_NAMES[telePane] : PAGE_NAMES[page]);
   slotPrint(sHeader, 0, 0, 190, 26, 2, h, col, cBg2);
 
   uint16_t dot = cBad;
@@ -567,21 +609,59 @@ void drawHeader() {
 
 void drawTelemetry() {
   char b[32];
+  if (telePane == 0) {                       // RIDE — one huge number
+    if (!tele.has) {
+      slotPrint(sTeleBig, 8, 58, 224, 76, uiScale == 0 ? 4 : 5, "--", cDim, cBg);
+      slotPrint(sTelePow, 8, 170, 110, 24, szMid(), "--", cDim, cBg);
+      slotPrint(sTeleGear, 122, 170, 110, 24, szMid(), "--", cDim, cBg);
+    } else {
+      if (wheelCircM > 0) dtostrf(tele.rpm * wheelCircM * 0.06f, 1, 0, b);
+      else                snprintf(b, sizeof(b), "%ld", (long)tele.rpm);
+      uint8_t sr = uiScale == 0 ? 4 : 5;
+      if (strlen(b) > 4 && sr > 4) sr = 4;   // auto-fit
+      slotPrint(sTeleBig, 8, 58, 224, 76, sr, b, uiVal, cBg);
+      dtostrf(tele.v, 4, 1, b); strcat(b, "V");
+      slotPrint(sTelePow, 8, 170, 110, 24, szMid(), b, cTxt, cBg);
+      dtostrf(tele.a, 4, 1, b); strcat(b, " A");
+      slotPrint(sTeleGear, 122, 170, 110, 24, szMid(), b, cTxt, cBg);
+    }
+    slotPrint(sTeleCur, 8, 140, 224, 20, 2,
+              wheelCircM > 0 ? "km/h" : "motor rpm", cDim, cBg);
+  } else if (telePane == 1) {                // ELEC
+    if (tele.has) {
+      dtostrf(tele.v, 4, 1, b); strcat(b, "V");
+      uint8_t sb = szBig();
+      if (strlen(b) > 5 && sb > 4) sb = 4;   // auto-fit: 6+ chars never overflows
+      slotPrint(sTeleBig, 8, 48, 150, 42, sb, b, uiVal, cBg);
+      dtostrf(tele.a, 4, 1, b); strcat(b, " A");
+      slotPrint(sTeleCur, 128, 48, 108, 26, szMid(), b, cTxt, cBg);
+      snprintf(b, sizeof(b), "%ldW", (long)(tele.v * tele.a));
+      slotPrint(sTelePow, 8, 112, 108, 26, szMid(), b, cTxt, cBg);
+      snprintf(b, sizeof(b), "%c", tele.gear);
+      slotPrint(sTeleGear, 128, 112, 108, 26, szMid(), b, cTxt, cBg);
+    } else {
+      slotPrint(sTeleBig, 8, 48, 150, 42, szBig(), "--.-V", cDim, cBg);
+      slotPrint(sTeleCur, 128, 48, 108, 26, szMid(), "--", cDim, cBg);
+      slotPrint(sTelePow, 8, 112, 108, 26, szMid(), "--", cDim, cBg);
+      slotPrint(sTeleGear, 128, 112, 108, 26, szMid(), "-", cDim, cBg);
+    }
+  } else {                                   // MOTOR
+    if (tele.has) {
+      snprintf(b, sizeof(b), "%ld", (long)tele.rpm);
+      uint8_t sb = szBig();
+      if (strlen(b) > 4 && sb > 4) sb = 4;
+      slotPrint(sTeleRpm, 8, 48, 150, 42, sb, b, uiVal, cBg);
+      snprintf(b, sizeof(b), "%c", tele.gear);
+      slotPrint(sTeleGear, 128, 48, 108, 26, szMid(), b, cTxt, cBg);
+      snprintf(b, sizeof(b), "%ld/%ldC", (long)tele.tc, (long)tele.tm);
+      slotPrint(sTeleTc, 8, 116, 150, 26, szMid(), b, cTxt, cBg);
+    } else {
+      slotPrint(sTeleRpm, 8, 48, 150, 42, szBig(), "--", cDim, cBg);
+      slotPrint(sTeleGear, 128, 48, 108, 26, szMid(), "-", cDim, cBg);
+      slotPrint(sTeleTc, 8, 116, 150, 26, szMid(), "--", cDim, cBg);
+    }
+  }
   if (tele.has) {
-    dtostrf(tele.v, 4, 1, b); strcat(b, "V");
-    uint8_t sb = szBig();
-    if (strlen(b) > 5 && sb > 4) sb = 4;   // auto-fit: 6+ chars never overflows
-    slotPrint(sTeleBig, 8, 48, 150, 42, sb, b, uiVal, cBg);
-    dtostrf(tele.a, 4, 1, b); strcat(b, " A");
-    slotPrint(sTeleCur, 128, 48, 108, 26, szMid(), b, cTxt, cBg);
-    snprintf(b, sizeof(b), "%ldW", (long)(tele.v * tele.a));
-    slotPrint(sTelePow, 8, 112, 108, 26, szMid(), b, cTxt, cBg);
-    snprintf(b, sizeof(b), "%c", tele.gear);
-    slotPrint(sTeleGear, 128, 112, 108, 26, szMid(), b, cTxt, cBg);
-    snprintf(b, sizeof(b), "%ld", (long)tele.rpm);
-    slotPrint(sTeleRpm, 8, 174, 108, 26, szMid(), b, cTxt, cBg);
-    snprintf(b, sizeof(b), "%ld/%ld", (long)tele.tc, (long)tele.tm);
-    slotPrint(sTeleTc, 128, 174, 108, 26, szMid(), b, cTxt, cBg);
     if (tele.fault) snprintf(b, sizeof(b), "F:%04lX %.12s", (unsigned long)tele.fault,
                              CTL_STATUS[tele.status]);
     else            snprintf(b, sizeof(b), "%.16s", CTL_STATUS[tele.status]);
@@ -589,12 +669,6 @@ void drawTelemetry() {
   } else {
     const char *m = !SerialBT.connected() ? "bluetooth: searching bridge"
                                           : "linked — waiting for frames";
-    slotPrint(sTeleBig, 8, 48, 150, 42, szBig(), "--.-V", cDim, cBg);
-    slotPrint(sTeleCur, 128, 48, 108, 26, szMid(), "--", cDim, cBg);
-    slotPrint(sTelePow, 8, 112, 108, 26, szMid(), "--", cDim, cBg);
-    slotPrint(sTeleGear, 128, 112, 108, 26, szMid(), "-", cDim, cBg);
-    slotPrint(sTeleRpm, 8, 174, 108, 26, szMid(), "--", cDim, cBg);
-    slotPrint(sTeleTc, 128, 174, 108, 26, szMid(), "--", cDim, cBg);
     slotPrint(sTeleStat, 8, 214, 224, 18, 2, m, cWarn, cBg);
   }
   uint32_t age = tele.has ? (millis() - tele.atMs) / 1000 : 0;
@@ -657,7 +731,8 @@ void drawSystem() {
   snprintf(b, sizeof(b), "up %lus  heap %ukB", (unsigned long)((millis() - bootMs) / 1000),
            (unsigned)(ESP.getFreeHeap() / 1024));
   slotPrint(sSys[4], 8, 162, 224, 18, 2, b, cTxt, cBg);
-  snprintf(b, sizeof(b), "lcd 0x%04X  wifi %ds@boot", (unsigned)0, WIFI_WINDOW_S);
+  if (wheelCircM > 0) snprintf(b, sizeof(b), "wheel %.2fm  km/h", wheelCircM);
+  else                snprintf(b, sizeof(b), "wheel unset (rpm)");
   slotPrint(sSys[5], 8, 184, 224, 18, 2, b, cDim, cBg);
 
   // BT release button (lets the phone's VOTOL app take the link)
@@ -710,10 +785,11 @@ void handleWindowState() {
   char s[300];
   snprintf(s, sizeof(s),
     "{\"uptimeS\":%lu,\"phase\":\"wifi-window\",\"bt\":%s,\"rx\":%lu,\"tx\":%lu,"
-    "\"touchVariant\":%d,\"raw\":[%d,%d,%d]}",
+    "\"disp\":\"%s\",\"page\":%d,\"pane\":%d,\"touchVariant\":%d,\"raw\":[%d,%d,%d]}",
     (unsigned long)((millis() - bootMs) / 1000),
     SerialBT.connected() ? "true" : "false",
     (unsigned long)rxCount, (unsigned long)txCount,
+    dispOn ? "on" : "off", (int)page, (int)telePane,
     touchVariant, lastRawX, lastRawY, lastRawZ);
   web.send(200, "application/json", s);
 }
@@ -738,6 +814,7 @@ void wifiWindowSetup() {
 void wifiWindowRun() {          // returns when the window is over
   ArduinoOTA.handle();
   web.handleClient();
+  if (!dispOn) return;          // headless window: screen still follows the fob
   char b[30];
   snprintf(b, sizeof(b), "setup window %lus",
            (unsigned long)(WIFI_WINDOW_S + 1 - (millis() - bootMs) / 1000));
@@ -772,6 +849,15 @@ void cliProcess(const char *line) {
     char ms[24]; fobMacStr(ms, sizeof(ms));
     Serial.printf("[cli] fob set %s\n", ms);
     toast("fob saved", cGood);
+    return;
+  }
+  if (line[0] == 'c' && (line[1] == ' ' || line[1] == '=')) {
+    // 'c 2.05' — tyre circumference in metres (RIDE pane: rpm -> km/h)
+    float v = atof(line + 2);
+    if (v < 0.5f || v > 5.0f) { Serial.println("[cli] need 0.5-5.0 m"); return; }
+    wheelCircM = v; prefs.putFloat("wcirc", v);
+    Serial.printf("[cli] wheel %.2f m (km/h = rpm x %.3f)\n", v, v * 0.06f);
+    toast("wheel saved", cGood);
     return;
   }
   switch (line[0]) {
@@ -823,8 +909,8 @@ void serialCli() {
       if (cliLen) { cliLine[cliLen] = 0; cliProcess(cliLine); cliLen = 0; }
     } else if (cliLen < sizeof(cliLine) - 1) {
       // single-letter commands fire immediately (no newline needed);
-      // anything starting with 'f ' (fob MAC) waits for the newline
-      if (c != ' ' && cliLen == 0 && c != 'f') {
+      // 'f <mac>' and 'c <metres>' wait for the newline
+      if (c != ' ' && cliLen == 0 && c != 'f' && c != 'c') {
         char one[2] = {c, 0};
         cliProcess(one);
       } else cliLine[cliLen++] = c;
@@ -866,8 +952,14 @@ void setup() {
     Serial.printf("[tft-dash] fob: %s\n", ms);
   }
 
-  tft.fillScreen(cBg);
-  drawChrome();
+  wheelCircM = prefs.getFloat("wcirc", 0);
+
+  // boot follows the fob: dark from the first second when registered+away
+  dispOn = (fobMacLen != 6);
+  if (dispOn) { tft.fillScreen(cBg); drawChrome(); }
+  else         tft.fillScreen(0x0000);
+  Serial.printf("[tft-dash] boot display %s\n",
+                dispOn ? "on (no fob registered)" : "dark (waiting for fob)");
 
   wifiWindowSetup();
   SerialBT.begin("votol-dash", true);   // true = master/SPP-client mode
@@ -882,11 +974,13 @@ void loop() {
 
   if (wifiPhase) {
     wifiWindowRun();
+    displayTick();                 // fob arriving mid-window still wakes it
     if (millis() - bootMs > WIFI_WINDOW_S * 1000UL) {
       WiFi.mode(WIFI_OFF);
       wifiPhase = false;
+      lastCycleMs = millis();
       Serial.println("[tft-dash] wifi off — touch + BT mode");
-      drawChrome();
+      if (dispOn) drawChrome();
     }
     delay(20);
     return;
@@ -918,15 +1012,19 @@ void loop() {
 
   klTick();
   buzzTick();
+  ridingTick();
   displayTick();
 
   if (dispOn) {
     handleTouch();
-    // no-touch fallback: slow auto-cycle if the screen was never touched
-    if (millis() - lastTouchMs > 60000 && millis() - lastCycleMs > 15000) {
-      lastCycleMs = millis();
-      page = (Page)((page + 1) % 3);
-      drawChrome();
+    if (page == PG_TELE) {         // riding locks RIDE; idle rotates ELEC/MOTOR
+      if (riding && telePane != 0) { telePane = 0; uiInvalidate(); drawChrome(); }
+      else if (!riding && millis() - lastCycleMs > (telePane == 0 ? 10000 : 8000)) {
+        lastCycleMs = millis();
+        telePane = telePane == 2 ? 1 : (telePane + 1) % 3;
+        uiInvalidate(); drawChrome();
+        Serial.printf("[tele] pane %s\n", PANE_NAMES[telePane]);
+      }
     }
     drawHeader();
     switch (page) {

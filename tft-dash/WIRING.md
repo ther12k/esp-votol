@@ -170,14 +170,24 @@ Module endpoints: `/state.json` (page, poll stats, RSSI), `/sethost?host=…&por
 
 ## 5. Screens (3 fat tabs — easier touch)
 
-- **TELE** — battery V (big), current, computed power, RPM, gear,
-  controller/motor temps, controller status + fault code, link freshness.
-  The dot top-right: green = frames < 5 s old, yellow = stale, red = bad.
-- **KEYLESS** — ARMED/DISARMED hero (semantic red/green, not themeable),
-  fob presence + RSSI, PANIC/STOP siren button.
+- **TELE** — three panes; **tap the content** to page through them
+  (header shows `VOTOL RIDE/ELEC/MOTOR`):
+  - **RIDE** — one huge number: **km/h** once the wheel circumference is
+    set (serial `c <metres>`, e.g. `c 2.05`; km/h = rpm × circ × 0.06),
+    until then big **motor rpm**. Battery V + current in a strip below.
+  - **ELEC** — battery V (big), current, computed power, gear.
+  - **MOTOR** — RPM (big), gear, controller/motor temps.
+  - Shared bottom: controller status + fault code, BT rx/tx/age link line.
+    The dot top-right: green = frames < 5 s old, yellow = stale, red = bad.
+  - **Auto behavior** (no page cycling between tabs anymore): riding
+    (rpm ≥ 50 for 2 s) locks the page to TELE + RIDE; parked, it rotates
+    ELEC ↔ MOTOR every 8 s.
+- **LOCK** — ARMED/DISARMED hero (semantic red/green, not themeable),
+  fob presence + RSSI, PANIC/STOP siren button (manual 30 s wail —
+  armed only; tap STOP or any tap to silence).
 - **SYS** — two sub-tabs at the top of the page:
   - **STATUS** — BT link state + rx/tx, touch raw values, uptime/heap,
-    "release BT for phone" button.
+    wheel-calibration line, "release BT for phone" button.
   - **CONFIG** — text size **S/M/L** (default M — smaller than the
     original build), **value color** and **accent color** swatches
     (6 colors). Selections apply live and auto-save to NVS. Fit
@@ -189,8 +199,9 @@ Module endpoints: `/state.json` (page, poll stats, RSSI), `/sethost?host=…&por
 - **No fob registered** → display always on (you can never be locked out).
 - **Fob registered** (NVS `fob`): display **on while the iTag is near**
   (BLE sighting within 12 s), **off** when it leaves or is switched off —
-  including at startup (registered + fob absent = dark until the fob
-  returns). Sleep = black fill (NOT panel DISPOFF: the hardwired backlight
+  **from the very first boot second** (the WiFi/OTA window runs headless:
+  reset with the fob away = dark screen while OTA still answers on
+  `votol-dash.local`; bring the iTag near, even mid-window, and it wakes). Sleep = black fill (NOT panel DISPOFF: the hardwired backlight
   shines through an undriven panel as WHITE — known mcufriend quirk);
   wake redraws instantly. Register/replace the fob via serial
   (`i` scan, `f <mac>` set, `m` learn by name, `M` clear) or the webapp
