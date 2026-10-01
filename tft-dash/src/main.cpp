@@ -57,10 +57,12 @@ BluetoothSerial SerialBT;
 #define BT_SERVER_NAME "VOTOL-BT"
 #define BT_SERVER_PIN  "1234"
 volatile bool btConnecting = false;
+uint8_t btFailCount = 0;
 void btConnectTask(void *) {
   Serial.println("[bt] connecting " BT_SERVER_NAME " ...");
   bool ok = SerialBT.connect(BT_SERVER_NAME);
   Serial.printf("[bt] connect %s\n", ok ? "ok" : "failed");
+  if (ok) btFailCount = 0; else btFailCount++;
   btConnecting = false;
   vTaskDelete(nullptr);
 }
@@ -122,7 +124,7 @@ void bleTask(void *) {
   for (;;) {
     BLEScanResults r = bleScan->start(1.5, false);
     bleScan->clearResults();
-    vTaskDelay(pdMS_TO_TICKS(400));
+    vTaskDelay(pdMS_TO_TICKS(100));   // tight duty cycle — fast fob pickup
   }
 }
 
@@ -153,8 +155,8 @@ void buzzInit() {
 }
 void chirp(int n) {
   for (int i = 0; i < n; i++) {
-    ledcWriteTone(BUZZ_CH, 2300); delay(110);
-    ledcWriteTone(BUZZ_CH, 0);    delay(90);
+    ledcWriteTone(BUZZ_CH, 2300); delay(90);
+    ledcWriteTone(BUZZ_CH, 0);    delay(50);
   }
 }
 void buzzTick() {
@@ -806,10 +808,10 @@ void playAnim(uint8_t kind) {            // 1 = ARM (close), 2 = DISARM (open)
   const int shYs[5] = {66, 73, 79, 86, 92};
   const int rls[5]  = {20, 28, 36, 44, 52};
   if (kind == 1) {                       // right leg plugs in, shackle seats: LOCK
-    for (uint8_t i = 0; i < 5; i++) { animLock(col, shYs[i], rls[i]); delay(70); }
+    for (uint8_t i = 0; i < 5; i++) { animLock(col, shYs[i], rls[i]); delay(60); }
   } else {                               // right leg lifts clear of the body: UNLOCK
-    for (int8_t i = 4; i >= 0; i--) { animLock(col, shYs[i], rls[i]); delay(70); }
-    for (int r = 52; r <= 116; r += 12) {       // "fob is back" sonar ping
+    for (int8_t i = 4; i >= 0; i--) { animLock(col, shYs[i], rls[i]); delay(60); }
+    for (int r = 52; r <= 116; r += 16) {       // "fob is back" sonar ping
       tft.drawCircle(120, 150, r, col); delay(40);
     }
   }
@@ -818,9 +820,9 @@ void playAnim(uint8_t kind) {            // 1 = ARM (close), 2 = DISARM (open)
     tft.setTextColor(col); tft.setTextSize(sz);
     tft.setCursor(120 - (int)strlen(txt) * 3 * sz, 232);
     tft.print(txt);
-    delay(110);
+    delay(80);
   }
-  delay(350);                            // hold, then restore the page
+  delay(200);                            // hold, then restore the page
   uiInvalidate(); drawChrome();
 }
 
@@ -1033,9 +1035,11 @@ void loop() {
   }
 
   // BT link maintenance — connect runs in its own task; the by-name
-  // inquiry blocks 10-30 s and must not freeze touch/UI.
+  // inquiry blocks 10-30 s and must not freeze touch/UI. Failed attempts
+  // (bridge unpowered) hog the radio and starve the BLE scan, so they
+  // back off to 45 s after 3 straight misses.
   if (!btPaused() && !SerialBT.connected() && !btConnecting &&
-      millis() - lastBtTryMs > 15000) {
+      millis() - lastBtTryMs > (btFailCount >= 3 ? 45000UL : 15000UL)) {
     lastBtTryMs = millis(); btConnecting = true;
     xTaskCreate(btConnectTask, "btc", 4096, nullptr, 1, nullptr);
   }
