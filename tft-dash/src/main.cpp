@@ -365,6 +365,9 @@ void klTick() {
     if (absentSinceMs == 0) absentSinceMs = now;
     if (!klArmed && (now - absentSinceMs) > ARM_AFTER_S * 1000UL) {
       klArmed = true; chirp(2); toast("ARMED - fob away", cWarn); pendingAnim = 1;
+      // arming happens ~8s AFTER the display already slept (12s fob TTL) —
+      // wake it briefly so the ARM animation is actually seen
+      if (!dispOn) dispForceUntilMs = now + 6000;
     }
   }
 }
@@ -784,11 +787,14 @@ void drawCfg() {
 }
 
 /* =========================================================== arm/disarm animation */
-void animLock(uint16_t col, int shY) {   // padlock stage; shY = shackle top
-  tft.fillRect(0, 27, W, 250, cBg);      // (66 = open/raised, 92 = closed)
-  tft.fillRect(80, shY, 12, 144 - shY, col);    // left leg
-  tft.fillRect(148, shY, 12, 144 - shY, col);   // right leg
-  tft.fillRect(80, shY, 80, 12, col);           // top bridge
+void animLock(uint16_t col, int shY, int rLeg) {
+  // padlock stage. shY = shackle bridge top (66 raised = open, 92 = closed);
+  // rLeg = right-leg length: short (ends in the AIR, gap to the body) = open,
+  // reaches down into the body = closed — the gap is the unlock cue.
+  tft.fillRect(0, 27, W, 250, cBg);
+  tft.fillRect(80, shY, 12, 144 - shY, col);    // left leg (always anchored)
+  tft.fillRect(80, shY, 80, 12, col);           // bridge
+  tft.fillRect(148, shY, 12, rLeg, col);        // right leg (the "mouth")
   tft.fillRoundRect(70, 138, 100, 74, 10, col); // body
   tft.fillCircle(120, 176, 10, cBg);            // keyhole
   tft.fillRect(115, 162, 10, 18, cBg);
@@ -797,11 +803,12 @@ void playAnim(uint8_t kind) {            // 1 = ARM (close), 2 = DISARM (open)
   Serial.printf("[anim] %s\n", kind == 1 ? "arm" : "disarm");
   uint16_t col = kind == 1 ? cBad : cGood;
   const char *txt = kind == 1 ? "ARMED" : "DISARMED";
-  const int ys[5] = {66, 73, 79, 86, 92};
-  if (kind == 1) {                       // shackle slides down, lock closes
-    for (uint8_t i = 0; i < 5; i++) { animLock(col, ys[i]); delay(70); }
-  } else {                               // shackle lifts, lock opens
-    for (int8_t i = 4; i >= 0; i--) { animLock(col, ys[i]); delay(70); }
+  const int shYs[5] = {66, 73, 79, 86, 92};
+  const int rls[5]  = {20, 28, 36, 44, 52};
+  if (kind == 1) {                       // right leg plugs in, shackle seats: LOCK
+    for (uint8_t i = 0; i < 5; i++) { animLock(col, shYs[i], rls[i]); delay(70); }
+  } else {                               // right leg lifts clear of the body: UNLOCK
+    for (int8_t i = 4; i >= 0; i--) { animLock(col, shYs[i], rls[i]); delay(70); }
     for (int r = 52; r <= 116; r += 12) {       // "fob is back" sonar ping
       tft.drawCircle(120, 150, r, col); delay(40);
     }
