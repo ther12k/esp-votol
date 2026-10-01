@@ -320,6 +320,7 @@ bool fobPresent() { return fobMacLen == 6 && (millis() - fobLastSeenMs) < FOB_TT
 bool dispOn = true;
 uint32_t dispForceUntilMs = 0;
 uint16_t dotCache = 0xFFFF;
+int8_t btOffIconShown = -1;          // crossed-BT badge state (top right)
 void drawChrome();                                   // fwd
 void uiInvalidate() {
   Slot *all[] = {&sTeleBig, &sTeleCur, &sTelePow, &sTeleRpm, &sTeleGear, &sTeleTc,
@@ -334,6 +335,7 @@ void setDisplay(bool on) {
   if (on) {
     uiInvalidate();
     dotCache = 0xFFFF;                   // force header dot repaint
+    btOffIconShown = -1;                 // and the BT-off badge
     drawChrome();
   } else {
     // NOT panel DISPOFF: on these shields the always-on backlight shines
@@ -604,7 +606,8 @@ void drawHeader() {
   uint32_t age = tele.has ? (millis() - tele.atMs) / 1000 : 999;
   if (wifiPhase)             { snprintf(h, sizeof(h), "VOTOL setup window"); col = uiAcc; }
   else if (btPaused())        { snprintf(h, sizeof(h), "VOTOL  bt paused");  col = cAcc; }
-  else if (!btLinkOn)         { snprintf(h, sizeof(h), "VOTOL  bt off");     col = cDim; }
+  else if (!btLinkOn)         snprintf(h, sizeof(h), "VOTOL %s",   // plain — badge shows the state
+                page == PG_TELE ? PANE_NAMES[telePane] : PAGE_NAMES[page]);
   else if (!SerialBT.connected()) { snprintf(h, sizeof(h), "VOTOL  bt search"); col = cWarn; }
   else if (!tele.has || age > 10)  { snprintf(h, sizeof(h), "VOTOL  no data");   col = cWarn; }
   else snprintf(h, sizeof(h), "VOTOL %s",
@@ -612,13 +615,27 @@ void drawHeader() {
   slotPrint(sHeader, 0, 0, 190, 26, 2, h, col, cBg2);
 
   uint16_t dot = cBad;
-  if (!wifiPhase && tele.has) {
+  if (!btLinkOn) dot = 0;                   // link intentionally off: no alarm dot
+  else if (!wifiPhase && tele.has) {
     if (age < 5) dot = cGood; else if (age < 30) dot = cWarn;
   } else if (!wifiPhase && SerialBT.connected()) dot = cWarn;
   if (dot != dotCache) {
     tft.fillRect(216, 7, 18, 12, cBg2);
-    tft.fillCircle(225, 13, 6, dot);
+    if (dot) tft.fillCircle(225, 13, 6, dot);
     dotCache = dot;
+  }
+
+  // BT-off badge: crossed "BT" left of the dot
+  bool off = !btLinkOn;
+  if (off != (bool)btOffIconShown) {
+    btOffIconShown = off;
+    tft.fillRect(190, 4, 24, 20, cBg2);
+    if (off) {
+      tft.setTextSize(1); tft.setTextColor(cDim);
+      tft.setCursor(196, 10); tft.print("BT");
+      tft.drawLine(193, 4, 213, 22, cBad);
+      tft.drawLine(194, 4, 214, 22, cBad);
+    }
   }
 }
 
@@ -682,7 +699,7 @@ void drawTelemetry() {
     else            snprintf(b, sizeof(b), "%.16s", CTL_STATUS[tele.status]);
     slotPrint(sTeleStat, 8, 214, 224, 18, 2, b, tele.fault ? cWarn : cDim, cBg);
   } else {
-    const char *m = !btLinkOn ? "bt link off (serial 'B' to enable)"
+    const char *m = !btLinkOn ? "telemetry off"
                   : !SerialBT.connected() ? "bluetooth: searching bridge"
                                           : "linked — waiting for frames";
     slotPrint(sTeleStat, 8, 214, 224, 18, 2, m, cWarn, cBg);
