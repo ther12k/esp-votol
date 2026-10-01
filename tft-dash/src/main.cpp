@@ -310,7 +310,12 @@ Slot sSys[8], sToast, sHeader;
 Slot sKlState, sKlFob, sKlInfo;
 int8_t btnCache = -1;
 
-bool fobPresent() { return fobMacLen == 6 && (millis() - fobLastSeenMs) < FOB_TTL_S * 1000UL; }
+bool fobPresent() {
+  // lastSeen==0 means "never seen since boot" — without the guard the pod
+  // thinks the fob is present for the first FOB_TTL_S after every power-on
+  return fobMacLen == 6 && fobLastSeenMs != 0 &&
+         (millis() - fobLastSeenMs) < FOB_TTL_S * 1000UL;
+}
 
 /* ---- display power: follows the registered iTag ----
  * unregistered fob -> always on (you must be able to see what you do);
@@ -375,8 +380,13 @@ void klTick() {
     // animation FIRST, screen off ~6s later (same 12s of silence needed
     // as before; no robustness change)
     if (!klArmed && (now - fobLastSeenMs) > ARM_AFTER_S * 1000UL) {
-      klArmed = true; chirp(2); toast("ARMED - fob away", cWarn); pendingAnim = 1;
-      dispForceUntilMs = now + 6000;      // keep the screen lit through it (also from sleep)
+      klArmed = true; chirp(2);
+      if (fobLastSeenMs >= bootMs) {       // fob was around this boot: show it
+        toast("ARMED - fob away", cWarn); pendingAnim = 1;
+        dispForceUntilMs = now + 6000;     // keep the screen lit through it
+      } else {                             // powered on with fob already off:
+        Serial.println("[kl] armed silently — fob off since boot");
+      }                                    // never light the screen at all
       absentSinceMs = now;
     }
   }
@@ -728,8 +738,9 @@ void drawKeyless() {
   snprintf(b, sizeof(b), "%s", klArmed ? "ARMED" : (grace ? "grace" : "DISARMED"));
   slotPrint(sKlState, 8, 44, 224, 32, szHero(), b, klArmed ? cBad : cGood, cBg);
   if (fobPresent()) snprintf(b, sizeof(b), "fob: near  %d dBm", fobRssi);
-  else              snprintf(b, sizeof(b), "fob: away  %lds",
-                             (long)((millis() - fobLastSeenMs) / 1000));
+  else if (fobLastSeenMs) snprintf(b, sizeof(b), "fob: away  %lds",
+                                   (long)((millis() - fobLastSeenMs) / 1000));
+  else              snprintf(b, sizeof(b), "fob: no signal");
   slotPrint(sKlFob, 8, 90, 224, 18, 2, b, fobPresent() ? cGood : cDim, cBg);
   fobMacStr(macs, sizeof(macs));
   snprintf(b, sizeof(b), "%.23s", macs);
