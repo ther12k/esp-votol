@@ -16,17 +16,21 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.View
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.journeyapps.barcodescanner.ScanContract
@@ -34,13 +38,12 @@ import com.journeyapps.barcodescanner.ScanOptions
 import java.util.UUID
 
 /**
- * VOTOL Pod Remote — direct BLE command link to the tft-dash display pod.
+ * VOTOL Pod Remote — mobile control center for the tft-dash display pod.
  *
- * Protocol (mirrors the pod firmware): service c9d01402-…, write
- * "CMD:SECRET" to c9d01403-…, replies arrive as notifications on
- * c9d01404-… ("OK DISARM" / "ERR KEY") alongside status frames
- * ("ARMED FON"). SECRET = the 32-hex pairing key shown as a QR in the
- * pod's SYS → SET tab.
+ * Three sections with Material 3 Bottom Navigation:
+ *  1. Control: Hero status, battery voltage, fob presence, DISARM / ARM / PANIC.
+ *  2. Config: Manage PIN, wheel circumference, physical fobs, bridge BT dial.
+ *  3. Pairing: QR scanner (SYS → SET), manual key entry, forget pod.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -54,17 +57,61 @@ class MainActivity : AppCompatActivity() {
     private var gatt: BluetoothGatt? = null
     private var cmdChar: BluetoothGattCharacteristic? = null
     private var statChar: BluetoothGattCharacteristic? = null
+    private var isConnected = false
     private var scanning = false
+
+    // State
     private var armed: Boolean? = null
     private var fobNear: Boolean? = null
+    private var voltage: String = "--.- V"
     private var pendingReply: ((Boolean, String) -> Unit)? = null
 
+    // Config cache from pod
+    private var podPin: String = "--"
+    private var podWheel: String = "--"
+    private var podFobCount: Int = 0
+    private var podBtOn: Boolean = false
+
+    // Views: Global
+    private lateinit var pageTitle: TextView
+    private lateinit var linkBadge: TextView
+    private lateinit var bottomNav: BottomNavigationView
+
+    // Views: Control Tab
+    private lateinit var viewControl: View
+    private lateinit var statusCard: MaterialCardView
+    private lateinit var stateIcon: TextView
     private lateinit var stateText: TextView
     private lateinit var subText: TextView
-    private lateinit var replyText: TextView
-    private lateinit var pairCard: MaterialCardView
-    private lateinit var keyInput: EditText
+    private lateinit var voltText: TextView
+    private lateinit var fobText: TextView
     private lateinit var connectBtn: MaterialButton
+    private lateinit var disarmBtn: MaterialButton
+    private lateinit var armBtn: MaterialButton
+    private lateinit var panicBtn: MaterialButton
+    private lateinit var replyText: TextView
+
+    // Views: Config Tab
+    private lateinit var viewConfig: View
+    private lateinit var refreshCfgBtn: MaterialButton
+    private lateinit var cfgPinStatus: TextView
+    private lateinit var newPinInput: EditText
+    private lateinit var setPinBtn: MaterialButton
+    private lateinit var cfgWheelStatus: TextView
+    private lateinit var wheelInput: EditText
+    private lateinit var setWheelBtn: MaterialButton
+    private lateinit var cfgFobStatus: TextView
+    private lateinit var clrFobsBtn: MaterialButton
+    private lateinit var cfgBtStatus: TextView
+    private lateinit var btOffBtn: MaterialButton
+    private lateinit var btOnBtn: MaterialButton
+
+    // Views: Pairing Tab
+    private lateinit var viewPairing: View
+    private lateinit var scanBtn: MaterialButton
+    private lateinit var keyInput: EditText
+    private lateinit var saveKeyBtn: MaterialButton
+    private lateinit var forgetKeyBtn: MaterialButton
 
     private fun prefs() = getSharedPreferences("votol_pod", Context.MODE_PRIVATE)
     private fun key(): String? = prefs().getString("key", null)
@@ -73,24 +120,145 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        stateText = findViewById(R.id.stateText)
-        subText = findViewById(R.id.subText)
-        replyText = findViewById(R.id.replyText)
-        pairCard = findViewById(R.id.pairCard)
-        keyInput = findViewById(R.id.keyInput)
-        connectBtn = findViewById(R.id.connectBtn)
+        bindViews()
+        setupListeners()
 
         adapter = (getSystemService(BLUETOOTH_SERVICE) as BluetoothManager).adapter
 
-        findViewById<MaterialButton>(R.id.saveKeyBtn).setOnClickListener { saveKey() }
-        findViewById<MaterialButton>(R.id.scanBtn).setOnClickListener { launchQrScan() }
-        connectBtn.setOnClickListener { connectOrDisconnect() }
-        findViewById<MaterialButton>(R.id.disarmBtn).setOnClickListener { send("DISARM") }
-        findViewById<MaterialButton>(R.id.armBtn).setOnClickListener { send("ARM") }
-        findViewById<MaterialButton>(R.id.panicBtn).setOnClickListener { send("PANIC") }
+        // Show saved key in input if present
+        key()?.let { keyInput.setText(it) }
 
         refreshUi()
         ensurePermissions()
+    }
+
+    private fun bindViews() {
+        pageTitle = findViewById(R.id.pageTitle)
+        linkBadge = findViewById(R.id.linkBadge)
+        bottomNav = findViewById(R.id.bottomNav)
+
+        viewControl = findViewById(R.id.viewControl)
+        statusCard = findViewById(R.id.statusCard)
+        stateIcon = findViewById(R.id.stateIcon)
+        stateText = findViewById(R.id.stateText)
+        subText = findViewById(R.id.subText)
+        voltText = findViewById(R.id.voltText)
+        fobText = findViewById(R.id.fobText)
+        connectBtn = findViewById(R.id.connectBtn)
+        disarmBtn = findViewById(R.id.disarmBtn)
+        armBtn = findViewById(R.id.armBtn)
+        panicBtn = findViewById(R.id.panicBtn)
+        replyText = findViewById(R.id.replyText)
+
+        viewConfig = findViewById(R.id.viewConfig)
+        refreshCfgBtn = findViewById(R.id.refreshCfgBtn)
+        cfgPinStatus = findViewById(R.id.cfgPinStatus)
+        newPinInput = findViewById(R.id.newPinInput)
+        setPinBtn = findViewById(R.id.setPinBtn)
+        cfgWheelStatus = findViewById(R.id.cfgWheelStatus)
+        wheelInput = findViewById(R.id.wheelInput)
+        setWheelBtn = findViewById(R.id.setWheelBtn)
+        cfgFobStatus = findViewById(R.id.cfgFobStatus)
+        clrFobsBtn = findViewById(R.id.clrFobsBtn)
+        cfgBtStatus = findViewById(R.id.cfgBtStatus)
+        btOffBtn = findViewById(R.id.btOffBtn)
+        btOnBtn = findViewById(R.id.btOnBtn)
+
+        viewPairing = findViewById(R.id.viewPairing)
+        scanBtn = findViewById(R.id.scanBtn)
+        keyInput = findViewById(R.id.keyInput)
+        saveKeyBtn = findViewById(R.id.saveKeyBtn)
+        forgetKeyBtn = findViewById(R.id.forgetKeyBtn)
+    }
+
+    private fun setupListeners() {
+        bottomNav.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_control -> switchTab(0)
+                R.id.nav_config -> switchTab(1)
+                R.id.nav_pairing -> switchTab(2)
+            }
+            true
+        }
+
+        // Control Tab
+        connectBtn.setOnClickListener { connectOrDisconnect() }
+        disarmBtn.setOnClickListener { send("DISARM") }
+        armBtn.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("ARM the alarm?")
+                .setMessage("Pod screen will enter armed standby mode.")
+                .setPositiveButton("ARM") { _, _ -> send("ARM") }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+        panicBtn.setOnClickListener { send("PANIC") }
+
+        // Config Tab
+        refreshCfgBtn.setOnClickListener { send("GETCFG") }
+        setPinBtn.setOnClickListener {
+            val pin = newPinInput.text.toString().trim()
+            if (pin.length in 4..12) {
+                send("SETPIN", pin)
+                newPinInput.setText("")
+            } else {
+                toast("PIN must be 4 to 12 characters")
+            }
+        }
+        setWheelBtn.setOnClickListener {
+            val w = wheelInput.text.toString().trim()
+            val num = w.toFloatOrNull()
+            if (num != null && num in 0.5f..5.0f) {
+                send("SETWHEEL", w)
+                wheelInput.setText("")
+            } else {
+                toast("Wheel must be between 0.5 and 5.0 metres")
+            }
+        }
+        clrFobsBtn.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Clear all fobs?")
+                .setMessage("All registered physical iTags will be removed from the pod.")
+                .setPositiveButton("Clear All") { _, _ -> send("CLRFOB") }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+        btOffBtn.setOnClickListener { send("SETBT", "0") }
+        btOnBtn.setOnClickListener { send("SETBT", "1") }
+
+        // Pairing Tab
+        scanBtn.setOnClickListener { launchQrScan() }
+        saveKeyBtn.setOnClickListener { saveKey() }
+        forgetKeyBtn.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Forget pairing key?")
+                .setMessage("You will need to scan the pod QR code again.")
+                .setPositiveButton("Forget") { _, _ ->
+                    prefs().edit().remove("key").apply()
+                    keyInput.setText("")
+                    toast("key removed")
+                    refreshUi()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    }
+
+    private fun switchTab(idx: Int) {
+        viewControl.visibility = if (idx == 0) View.VISIBLE else View.GONE
+        viewConfig.visibility = if (idx == 1) View.VISIBLE else View.GONE
+        viewPairing.visibility = if (idx == 2) View.VISIBLE else View.GONE
+
+        pageTitle.text = when (idx) {
+            0 -> "Remote Control"
+            1 -> "Pod Settings"
+            else -> "Pairing & Key"
+        }
+
+        if (idx == 1 && isConnected) {
+            // Auto fetch current config on entering config tab
+            send("GETCFG")
+        }
     }
 
     /* ----------------------------- pairing key ----------------------------- */
@@ -99,10 +267,11 @@ class MainActivity : AppCompatActivity() {
         val t = raw.trim().uppercase()
         val m = Regex("^VOTOL:([0-9A-F]{32})$").find(t)
         if (m != null) return m.groupValues[1]
-        return if (Regex("^[0-9A-F]{32}$").matches(t)) t else null
+        if (Regex("^[0-9A-F]{32}$").matches(t)) return t
+        if (Regex("^[0-9A-Z]{4,12}$").matches(t)) return t
+        return null
     }
 
-    /** QR scan: pod's SYS → SET tab shows VOTOL:<32hex>; scan fills + saves. */
     private val scanLauncher = registerForActivityResult(ScanContract()) { result ->
         val contents = result.contents
         if (contents.isNullOrBlank()) return@registerForActivityResult
@@ -114,7 +283,7 @@ class MainActivity : AppCompatActivity() {
         scanLauncher.launch(
             ScanOptions()
                 .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                .setPrompt("point at the pod's QR — SYS → SET")
+                .setPrompt("Point at the pod QR: SYS → SET")
                 .setBeepEnabled(false)
                 .setOrientationLocked(true)
         )
@@ -123,12 +292,13 @@ class MainActivity : AppCompatActivity() {
     private fun saveKey() {
         val k = parseKey(keyInput.text.toString())
         if (k == null) {
-            toast("not a VOTOL key (VOTOL:<32 hex> or 32 hex)")
+            toast("Invalid key format (must be 32-hex or 4-12 PIN)")
             return
         }
         prefs().edit().putString("key", k).apply()
-        toast("key saved")
+        toast("Key saved successfully!")
         refreshUi()
+        switchTab(0)
     }
 
     /* ------------------------------ permissions ---------------------------- */
@@ -145,16 +315,6 @@ class MainActivity : AppCompatActivity() {
         if (missing.isNotEmpty()) ActivityCompat.requestPermissions(this, missing.toTypedArray(), 1)
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<out String>, grantResults: IntArray,
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode != 1) return
-        if (grantResults.any { it != PackageManager.PERMISSION_GRANTED }) {
-            subText.text = "Bluetooth permissions denied — allow them in Settings"
-        }
-    }
-
     private fun hasBlePermission(): Boolean = if (Build.VERSION.SDK_INT >= 31) {
         ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) ==
             PackageManager.PERMISSION_GRANTED &&
@@ -168,16 +328,18 @@ class MainActivity : AppCompatActivity() {
     /* ------------------------------- scanning ------------------------------ */
 
     private fun connectOrDisconnect() {
-        if (gatt != null) {
+        if (isConnected || gatt != null) {
             disconnect()
             return
         }
         if (key() == null) {
-            toast("save the pairing key first")
+            toast("Pair with the pod first (Scan QR)")
+            switchTab(2)
             return
         }
-        if (adapter == null || adapter!!.isEnabled == false) {
-            subText.text = "Bluetooth is off — enable it and tap Connect"
+        if (adapter?.isEnabled != true) {
+            subText.text = "Bluetooth is disabled on phone"
+            toast("Please enable Bluetooth")
             return
         }
         if (!hasBlePermission()) {
@@ -191,8 +353,9 @@ class MainActivity : AppCompatActivity() {
     private fun startScan() {
         if (scanning) return
         scanning = true
+        subText.text = "scanning for pod… stand near bike"
         refreshUi()
-        subText.text = "scanning for the pod… (stand near the bike)"
+
         val scanner = adapter?.bluetoothLeScanner ?: run { scanning = false; return }
         val filters = listOf(
             ScanFilter.Builder().setServiceUuid(android.os.ParcelUuid(svcUuid)).build(),
@@ -201,10 +364,11 @@ class MainActivity : AppCompatActivity() {
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
+
         scanner.startScan(filters, settings, scanCb)
         main.postDelayed({
-            if (scanning) stopScan("pod not found — is it powered and awake?")
-        }, 15000)
+            if (scanning) stopScan("pod not found — is it powered on?")
+        }, 12000)
     }
 
     @SuppressLint("MissingPermission")
@@ -229,17 +393,17 @@ class MainActivity : AppCompatActivity() {
             if (devName == "votol-dash" || hasUuid || devName?.contains("votol", ignoreCase = true) == true) {
                 stopScan(null)
                 subText.text = "pod found — connecting…"
+                refreshUi()
                 gatt = if (Build.VERSION.SDK_INT >= 23) {
                     result.device.connectGatt(this@MainActivity, false, gattCb, BluetoothDevice.TRANSPORT_LE)
                 } else {
                     result.device.connectGatt(this@MainActivity, false, gattCb)
                 }
-                refreshUi()
             }
         }
 
         override fun onScanFailed(errorCode: Int) {
-            stopScan("scan failed ($errorCode) — check Bluetooth + location")
+            stopScan("scan failed ($errorCode)")
         }
     }
 
@@ -249,7 +413,15 @@ class MainActivity : AppCompatActivity() {
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
             when (newState) {
-                BluetoothProfile.STATE_CONNECTED -> g.discoverServices()
+                BluetoothProfile.STATE_CONNECTED -> {
+                    main.postDelayed({
+                        try { g.discoverServices() } catch (_: Exception) {}
+                    }, 300)
+                    runOnUiThread {
+                        subText.text = "connected — discovering services…"
+                        refreshUi()
+                    }
+                }
                 BluetoothProfile.STATE_DISCONNECTED -> runOnUiThread {
                     cleanupGatt()
                     subText.text = "disconnected"
@@ -267,7 +439,7 @@ class MainActivity : AppCompatActivity() {
             val svc = g.getService(svcUuid)
             if (svc == null) {
                 runOnUiThread {
-                    subText.text = "pod has no VOTOL service — wrong device?"
+                    subText.text = "VOTOL service not found on device"
                     cleanupGatt()
                     refreshUi()
                 }
@@ -279,14 +451,19 @@ class MainActivity : AppCompatActivity() {
                 g.setCharacteristicNotification(ch, true)
                 val d = ch.getDescriptor(cccUuid)
                 if (d != null) {
-                    d.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                    g.writeDescriptor(d)
+                    if (Build.VERSION.SDK_INT >= 33) {
+                        g.writeDescriptor(d, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+                    } else {
+                        d.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                        g.writeDescriptor(d)
+                    }
                 } else {
                     g.readCharacteristic(ch)
                 }
             }
+            isConnected = true
             runOnUiThread {
-                subText.text = "connected"
+                subText.text = "linked"
                 refreshUi()
             }
         }
@@ -329,7 +506,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun cleanupGatt() {
-        pendingReply?.invoke(false, "connection lost")
+        isConnected = false
+        pendingReply?.invoke(false, "connection closed")
         pendingReply = null
         try {
             gatt?.close()
@@ -337,6 +515,8 @@ class MainActivity : AppCompatActivity() {
         gatt = null
         cmdChar = null
         statChar = null
+        armed = null
+        fobNear = null
     }
 
     private fun disconnect() {
@@ -351,18 +531,37 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleFrame(text: String) {
         val frame = text.trim()
+        Log.i("PodRemote", "RX: $frame")
         runOnUiThread {
             if (frame.startsWith("OK") || frame.startsWith("ERR")) {
                 replyText.text = frame
                 pendingReply?.invoke(frame.startsWith("OK"), frame)
                 pendingReply = null
-                val m = Regex("\\b(ARMED|DISARMED|ARM|DISARM)\\b").find(frame)
-                if (m != null) armed = m.groupValues[1].startsWith("ARM")
+
+                if (frame.startsWith("OK ARMED")) armed = true
+                if (frame.startsWith("OK DISARM")) armed = false
+            } else if (frame.startsWith("CFG:")) {
+                // CFG:pin:wheel:fobCount:btLinkOn
+                val parts = frame.split(":")
+                if (parts.size >= 5) {
+                    podPin = parts[1]
+                    podWheel = parts[2]
+                    podFobCount = parts[3].toIntOrNull() ?: 0
+                    podBtOn = parts[4] == "1"
+                    updateConfigUi()
+                    toast("Config loaded")
+                }
             } else {
-                val m = Regex("^(ARMED|DISARMED)\\s+(FON|FOFF)").find(frame)
-                if (m != null) {
-                    armed = m.groupValues[1] == "ARMED"
-                    fobNear = m.groupValues[2] == "FON"
+                // status frame: "ARMED FON 78.5V"
+                val parts = frame.split(" ")
+                if (parts.isNotEmpty()) {
+                    armed = parts[0] == "ARMED"
+                }
+                if (parts.size >= 2) {
+                    fobNear = parts[1] == "FON"
+                }
+                if (parts.size >= 3 && parts[2].endsWith("V")) {
+                    voltage = parts[2]
                 }
             }
             refreshUi()
@@ -370,27 +569,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     @SuppressLint("MissingPermission")
-    private fun send(cmd: String) {
-        val g = gatt ?: run { toast("not connected"); return }
-        val ch = cmdChar ?: run { toast("link not ready"); return }
-        val k = key() ?: run { toast("save the pairing key first"); return }
-        if (pendingReply != null) { toast("busy — wait for the reply"); return }
+    private fun send(cmd: String, arg: String = "") {
+        val g = gatt ?: run { toast("Not connected"); return }
+        val ch = cmdChar ?: run { toast("Link not ready"); return }
+        val k = key() ?: run { toast("Save pairing key first"); return }
+        if (pendingReply != null) { toast("Busy…"); return }
 
-        replyText.text = "$cmd …"
+        replyText.text = "→ $cmd"
         pendingReply = { ok, msg ->
             runOnUiThread {
                 replyText.text = msg
-                toast(if (ok) "$cmd ok" else "$cmd refused")
+                toast(if (ok) "$cmd ✓" else "$cmd Refused")
             }
         }
         main.postDelayed({
             if (pendingReply != null) {
                 pendingReply = null
-                replyText.text = "no reply — pod asleep or out of range"
+                replyText.text = "timeout — pod didn't respond"
             }
         }, 5000)
 
-        val payload = "$cmd:$k"
+        val payload = if (arg.isEmpty()) "$cmd:$k" else "$cmd:$k:$arg"
         val bytes = payload.toByteArray(Charsets.UTF_8)
         val writeOk = if (Build.VERSION.SDK_INT >= 33) {
             g.writeCharacteristic(ch, bytes, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) == 0
@@ -407,36 +606,71 @@ class MainActivity : AppCompatActivity() {
 
     /* ---------------------------------- UI --------------------------------- */
 
+    private fun updateConfigUi() {
+        cfgPinStatus.text = "Current PIN: $podPin"
+        cfgWheelStatus.text = "Wheel circumference: $podWheel m"
+        cfgFobStatus.text = "Registered iTag fobs: $podFobCount"
+        cfgBtStatus.text = "Bridge BT dial: ${if (podBtOn) "ON (Bluetooth)" else "OFF (CAN Bus mode)"}"
+    }
+
     private fun refreshUi() {
-        val connected = gatt != null
-        val hasKey = key() != null
-        pairCard.visibility = if (hasKey && connected) android.view.View.GONE else android.view.View.VISIBLE
-
-        connectBtn.text = when {
-            scanning -> "scanning…"
-            connected -> "Disconnect"
-            else -> "Connect"
-        }
-
-        val state = when {
-            connected && armed == true -> "🔒 ARMED" to "#EF4444"
-            connected && armed == false -> "🔓 disarmed" to "#10B981"
-            connected -> "❔ unknown" to "#F5F7FB"
-            else -> "offline" to "#9AA3B2"
-        }
-        stateText.text = state.first
-        stateText.setTextColor(android.graphics.Color.parseColor(state.second))
-
-        if (connected) {
-            val fob = when (fobNear) {
-                true -> "fob near"
-                false -> "fob away"
-                null -> "fob ?"
+        runOnUiThread {
+            // Header badge
+            if (isConnected) {
+                linkBadge.text = "LINKED"
+                linkBadge.setTextColor(Color.parseColor("#10B981"))
+            } else if (scanning) {
+                linkBadge.text = "SEARCHING"
+                linkBadge.setTextColor(Color.parseColor("#F59E0B"))
+            } else {
+                linkBadge.text = "OFFLINE"
+                linkBadge.setTextColor(Color.parseColor("#9AA3B2"))
             }
-            if (subText.text.toString() in setOf("connected", "disconnected", "not connected") ||
-                subText.text.toString().startsWith("pod") || subText.text.toString().isEmpty()
-            ) {
-                subText.text = "connected · $fob"
+
+            // Connect button state
+            connectBtn.text = when {
+                scanning -> "Scanning…"
+                isConnected -> "Disconnect"
+                gatt != null -> "Connecting…"
+                else -> "Connect"
+            }
+
+            // Hero state display
+            when {
+                !isConnected -> {
+                    stateIcon.text = "📡"
+                    stateText.text = "OFFLINE"
+                    stateText.setTextColor(Color.parseColor("#9AA3B2"))
+                    statusCard.setCardBackgroundColor(Color.parseColor("#161B27"))
+                    voltText.text = "--.- V"
+                    fobText.text = "--"
+                }
+                armed == true -> {
+                    stateIcon.text = "🚫"
+                    stateText.text = "ARMED"
+                    stateText.setTextColor(Color.parseColor("#EF4444"))
+                    statusCard.setCardBackgroundColor(Color.parseColor("#2A1115"))
+                    voltText.text = voltage
+                    fobText.text = if (fobNear == true) "near" else "away"
+                    fobText.setTextColor(if (fobNear == true) Color.parseColor("#10B981") else Color.parseColor("#EF4444"))
+                }
+                armed == false -> {
+                    stateIcon.text = "🔓"
+                    stateText.text = "DISARMED"
+                    stateText.setTextColor(Color.parseColor("#10B981"))
+                    statusCard.setCardBackgroundColor(Color.parseColor("#10241C"))
+                    voltText.text = voltage
+                    fobText.text = if (fobNear == true) "near" else "away"
+                    fobText.setTextColor(if (fobNear == true) Color.parseColor("#10B981") else Color.parseColor("#9AA3B2"))
+                }
+                else -> {
+                    stateIcon.text = "❔"
+                    stateText.text = "LINKED"
+                    stateText.setTextColor(Color.parseColor("#F5F7FB"))
+                    statusCard.setCardBackgroundColor(Color.parseColor("#161B27"))
+                    voltText.text = voltage
+                    fobText.text = "--"
+                }
             }
         }
     }

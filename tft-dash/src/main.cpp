@@ -163,8 +163,13 @@ bool authOk(const char *sec) {
 }
 bool fobPresent();                     // fwd (defined with display state)
 extern bool klArmed;                   // fwd (keyless state machine)
+void blePushStatus();                  // fwd
 class SrvCb : public BLEServerCallbacks {
-  void onConnect(BLEServer *s) override { bleConnected = true; Serial.println("[ble] app connected"); }
+  void onConnect(BLEServer *s) override {
+    bleConnected = true;
+    Serial.println("[ble] app connected");
+    blePushStatus();
+  }
   void onDisconnect(BLEServer *s) override {
     bleConnected = false; Serial.println("[ble] app gone");
     BLEDevice::startAdvertising();
@@ -242,7 +247,9 @@ void bleTask(void *) {
   cmd->setCallbacks(new CmdCb());
   statChr = svc->createCharacteristic(
       BLE_STAT_UUID, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
+  statChr->setCallbacks(new StatCb());
   statChr->addDescriptor(new BLE2902());
+  statChr->setValue("DISARMED FOFF");
   svc->start();
   BLEAdvertising *adv = BLEDevice::getAdvertising();
   adv->addServiceUUID(BLE_SVC_UUID);
@@ -563,6 +570,15 @@ void displayTick() {
 
 /* ---- keyless state machine ---- */
 void drawStandby();                  // fwd (defined after playAnim)
+void blePushStatus() {
+  if (bleConnected && statChr) {
+    char st[32];
+    snprintf(st, sizeof(st), "%s %s", klArmed ? "ARMED" : "DISARMED",
+             fobPresent() ? "FON" : "FOFF");
+    statChr->setValue((uint8_t *)st, strlen(st));
+    statChr->notify();
+  }
+}
 void klTick() {
   if (fobCount == 0) return;                  // no fob learned yet
   uint32_t now = millis();
@@ -570,7 +586,10 @@ void klTick() {
   if (fobPresent()) {
     absentSinceMs = now;
     manualDisarmed = false;                   // owner (fob) is here — normal mode
-    if (klArmed) { klArmed = false; chirp(1); toast("DISARMED - fob back", cGood); pendingAnim = 2; }
+    if (klArmed) {
+      klArmed = false; chirp(1); toast("DISARMED - fob back", cGood); pendingAnim = 2;
+      blePushStatus();
+    }
   } else {
     if (absentSinceMs == 0) absentSinceMs = now;
     if (manualDisarmed) absentSinceMs = now;  // manual disarm: never auto-arm
@@ -580,6 +599,7 @@ void klTick() {
     // as before; no robustness change)
     if (!klArmed && !manualDisarmed && (now - fobLastSeenMs) > ARM_AFTER_S * 1000UL) {
       klArmed = true; chirp(2);
+      blePushStatus();
       if (fobLastSeenMs >= bootMs) {       // fob was around this boot: show it
         toast("ARMED - fob away", cWarn); pendingAnim = 1;
         dispForceUntilMs = now + 6000;     // keep the screen lit through it
@@ -620,6 +640,7 @@ void doDeviceArm() {
   if (fobPresent())  { toast("fob near - it would disarm", cDim); uiInvalidate(); drawChrome(); return; }
   klArmed = true; manualDisarmed = false; absentSinceMs = millis();
   chirp(2); pendingAnim = 1;
+  blePushStatus();
   Serial.println("[kl] armed from device (YES confirmed)");
 }
 void armAskTouch() {
@@ -1150,7 +1171,7 @@ void drawCfg() {
 }
 
 /* ---- phone-app command execution (runs in loop context) ---- */
-void bleExec(const char *cmd, const char *sec) {
+void bleExec(const char *cmd, const char *sec, const char *arg) {
   if (!authOk(sec)) {
     snprintf(bleReply, sizeof(bleReply), "ERR KEY");
     Serial.printf("[ble] cmd %s: BAD KEY\n", cmd);
@@ -1160,20 +1181,77 @@ void bleExec(const char *cmd, const char *sec) {
     if (fobPresent()) { snprintf(bleReply, sizeof(bleReply), "ERR FOB NEAR"); return; }
     klArmed = true; manualDisarmed = false; chirp(2);
     toast("ARMED - app", cWarn);
+    blePushStatus();
     if (dispOn) pendingAnim = 1;
     snprintf(bleReply, sizeof(bleReply), "OK ARMED");
   } else if (!strcmp(cmd, "DISARM")) {
     // sticky: stays disarmed + display on until ARM is sent (or fob seen)
     klArmed = false; manualDisarmed = true; absentSinceMs = millis(); chirp(1);
     toast("DISARMED - app", cGood);
+    blePushStatus();
     if (dispOn) pendingAnim = 2;
     snprintf(bleReply, sizeof(bleReply), "OK DISARM");
   } else if (!strcmp(cmd, "PANIC")) {
     panicUntilMs = millis() + PANIC_S * 1000UL;
     snprintf(bleReply, sizeof(bleReply), "OK PANIC");
   } else if (!strcmp(cmd, "STAT")) {
-    snprintf(bleReply, sizeof(bleReply), "%s %s", klArmed ? "ARMED" : "DISARMED",
-             fobPresent() ? "FON" : "FOFF");
+    float v = tele.has ? tele.v : 0.0f;
+    snprintf(bleReply, sizeof(bleReply), "%s %s %.1fV",
+             klArmed ? "ARMED" : "DISARMED",
+             fobPresent() ? "FON" : "FOFF", v);
+  } else if (!strcmp(cmd, "GETCFG")) {
+    snprintf(bleReply, sizeof(bleReply), "CFG:%s:%.2f:%d:%d",
+             pairPin[0] ? pairPin : "-", wheelCircM, (int)fobCount, btLinkOn ? 1 : 0);
+  } else if (!strcmp(cmd, "SETPIN")) {
+    if (!arg || !*arg || !strcasecmp(arg, "off") || !strcmp(arg, "-")) {
+      pairPin[0] = 0; prefs.remove("pin");
+      toast("PIN cleared", cWarn);
+      snprintf(bleReply, sizeof(bleReply), "OK PIN OFF");
+    } else if (strlen(arg) >= 4 && strlen(arg) <= 12) {
+      strncpy(pairPin, arg, 12); pairPin[12] = 0;
+      prefs.putString("pin", pairPin);
+      toast("PIN updated", cGood);
+      snprintf(bleReply, sizeof(bleReply), "OK PIN %s", pairPin);
+    } else {
+      snprintf(bleReply, sizeof(bleReply), "ERR PIN LEN");
+    }
+  } else if (!strcmp(cmd, "SETWHEEL")) {
+    float m = (float)atof(arg);
+    if (m >= 0.5f && m <= 5.0f) {
+      wheelCircM = m; prefs.putFloat("wcirc", m);
+      toast("wheel saved", cGood);
+      snprintf(bleReply, sizeof(bleReply), "OK WHEEL %.2f", m);
+    } else {
+      snprintf(bleReply, sizeof(bleReply), "ERR WHEEL VAL");
+    }
+  } else if (!strcmp(cmd, "ADDFOB")) {
+    bool ok = false;
+    if (arg && (arg[0] == 'N' || arg[0] == 'n') && arg[1] == ':') {
+      ok = fobAddName(arg + 2);
+    } else if (arg && strlen(arg) == 17) {
+      uint8_t mac[6]; int n = 0; const char *p = arg;
+      while (*p && n < 6) {
+        if (*p == ':' || *p == '-') { p++; continue; }
+        char hb[3] = {p[0], p[1], 0};
+        mac[n++] = (uint8_t)strtoul(hb, nullptr, 16);
+        p += 2;
+      }
+      if (n == 6) ok = fobAddMac(mac);
+    }
+    if (ok) {
+      fobSave(); toast("fob added", cGood);
+      snprintf(bleReply, sizeof(bleReply), "OK FOB %d", (int)fobCount);
+    } else {
+      snprintf(bleReply, sizeof(bleReply), "ERR FOB");
+    }
+  } else if (!strcmp(cmd, "CLRFOB")) {
+    fobCount = 0; prefs.putString("fobs", "");
+    toast("fobs cleared", cWarn);
+    snprintf(bleReply, sizeof(bleReply), "OK FOBS CLR");
+  } else if (!strcmp(cmd, "SETBT")) {
+    btLinkOn = (atoi(arg) != 0);
+    prefs.putBool("btlink", btLinkOn);
+    snprintf(bleReply, sizeof(bleReply), "OK BT %d", btLinkOn ? 1 : 0);
   } else {
     snprintf(bleReply, sizeof(bleReply), "ERR CMD");
     return;
@@ -1185,10 +1263,22 @@ void bleProcessPending() {
   char line[80];
   strncpy(line, bleCmdBuf, sizeof(line) - 1); line[sizeof(line) - 1] = 0;
   bleCmdPending = false;
-  char *sep = strpbrk(line, ":|");
-  if (sep) *sep = 0;
-  for (char *p = line; *p; p++) *p = toupper((unsigned char)*p);
-  bleExec(line, sep ? sep + 1 : "");
+  // format is "CMD:SECRET" or "CMD:SECRET:ARG"
+  char *p1 = strpbrk(line, ":|");
+  char *cmd = line;
+  char *sec = "";
+  char *arg = "";
+  if (p1) {
+    *p1 = 0;
+    sec = p1 + 1;
+    char *p2 = strpbrk(sec, ":|");
+    if (p2) {
+      *p2 = 0;
+      arg = p2 + 1;
+    }
+  }
+  for (char *p = cmd; *p; p++) *p = toupper((unsigned char)*p);
+  bleExec(cmd, sec, arg);
   if (bleConnected && statChr) {
     statChr->setValue((uint8_t *)bleReply, strlen(bleReply));
     statChr->notify();

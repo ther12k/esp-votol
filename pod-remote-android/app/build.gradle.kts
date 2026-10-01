@@ -11,8 +11,8 @@ android {
         applicationId = "id.my.votol.pod"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "2.0"
     }
 
     buildTypes {
