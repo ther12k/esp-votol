@@ -16,6 +16,7 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -85,9 +86,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var subText: TextView
     private lateinit var voltText: TextView
     private lateinit var fobText: TextView
+    private lateinit var securityToggleBtn: MaterialButton
     private lateinit var connectBtn: MaterialButton
-    private lateinit var disarmBtn: MaterialButton
-    private lateinit var armBtn: MaterialButton
     private lateinit var panicBtn: MaterialButton
     private lateinit var replyText: TextView
 
@@ -144,9 +144,8 @@ class MainActivity : AppCompatActivity() {
         subText = findViewById(R.id.subText)
         voltText = findViewById(R.id.voltText)
         fobText = findViewById(R.id.fobText)
+        securityToggleBtn = findViewById(R.id.securityToggleBtn)
         connectBtn = findViewById(R.id.connectBtn)
-        disarmBtn = findViewById(R.id.disarmBtn)
-        armBtn = findViewById(R.id.armBtn)
         panicBtn = findViewById(R.id.panicBtn)
         replyText = findViewById(R.id.replyText)
 
@@ -183,15 +182,7 @@ class MainActivity : AppCompatActivity() {
 
         // Control Tab
         connectBtn.setOnClickListener { connectOrDisconnect() }
-        disarmBtn.setOnClickListener { send("DISARM") }
-        armBtn.setOnClickListener {
-            AlertDialog.Builder(this)
-                .setTitle("ARM the alarm?")
-                .setMessage("Pod screen will enter armed standby mode.")
-                .setPositiveButton("ARM") { _, _ -> send("ARM") }
-                .setNegativeButton("Cancel", null)
-                .show()
-        }
+        securityToggleBtn.setOnClickListener { handleSecurityToggle() }
         panicBtn.setOnClickListener { send("PANIC") }
 
         // Config Tab
@@ -606,6 +597,25 @@ class MainActivity : AppCompatActivity() {
 
     /* ---------------------------------- UI --------------------------------- */
 
+    private fun handleSecurityToggle() {
+        if (!isConnected) {
+            connectOrDisconnect()
+            return
+        }
+        if (armed == true) {
+            // Currently ARMED -> DISARM immediately
+            send("DISARM")
+        } else {
+            // Currently DISARMED or unknown -> confirm before arming
+            AlertDialog.Builder(this)
+                .setTitle("ARM the alarm?")
+                .setMessage("Pod screen will enter armed standby mode.")
+                .setPositiveButton("ARM") { _, _ -> send("ARM") }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    }
+
     private fun updateConfigUi() {
         cfgPinStatus.text = "Current PIN: $podPin"
         cfgWheelStatus.text = "Wheel circumference: $podWheel m"
@@ -635,7 +645,7 @@ class MainActivity : AppCompatActivity() {
                 else -> "Connect"
             }
 
-            // Hero state display
+            // Hero state & security toggle button display
             when {
                 !isConnected -> {
                     stateIcon.text = "📡"
@@ -644,6 +654,11 @@ class MainActivity : AppCompatActivity() {
                     statusCard.setCardBackgroundColor(Color.parseColor("#161B27"))
                     voltText.text = "--.- V"
                     fobText.text = "--"
+
+                    securityToggleBtn.text = "Connect to Control"
+                    securityToggleBtn.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#161B27"))
+                    securityToggleBtn.setTextColor(Color.parseColor("#9AA3B2"))
+                    securityToggleBtn.strokeColor = ColorStateList.valueOf(Color.parseColor("#2A3242"))
                 }
                 armed == true -> {
                     stateIcon.text = "🚫"
@@ -653,6 +668,11 @@ class MainActivity : AppCompatActivity() {
                     voltText.text = voltage
                     fobText.text = if (fobNear == true) "near" else "away"
                     fobText.setTextColor(if (fobNear == true) Color.parseColor("#10B981") else Color.parseColor("#EF4444"))
+
+                    securityToggleBtn.text = "🔓 DISARM"
+                    securityToggleBtn.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
+                    securityToggleBtn.setTextColor(Color.parseColor("#07090D"))
+                    securityToggleBtn.strokeColor = ColorStateList.valueOf(Color.parseColor("#10B981"))
                 }
                 armed == false -> {
                     stateIcon.text = "🔓"
@@ -662,6 +682,11 @@ class MainActivity : AppCompatActivity() {
                     voltText.text = voltage
                     fobText.text = if (fobNear == true) "near" else "away"
                     fobText.setTextColor(if (fobNear == true) Color.parseColor("#10B981") else Color.parseColor("#9AA3B2"))
+
+                    securityToggleBtn.text = "🔒 ARM"
+                    securityToggleBtn.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#2A1115"))
+                    securityToggleBtn.setTextColor(Color.parseColor("#EF4444"))
+                    securityToggleBtn.strokeColor = ColorStateList.valueOf(Color.parseColor("#EF4444"))
                 }
                 else -> {
                     stateIcon.text = "❔"
@@ -670,6 +695,11 @@ class MainActivity : AppCompatActivity() {
                     statusCard.setCardBackgroundColor(Color.parseColor("#161B27"))
                     voltText.text = voltage
                     fobText.text = "--"
+
+                    securityToggleBtn.text = "🔒 ARM"
+                    securityToggleBtn.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#1E2638"))
+                    securityToggleBtn.setTextColor(Color.parseColor("#F5F7FB"))
+                    securityToggleBtn.strokeColor = ColorStateList.valueOf(Color.parseColor("#2A3242"))
                 }
             }
         }

@@ -199,19 +199,19 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Big DISARM Action -->
+                    <!-- Single Primary Toggle Action Button (ARM / DISARM) -->
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/disarmBtn"
+                        android:id="@+id/securityToggleBtn"
                         android:layout_width="match_parent"
-                        android:layout_height="74dp"
+                        android:layout_height="76dp"
                         android:layout_marginTop="18dp"
                         android:backgroundTint="#10B981"
                         android:text="🔓 DISARM"
                         android:textSize="20sp"
                         android:textStyle="bold"
-                        app:cornerRadius="18dp" />
+                        app:cornerRadius="20dp" />
 
-                    <!-- ARM & PANIC Row -->
+                    <!-- Quick Actions Row: Connect + Panic -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -219,43 +219,28 @@
                         android:orientation="horizontal">
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/armBtn"
+                            android:id="@+id/connectBtn"
+                            style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="0dp"
-                            android:layout_height="64dp"
+                            android:layout_height="60dp"
                             android:layout_weight="1"
                             android:layout_marginEnd="6dp"
-                            android:backgroundTint="#1E2638"
-                            android:text="🔒 ARM"
-                            android:textColor="#F5F7FB"
-                            android:textSize="16sp"
-                            android:textStyle="bold"
-                            app:cornerRadius="16dp"
-                            app:strokeColor="#2A3242"
-                            app:strokeWidth="1dp" />
+                            android:text="Connect"
+                            android:textSize="15sp"
+                            app:cornerRadius="16dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/panicBtn"
                             android:layout_width="0dp"
-                            android:layout_height="64dp"
+                            android:layout_height="60dp"
                             android:layout_weight="1"
                             android:layout_marginStart="6dp"
                             android:backgroundTint="#EF4444"
                             android:text="🚨 PANIC"
-                            android:textSize="16sp"
+                            android:textSize="15sp"
                             android:textStyle="bold"
                             app:cornerRadius="16dp" />
                     </LinearLayout>
-
-                    <!-- Connect / Disconnect button -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/connectBtn"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:layout_marginTop="14dp"
-                        android:text="Connect"
-                        android:textSize="15sp"
-                        app:cornerRadius="16dp" />
 
                     <TextView
                         android:id="@+id/replyText"
