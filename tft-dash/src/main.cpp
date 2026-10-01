@@ -1238,28 +1238,31 @@ void playAnim(uint8_t kind) {            // 1 = ARM (close), 2 = DISARM (open)
 
 /* ---- armed standby screen: STILL image, FULL screen ----
  * The backlight can't be turned off on this shield, so armed idle shows
- * a huge red X — readable from a distance: NOT ALLOWED / do not turn on.
- * Double-tap wakes the PIN gate. */
+ * a bold PROHIBITED symbol (thick ring + thick X, "not allowed", readable
+ * from a distance). Double-tap wakes the PIN gate. */
 void drawStandby() {
   pinScreen = false;
   tft.fillRect(0, 0, W, H, cBg);
-  const int x0 = 45, x1 = 195, y0 = 60, y1 = 210, t = 13;
-  for (int d = -t; d <= t; d++) {          // thick 45° diagonals (perpendicular offsets)
-    tft.drawLine(x0 + d, y0 + d, x1 + d, y1 + d, cBad);
-    tft.drawLine(x0 + d, y1 - d, x1 + d, y0 - d, cBad);
+  const int cx = 120, cy = 134, R = 98;
+  for (int r = R; r > R - 14; r--)            // ~14px bold ring
+    tft.drawCircle(cx, cy, r, cBad);
+  const int a = 68, t = 15;
+  for (int d = -t; d <= t; d++) {             // ~31px bold X inside the ring
+    tft.drawLine(cx - a + d, cy - a + d, cx + a + d, cy + a + d, cBad);
+    tft.drawLine(cx - a + d, cy + a - d, cx + a + d, cy - a + d, cBad);
   }
   tft.setTextColor(cBad); tft.setTextSize(4);
-  tft.setCursor(120 - 5 * 24, 236);        // "ARMED"
+  tft.setCursor(120 - 5 * 24, 244);           // "ARMED"
   tft.print("ARMED");
   tft.setTextSize(2); tft.setTextColor(cTxt);
   char b[24];
   if (tele.has && millis() - tele.atMs < 30000) snprintf(b, sizeof(b), "BAT %.1fV", tele.v);
   else snprintf(b, sizeof(b), "BAT --.-V");
-  tft.setCursor(120 - strlen(b) * 12, 280);
+  tft.setCursor(120 - strlen(b) * 12, 284);
   tft.print(b);
   tft.setTextSize(1); tft.setTextColor(cDim);
   const char *h = "double-tap: enter PIN";
-  tft.setCursor(120 - (int)strlen(h) * 3, 304);
+  tft.setCursor(120 - (int)strlen(h) * 3, 306);
   tft.print(h);
 }
 
