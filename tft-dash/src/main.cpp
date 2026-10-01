@@ -24,7 +24,8 @@
  * 's' swap axes, 'f'/'g' flip x/y, 'w' save touch setup to NVS,
  * 'r' 6 s raw dump, 'p' send SHOW now, 'd' display on 2 min,
  * 'f <mac>' set fob, 'c <metres>' wheel circumference (RIDE km/h),
- * 'a'/'A' preview the ARM/DISARM animation.
+ * 'a'/'A' preview the ARM/DISARM animation, 'B' BT link on/off
+ * (off while the bridge talks CAN to the VOTOL instead of BT SPP).
  *
  * TELE has three panes (tap the content to page through): RIDE = one big
  * speed number (km/h once the wheel circumference is set, else motor rpm),
@@ -268,6 +269,7 @@ void parseRx() {
 WebServer web(80);
 uint32_t bootMs = 0, lastPollMs = 0, lastTouchMs = 0, lastCycleMs = 0, lastBtTryMs = 0;
 uint32_t btPauseUntilMs = 0;
+bool btLinkOn = true;               // false = don't dial VOTOL-BT (bridge now talks CAN to the VOTOL)
 bool wifiPhase = true;
 char toastTxt[80] = "";
 uint16_t toastCol = 0;
@@ -279,6 +281,7 @@ void toast(const char *t, uint16_t c) {
 }
 bool btPaused() { return millis() < btPauseUntilMs; }
 void btPauseToggle() {
+  if (!btLinkOn) { toast("BT link is off (serial 'B')", cDim); return; }
   if (btPaused()) {
     btPauseUntilMs = 0;
     toast("BT resume", cGood);
@@ -598,6 +601,7 @@ void drawHeader() {
   uint32_t age = tele.has ? (millis() - tele.atMs) / 1000 : 999;
   if (wifiPhase)             { snprintf(h, sizeof(h), "VOTOL setup window"); col = uiAcc; }
   else if (btPaused())        { snprintf(h, sizeof(h), "VOTOL  bt paused");  col = cAcc; }
+  else if (!btLinkOn)         { snprintf(h, sizeof(h), "VOTOL  bt off");     col = cDim; }
   else if (!SerialBT.connected()) { snprintf(h, sizeof(h), "VOTOL  bt search"); col = cWarn; }
   else if (!tele.has || age > 10)  { snprintf(h, sizeof(h), "VOTOL  no data");   col = cWarn; }
   else snprintf(h, sizeof(h), "VOTOL %s",
@@ -675,7 +679,8 @@ void drawTelemetry() {
     else            snprintf(b, sizeof(b), "%.16s", CTL_STATUS[tele.status]);
     slotPrint(sTeleStat, 8, 214, 224, 18, 2, b, tele.fault ? cWarn : cDim, cBg);
   } else {
-    const char *m = !SerialBT.connected() ? "bluetooth: searching bridge"
+    const char *m = !btLinkOn ? "bt link off (serial 'B' to enable)"
+                  : !SerialBT.connected() ? "bluetooth: searching bridge"
                                           : "linked — waiting for frames";
     slotPrint(sTeleStat, 8, 214, 224, 18, 2, m, cWarn, cBg);
   }
@@ -726,9 +731,11 @@ void drawKeyless() {
 
 void drawSystem() {
   char b[48];
-  snprintf(b, sizeof(b), "bt %s %s", SerialBT.connected() ? "LINKED" : "search",
+  snprintf(b, sizeof(b), "bt %s %s",
+           !btLinkOn ? "OFF" : SerialBT.connected() ? "LINKED" : "search",
            BT_SERVER_NAME);
-  slotPrint(sSys[0], 8, 80, 224, 18, 2, b, SerialBT.connected() ? cGood : cDim, cBg);
+  slotPrint(sSys[0], 8, 80, 224, 18, 2, b,
+            (!btLinkOn || !SerialBT.connected()) ? cDim : cGood, cBg);
   snprintf(b, sizeof(b), "rx %lu tx %lu", (unsigned long)rxCount, (unsigned long)txCount);
   slotPrint(sSys[1], 8, 96, 224, 18, 2, b, cTxt, cBg);
   snprintf(b, sizeof(b), "touch v%d %s%s%s", touchVariant, tSwapXY ? "SW" : "",
@@ -920,6 +927,13 @@ void cliProcess(const char *line) {
     case 'a': pendingAnim = 1; break;      // test the ARM animation
     case 'A': pendingAnim = 2; break;      // test the DISARM animation
     case 'b': btPauseToggle(); break;
+    case 'B':                               // VOTOL link moved to CAN — BT dial on/off
+      btLinkOn = !btLinkOn;
+      prefs.putBool("btlink", btLinkOn);
+      if (!btLinkOn && SerialBT.connected()) SerialBT.disconnect();
+      Serial.printf("[cli] bt link %s\n", btLinkOn ? "on" : "off");
+      toast(btLinkOn ? "BT link on" : "BT link off", cAcc);
+      break;
     case 'd':
       dispForceUntilMs = millis() + 120000UL;
       if (!dispOn) setDisplay(true);
@@ -1001,6 +1015,7 @@ void setup() {
   }
 
   wheelCircM = prefs.getFloat("wcirc", 0);
+  btLinkOn = prefs.getBool("btlink", true);
 
   // boot follows the fob: dark from the first second when registered+away
   dispOn = (fobMacLen != 6);
@@ -1038,10 +1053,12 @@ void loop() {
   // inquiry blocks 10-30 s and must not freeze touch/UI. Failed attempts
   // (bridge unpowered) hog the radio and starve the BLE scan, so they
   // back off to 45 s after 3 straight misses.
-  if (!btPaused() && !SerialBT.connected() && !btConnecting &&
-      millis() - lastBtTryMs > (btFailCount >= 3 ? 45000UL : 15000UL)) {
-    lastBtTryMs = millis(); btConnecting = true;
-    xTaskCreate(btConnectTask, "btc", 4096, nullptr, 1, nullptr);
+  if (!btLinkOn || (!btPaused() && !SerialBT.connected() && !btConnecting &&
+      millis() - lastBtTryMs > (btFailCount >= 3 ? 45000UL : 15000UL))) {
+    if (btLinkOn) {
+      lastBtTryMs = millis(); btConnecting = true;
+      xTaskCreate(btConnectTask, "btc", 4096, nullptr, 1, nullptr);
+    }
   }
   parseRx();
   if (SerialBT.connected() && millis() - lastPollMs > 1000) {
