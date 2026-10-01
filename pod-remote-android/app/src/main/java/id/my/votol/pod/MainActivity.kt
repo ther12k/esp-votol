@@ -195,7 +195,8 @@ class MainActivity : AppCompatActivity() {
         subText.text = "scanning for the pod… (stand near the bike)"
         val scanner = adapter?.bluetoothLeScanner ?: run { scanning = false; return }
         val filters = listOf(
-            ScanFilter.Builder().setServiceUuid(android.os.ParcelUuid(svcUuid)).build()
+            ScanFilter.Builder().setServiceUuid(android.os.ParcelUuid(svcUuid)).build(),
+            ScanFilter.Builder().setDeviceName("votol-dash").build()
         )
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
@@ -222,9 +223,19 @@ class MainActivity : AppCompatActivity() {
     private val scanCb = object : ScanCallback() {
         @SuppressLint("MissingPermission")
         override fun onScanResult(callbackType: Int, result: ScanResult) {
-            stopScan(null)
-            subText.text = "pod found — connecting…"
-            result.device.connectGatt(this@MainActivity, false, gattCb)
+            val devName = try { result.device.name } catch (_: Exception) { null }
+                ?: result.scanRecord?.deviceName
+            val hasUuid = result.scanRecord?.serviceUuids?.any { it.uuid == svcUuid } == true
+            if (devName == "votol-dash" || hasUuid || devName?.contains("votol", ignoreCase = true) == true) {
+                stopScan(null)
+                subText.text = "pod found — connecting…"
+                gatt = if (Build.VERSION.SDK_INT >= 23) {
+                    result.device.connectGatt(this@MainActivity, false, gattCb, BluetoothDevice.TRANSPORT_LE)
+                } else {
+                    result.device.connectGatt(this@MainActivity, false, gattCb)
+                }
+                refreshUi()
+            }
         }
 
         override fun onScanFailed(errorCode: Int) {
@@ -270,13 +281,18 @@ class MainActivity : AppCompatActivity() {
                 if (d != null) {
                     d.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
                     g.writeDescriptor(d)
+                } else {
+                    g.readCharacteristic(ch)
                 }
-                g.readCharacteristic(ch)   // seed the hero with current status
             }
             runOnUiThread {
                 subText.text = "connected"
                 refreshUi()
             }
+        }
+
+        override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) {
+            statChar?.let { g.readCharacteristic(it) }
         }
 
         @Deprecated("pre-33 path")
@@ -288,10 +304,26 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        override fun onCharacteristicRead(
+            g: BluetoothGatt, ch: BluetoothGattCharacteristic, value: ByteArray, status: Int,
+        ) {
+            if (ch.uuid == statUuid && status == BluetoothGatt.GATT_SUCCESS) {
+                value.toString(Charsets.UTF_8).let { handleFrame(it) }
+            }
+        }
+
         @Deprecated("pre-33 path")
         override fun onCharacteristicChanged(g: BluetoothGatt, ch: BluetoothGattCharacteristic) {
             if (ch.uuid == statUuid) {
                 ch.value?.toString(Charsets.UTF_8)?.let { handleFrame(it) }
+            }
+        }
+
+        override fun onCharacteristicChanged(
+            g: BluetoothGatt, ch: BluetoothGattCharacteristic, value: ByteArray,
+        ) {
+            if (ch.uuid == statUuid) {
+                value.toString(Charsets.UTF_8).let { handleFrame(it) }
             }
         }
     }
@@ -311,8 +343,7 @@ class MainActivity : AppCompatActivity() {
         try {
             gatt?.disconnect()
         } catch (_: Exception) {}
-        cleanupGatt()
-        subText.text = "disconnected"
+        subText.text = "disconnecting…"
         refreshUi()
     }
 
@@ -360,8 +391,15 @@ class MainActivity : AppCompatActivity() {
         }, 5000)
 
         val payload = "$cmd:$k"
-        ch.value = payload.toByteArray(Charsets.UTF_8)
-        if (!g.writeCharacteristic(ch)) {
+        val bytes = payload.toByteArray(Charsets.UTF_8)
+        val writeOk = if (Build.VERSION.SDK_INT >= 33) {
+            g.writeCharacteristic(ch, bytes, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) == 0
+        } else {
+            ch.value = bytes
+            ch.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            g.writeCharacteristic(ch)
+        }
+        if (!writeOk) {
             pendingReply = null
             replyText.text = "write failed"
         }

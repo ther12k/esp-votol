@@ -49,6 +49,7 @@
  */
 
 #include <Arduino.h>
+#include <nvs_flash.h>
 #include <Preferences.h>
 #include <MCUFRIEND_kbv.h>
 
@@ -166,7 +167,7 @@ class SrvCb : public BLEServerCallbacks {
   void onConnect(BLEServer *s) override { bleConnected = true; Serial.println("[ble] app connected"); }
   void onDisconnect(BLEServer *s) override {
     bleConnected = false; Serial.println("[ble] app gone");
-    s->getAdvertising()->start();
+    BLEDevice::startAdvertising();
   }
 };
 class CmdCb : public BLECharacteristicCallbacks {
@@ -1634,6 +1635,11 @@ void setup() {
   tft.setRotation(0);
   Serial.printf("[tft-dash] LCD id 0x%04X\n", id);
 
+  esp_err_t nvsErr = nvs_flash_init();
+  if (nvsErr == ESP_ERR_NVS_NO_FREE_PAGES || nvsErr == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    nvs_flash_erase();
+    nvs_flash_init();
+  }
   prefs.begin("tftdash", false);
   touchVariant = prefs.getUChar("tvar", 0);
   tSwapXY = prefs.getBool("tswap", false);
