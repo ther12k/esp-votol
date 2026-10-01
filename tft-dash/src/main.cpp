@@ -456,7 +456,8 @@ bool btLinkOn = true;               // false = don't dial VOTOL-BT (bridge now t
 bool klArmed = false;               // declared early: display logic reads them
 uint32_t absentSinceMs = 0;
 bool manualDisarmed = false;        // phone/PIN disarm: stays disarmed until phone ARM
-uint32_t armConfirmUntilMs = 0;     // device ARM: two-tap confirmation window
+bool armAsk = false;                // YES/NO arm confirmation screen open
+uint32_t armAskUntilMs = 0;
 bool wifiPhase = true;
 char toastTxt[80] = "";
 uint16_t toastCol = 0;
@@ -536,16 +537,19 @@ void setDisplay(bool on) {
     dotCache = 0xFFFF;                   // force header dot repaint
     btOffIconShown = -1;                 // and the BT-off badge
     drawChrome();
-  } else if (pinScreen) {
-    // PIN screen stays as-is (it's its own mode)
-  } else if (klArmed) {
-    // backlight can't be killed on this shield — armed idle shows a
-    // STILL image (lock + battery) instead of black; double-tap = PIN
-    drawStandby();
-    Serial.println("[disp] standby (armed)");
   } else {
-    tft.fillRect(0, 0, W, H, 0x0000);    // not armed: plain dark
-    Serial.println("[disp] off");
+    armAsk = false;                        // a dialog can't outlive a sleep
+    if (pinScreen) {
+      // PIN gate/entry stays as-is (it's its own mode)
+    } else if (klArmed) {
+      // backlight can't be killed on this shield — armed idle shows a
+      // STILL image (lock + battery) instead of black; double-tap = PIN
+      drawStandby();
+      Serial.println("[disp] standby (armed)");
+    } else {
+      tft.fillRect(0, 0, W, H, 0x0000);    // not armed: plain dark
+      Serial.println("[disp] off");
+    }
   }
 }
 void displayTick() {
@@ -591,21 +595,52 @@ void panicToggle() {
   else if (klArmed) { panicUntilMs = millis() + PANIC_S * 1000UL; toast("SIREN 30s", cBad); }
   else toast("arm first (fob away)", cWarn);
 }
-/* device ARM — two-tap confirmation so a stray touch can never arm */
-void armConfirmTap() {
-  if (fobCount == 0) { toast("no fob registered", cDim); return; }
-  if (fobPresent()) { toast("fob near - it would disarm", cDim); return; }
-  if (millis() < armConfirmUntilMs) {          // second tap inside the window
-    armConfirmUntilMs = 0;
-    klArmed = true; manualDisarmed = false; absentSinceMs = millis();
-    chirp(2); pendingAnim = 1;
-    Serial.println("[kl] armed from device (confirmed)");
-  } else {                                     // first tap: ask again
-    armConfirmUntilMs = millis() + 3000;
-    toast("tap again to ARM", cWarn);
-    Serial.println("[kl] arm confirm window 3 s");
+/* device ARM — YES/NO confirmation screen (a stray tap can never arm) */
+bool mapTouch(int &px, int &py);                     // fwd
+void drawArmAsk() {
+  tft.fillRect(0, 0, W, H, cBg);
+  tft.setTextSize(2); tft.setTextColor(cTxt);
+  const char *t = "ARM THE ALARM?";
+  tft.setCursor((W - (int)strlen(t) * 12) / 2, 92); tft.print(t);
+  tft.setTextSize(1); tft.setTextColor(cDim);
+  const char *s = "screen will rest at the lock screen";
+  tft.setCursor((W - (int)strlen(s) * 6) / 2, 120); tft.print(s);
+  tft.fillRect(8, 168, 224, 58, cBg2); tft.drawRect(8, 168, 224, 58, cGood);
+  tft.setTextSize(3); tft.setTextColor(cGood);
+  const char *n = "NO";
+  tft.setCursor((W - (int)strlen(n) * 18) / 2, 186); tft.print(n);
+  tft.fillRect(8, 242, 224, 58, cBg2); tft.drawRect(8, 242, 224, 58, cBad);
+  tft.setTextColor(cBad);
+  const char *y = "YES, ARM";
+  tft.setCursor((W - (int)strlen(y) * 18) / 2, 260); tft.print(y);
+}
+void doDeviceArm() {
+  if (fobCount == 0) { toast("no fob registered", cDim); uiInvalidate(); drawChrome(); return; }
+  if (fobPresent())  { toast("fob near - it would disarm", cDim); uiInvalidate(); drawChrome(); return; }
+  klArmed = true; manualDisarmed = false; absentSinceMs = millis();
+  chirp(2); pendingAnim = 1;
+  Serial.println("[kl] armed from device (YES confirmed)");
+}
+void armAskTouch() {
+  int px, py;
+  if (!mapTouch(px, py)) return;
+  static uint32_t lastTapMs = 0;
+  if (millis() - lastTapMs < 180) return;
+  lastTapMs = millis();
+  if (py >= 160 && py <= 232) {          // NO
+    armAsk = false; uiInvalidate(); drawChrome();
+    Serial.println("[kl] arm cancelled");
+  } else if (py >= 234) {                // YES
+    armAsk = false;
+    doDeviceArm();
   }
-  btnCache = -1;                               // repaint the button now
+}
+void armAskOpen() {
+  if (fobCount == 0) { toast("no fob registered", cDim); return; }
+  if (fobPresent())  { toast("fob near - it would disarm", cDim); return; }
+  armAsk = true; armAskUntilMs = millis() + 10000;
+  drawArmAsk();
+  Serial.println("[kl] arm confirm asked");
 }
 
 /* ---- riding detection: sustained wheel rpm locks TELE to the RIDE pane ---- */
@@ -716,6 +751,9 @@ RawTouch readFilm() {
 
 int lastRawX = -1, lastRawY = -1, lastRawZ = -1;
 void drawChrome();                                   // fwd (used by handleTouch)
+bool mapTouch(int &px, int &py);                     // fwd (standby/PIN/arm dialogs)
+void drawPinScreen();                                // fwd (CONFIG change-PIN)
+extern uint8_t pinEntryMode;                         // defined with the PIN block
 void handleTouch() {
   static uint32_t lastSample = 0;
   if (millis() - lastSample < 30) return;
@@ -743,22 +781,28 @@ void handleTouch() {
     uint8_t nt = px < 84 ? 0 : px < 160 ? 1 : 2;
     if (nt != setupTab) { setupTab = nt; uiInvalidate(); drawChrome(); }
   } else if (page == PG_SETUP && setupTab == 1) {          // CONFIG content
-    if (py >= 84 && py <= 124 && px >= 8) {                // size S/M/L
+    // zones match the DRAWN widgets (size y44-84, value y112-140,
+    // accent y168-196, CHANGE PIN y216-250) with finger margins
+    if (py >= 40 && py <= 92 && px >= 8) {                 // size S/M/L
       uiScale = px < 86 ? 0 : px < 154 ? 1 : 2;
       uiSave(); drawChrome(); toast("size saved", uiAcc);
-    } else if (py >= 146 && py <= 174 && px >= 8 && px <= 230) {   // value color
+    } else if (py >= 106 && py <= 146 && px >= 8 && px <= 230) {   // value color
       uiVal = PALETTE[(px - 8) / 38];
       uiSave(); drawChrome(); toast("value color saved", uiAcc);
-    } else if (py >= 198 && py <= 226 && px >= 8 && px <= 230) {   // accent color
+    } else if (py >= 162 && py <= 202 && px >= 8 && px <= 230) {   // accent color
       uiAcc = PALETTE[(px - 8) / 38];
       uiSave(); drawChrome(); toast("accent color saved", uiAcc);
+    } else if (py >= 210 && py <= 256 && px >= 8 && px <= 232) {   // change PIN
+      pinEntryMode = 1;
+      drawPinScreen();
+      Serial.println("[pin] PIN change started");
     }
   } else if (page == PG_SETUP && setupTab == 0 &&
              py >= 212 && py <= 256 && px >= 8 && px <= 232) {
     btPauseToggle();                        // release BT for the phone app
   } else if (page == PG_KEYLESS && py >= 190 && py <= 250 && px >= 8 && px <= 232) {
     if (klArmed) panicToggle();               // siren on/off
-    else         armConfirmTap();             // two-tap ARM when disarmed
+    else         armAskOpen();                // YES/NO confirmation screen
   } else if (page == PG_TELE && py >= 30) {
     telePane = (telePane + 1) % 3;          // tap content: RIDE -> ELEC -> MOTOR
     lastCycleMs = millis();
@@ -771,7 +815,7 @@ void handleTouch() {
 /* ---- touch on the standby/PIN screens ----
  * (mapping duplicated from handleTouch — these run when the app UI doesn't) */
 void drawPinScreen();                // fwd (defined after playAnim)
-void pinTryDisarm();
+void pinOk();
 void pinDrawEntry();
 bool mapTouch(int &px, int &py) {
   static uint32_t lastSample = 0;
@@ -819,7 +863,7 @@ void pinTouch() {
   if (i <= 8 && pinLen < 12) pinEntry[pinLen++] = '1' + i;
   else if (i == 10 && pinLen < 12) pinEntry[pinLen++] = '0';
   else if (i == 9) pinLen = 0;
-  else if (i == 11) { pinTryDisarm(); return; }
+  else if (i == 11) { pinOk(); return; }
   pinDrawEntry();
 }
 
@@ -1019,27 +1063,16 @@ void drawKeyless() {
   }
 
   bool panic = millis() < panicUntilMs;
-  bool armCfm = !klArmed && millis() < armConfirmUntilMs;
-  int8_t st = (klArmed ? 1 : 0) | (panic ? 2 : 0) | (armCfm ? 4 : 0);
+  int8_t st = (klArmed ? 1 : 0) | (panic ? 2 : 0);
   if (st != btnCache) {
     btnCache = st;
     tft.fillRect(8, 190, 224, 60, cBg2);
-    if (klArmed) {
-      tft.drawRect(8, 190, 224, 60, panic ? cGood : cBad);
-      tft.setTextSize(3);
-      tft.setTextColor(panic ? cGood : cBad);
-      const char *t = panic ? "STOP" : "PANIC";
-      tft.setCursor(8 + (224 - strlen(t) * 18) / 2, 208);
-      tft.print(t);
-    } else {                       // disarmed: ARM with two-tap confirmation
-      tft.drawRect(8, 190, 224, 60, armCfm ? cWarn : cDim);
-      uint8_t ts = armCfm ? 2 : 3;
-      tft.setTextSize(ts);
-      tft.setTextColor(armCfm ? cWarn : cTxt);
-      const char *t = armCfm ? "TAP AGAIN: ARM" : "ARM";
-      tft.setCursor(8 + (224 - strlen(t) * 6 * ts) / 2, armCfm ? 212 : 208);
-      tft.print(t);
-    }
+    tft.drawRect(8, 190, 224, 60, panic ? cGood : klArmed ? cBad : cDim);
+    tft.setTextSize(3);
+    tft.setTextColor(panic ? cGood : klArmed ? cBad : cTxt);
+    const char *t = panic ? "STOP" : klArmed ? "PANIC" : "ARM";
+    tft.setCursor(8 + (224 - strlen(t) * 18) / 2, 208);
+    tft.print(t);
   }
 }
 
@@ -1104,8 +1137,13 @@ void drawCfg() {
     }
   }
   tft.setTextSize(1); tft.setTextColor(cDim);
-  tft.setCursor(8, 210); tft.print("long values auto-shrink to fit the page");
-  slotPrint(sToast, 8, 232, 224, 16, 1,
+  tft.setCursor(8, 206); tft.print("SECURITY");
+  tft.fillRect(8, 216, 224, 34, cBg2);
+  tft.drawRect(8, 216, 224, 34, cDim);
+  tft.setTextSize(2); tft.setTextColor(cTxt);
+  tft.setCursor(8 + (224 - 10 * 12) / 2, 225);
+  tft.print("CHANGE PIN");
+  slotPrint(sToast, 8, 256, 224, 16, 1,
             millis() - toastAtMs < 4000 ? toastTxt : "", toastCol, cBg);
 }
 
@@ -1198,36 +1236,58 @@ void playAnim(uint8_t kind) {            // 1 = ARM (close), 2 = DISARM (open)
   uiInvalidate(); drawChrome();          // restore the page underneath
 }
 
-/* ---- armed standby screen: STILL image, no animation ----
+/* ---- armed standby screen: STILL image, FULL screen ----
  * The backlight can't be turned off on this shield, so armed idle shows
- * a static lock + battery instead of black. Double-tap wakes a PIN gate. */
+ * a static lock + battery instead of black — and it takes the whole
+ * display (no header, no tab menu). Double-tap wakes the PIN gate. */
 void drawStandby() {
   pinScreen = false;
-  animLock(cBad, 92, 52);                // final closed-lock pose (clears area)
-  tft.setTextColor(cBad); tft.setTextSize(3);
-  tft.setCursor(120 - 3 * 18, 150);      // under the lock body
+  tft.fillRect(0, 0, W, H, cBg);
+  const int oy = 4;                    // lock pose (closed), vertically centered
+  tft.fillRect(80, 92 + oy, 12, 52, cBad);             // left leg
+  tft.fillRect(148, 92 + oy, 12, 52, cBad);            // right leg
+  tft.fillRect(80, 92 + oy, 80, 12, cBad);             // bridge
+  tft.fillRoundRect(70, 138 + oy, 100, 74, 10, cBad); // body
+  tft.fillCircle(120, 176 + oy, 10, cBg);             // keyhole
+  tft.fillRect(115, 162 + oy, 10, 18, cBg);
+  tft.setTextColor(cBad); tft.setTextSize(4);
+  tft.setCursor(120 - 5 * 24, 236);                   // "ARMED"
   tft.print("ARMED");
   tft.setTextSize(2); tft.setTextColor(cTxt);
   char b[24];
-  if (tele.has && millis() - tele.atMs < 30000)
-    snprintf(b, sizeof(b), "BAT %.1fV", tele.v);
-  else
-    snprintf(b, sizeof(b), "BAT --.-V");
-  tft.setCursor(120 - strlen(b) * 6, 186);
+  if (tele.has && millis() - tele.atMs < 30000) snprintf(b, sizeof(b), "BAT %.1fV", tele.v);
+  else snprintf(b, sizeof(b), "BAT --.-V");
+  tft.setCursor(120 - strlen(b) * 12, 280);
   tft.print(b);
   tft.setTextSize(1); tft.setTextColor(cDim);
-  tft.setCursor(120 - 23 * 3, 216);
-  tft.print("double-tap: enter PIN");
+  const char *h = "double-tap: enter PIN";
+  tft.setCursor(120 - (int)strlen(h) * 3, 304);
+  tft.print(h);
 }
 
-/* ---- PIN entry gate (over the standby screen) ---- */
+/* ---- PIN entry gate (over the standby screen) + on-device PIN change ----
+ * pinEntryMode: 0 = disarm gate, 1 = new PIN first entry, 2 = repeat. */
+uint8_t pinEntryMode = 0;
+char pinNew[13];
 Slot sPinDisp, sPinMsg;
+void pinTitle() {
+  const char *t = pinEntryMode == 0 ? "PIN TO DISARM"
+                : pinEntryMode == 1 ? "NEW PIN - EMPTY OK = CANCEL"
+                                    : "REPEAT NEW PIN";
+  tft.fillRect(0, 18, W, 12, cBg);
+  tft.setTextSize(1); tft.setTextColor(cDim);
+  tft.setCursor((W - (int)strlen(t) * 6) / 2, 22);
+  tft.print(t);
+  const char *m = pinEntryMode == 0
+                    ? (pairPin[0] ? "wrong PIN locks 15 s after 3 tries" : "no PIN set — set one in CONFIG")
+                    : pinEntryMode == 1 ? "4-12 digits"
+                                        : "repeat the same PIN";
+  slotPrint(sPinMsg, 8, 64, 224, 12, 1, m,
+            pinEntryMode == 0 && !pairPin[0] ? cWarn : cDim, cBg);
+}
 void drawPinScreen() {
   pinScreen = true; pinAtMs = millis(); pinLen = 0;
   tft.fillRect(0, 0, W, H, cBg);
-  // small title, centered
-  tft.setTextSize(1); tft.setTextColor(cDim);
-  tft.setCursor(81, 22); tft.print("PIN TO DISARM");
   // entry display
   tft.fillRect(30, 34, 180, 26, cBg2); tft.drawRect(30, 34, 180, 26, cDim);
   // keypad edge-to-edge: 4 rows to the bottom, big keys (76x54)
@@ -1244,11 +1304,7 @@ void drawPinScreen() {
       tft.setCursor(x + (76 - 18 * strlen(lab[i])) / 2, y + 15);
       tft.print(lab[i]);
     }
-  if (!pairPin[0]) {
-    slotPrint(sPinMsg, 8, 64, 224, 12, 1, "no PIN set — serial 'P <pin>'", cWarn, cBg);
-  } else {
-    slotPrint(sPinMsg, 8, 64, 224, 12, 1, "wrong PIN locks 15 s after 3 tries", cDim, cBg);
-  }
+  pinTitle();
   sPinDisp.last[0] = 1;                  // force entry redraw
 }
 void pinDrawEntry() {
@@ -1261,13 +1317,42 @@ void pinDrawEntry() {
   slotPrint(sPinDisp, 34, 38, 172, 18, 2, line, cTxt, cBg2);
 }
 void pinExitToStandby() {
-  pinScreen = false;
+  pinScreen = false; pinEntryMode = 0;
   drawStandby();
 }
-void pinTryDisarm() {
+void pinExitSetup(const char *msg, uint16_t col) {
+  pinEntryMode = 0; pinScreen = false;
+  toast(msg, col);
+  if (dispOn) { uiInvalidate(); drawChrome(); }
+  else if (klArmed) drawStandby();
+  else tft.fillRect(0, 0, W, H, 0x0000);
+}
+void pinOk() {
   pinEntry[pinLen] = 0;
-  if (!pairPin[0]) { slotPrint(sPinMsg, 8, 64, 224, 12, 1, "no PIN set", cWarn, cBg); pinLen = 0; pinDrawEntry(); return; }
-  if (authOk(pinEntry)) {
+  if (pinEntryMode == 1) {               // new PIN, first entry
+    if (pinLen == 0) { pinExitSetup("PIN change cancelled", cDim); return; }
+    if (pinLen < 4 || pinLen > 12) {
+      slotPrint(sPinMsg, 8, 64, 224, 12, 1, "need 4-12 digits", cWarn, cBg);
+      pinLen = 0; pinDrawEntry(); pinAtMs = millis();
+      return;
+    }
+    strcpy(pinNew, pinEntry); pinEntryMode = 2; pinLen = 0;
+    pinTitle(); pinDrawEntry();
+  } else if (pinEntryMode == 2) {        // repeat: must match
+    if (!strcmp(pinNew, pinEntry)) {
+      strncpy(pairPin, pinNew, 12); pairPin[12] = 0;
+      prefs.putString("pin", pairPin);
+      Serial.println("[pin] PIN changed on device");
+      pinExitSetup("PIN saved", cGood);
+      return;
+    }
+    pinEntryMode = 1; pinLen = 0;
+    pinTitle(); pinDrawEntry();
+    slotPrint(sPinMsg, 8, 64, 224, 12, 1, "mismatch - start over", cWarn, cBg);
+  } else if (!pairPin[0]) {
+    slotPrint(sPinMsg, 8, 64, 224, 12, 1, "no PIN set - CONFIG > CHANGE PIN", cWarn, cBg);
+    pinLen = 0; pinDrawEntry();
+  } else if (authOk(pinEntry)) {
     klArmed = false; manualDisarmed = true;
     absentSinceMs = millis();
     chirp(1);
@@ -1275,6 +1360,7 @@ void pinTryDisarm() {
     pendingAnim = 2;                     // unlock animation, then the app
     dispOn = false;                      // force a clean wake to full UI
     setDisplay(true);
+    return;
   } else {
     Serial.println("[pin] wrong");
     pinLen = 0; pinDrawEntry();
@@ -1636,7 +1722,27 @@ void loop() {
       playAnim(a);
       if (!dispOn) return;   // ARM animation put us on standby — don't repaint
     }
+    if (pinScreen) {         // keypad (gate or PIN-change) owns the screen
+      pinTouch();
+      if (pinScreen && millis() - pinAtMs > 20000) {
+        Serial.println("[pin] timeout");
+        if (pinEntryMode == 0) pinExitToStandby();
+        else pinExitSetup("PIN change timed out", cDim);
+      }
+      delay(10);
+      return;
+    }
+    if (armAsk) {            // YES/NO arm confirmation owns the screen
+      armAskTouch();
+      if (armAsk && millis() > armAskUntilMs) {
+        armAsk = false; uiInvalidate(); drawChrome();
+        Serial.println("[kl] arm confirm timeout");
+      }
+      delay(10);
+      return;
+    }
     handleTouch();
+    if (pinScreen || armAsk) { delay(10); return; }   // a mode just opened
     if (page == PG_TELE) {         // riding locks RIDE; idle rotates ELEC/MOTOR
       if (riding && telePane != 0) { telePane = 0; uiInvalidate(); drawChrome(); }
       else if (!riding && millis() - lastCycleMs > (telePane == 0 ? 10000 : 8000)) {

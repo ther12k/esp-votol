@@ -193,6 +193,8 @@ Module endpoints: `/state.json` (page, poll stats, RSSI), `/sethost?host=…&por
   Every arm/disarm transition plays a short padlock animation (red lock
   closes + "ARMED" / green lock opens with a sonar ping + "DISARMED");
   preview over serial with `a` (arm) / `A` (disarm).
+  Tapping **ARM** (shown while disarmed) opens a full-screen
+  **YES / NO confirmation** — a stray tap can never arm.
   **Fobs (up to 4):** iTags by static MAC, **phones by advertised NAME**
   (Android rotates its BLE MAC, so MAC entries break — the phone must
   run a BLE advertiser app, e.g. nRF Connect → Advertiser, with a
@@ -225,15 +227,17 @@ Module endpoints: `/state.json` (page, poll stats, RSSI), `/sethost?host=…&por
 
 - **No fob registered** → display always on (you can never be locked out).
 - **Fob registered** (NVS `fobs`): display **on while any fob is near**
-  (BLE sighting within 12 s), **ARMED idle shows a still standby image**
-  (closed lock + ARMED + battery voltage — the backlight can't be
-  switched off on this shield, so armed idle is informative, not black;
-  no animation while idle). **Double-tap the standby screen → PIN
-  keypad → OK = disarm into the app** (uses the app PIN — serial
-  `P <pin>` first; 3 wrong tries = 15 s lockout, 20 s idle falls back
-  to standby). Phone/PIN disarm is **sticky**: display on + no auto
-  re-arm until the app sends `ARM` (or a real fob shows up and later
-  leaves). Sleep = black fill (NOT panel DISPOFF: the hardwired backlight
+  (BLE sighting within 12 s), **ARMED idle shows a still FULL-SCREEN
+  standby image** — closed lock + ARMED + battery voltage, no header,
+  no tab menu (the backlight can't be switched off on this shield, so
+  armed idle is informative, not black; no animation while idle).
+  **Double-tap the standby screen → PIN keypad (edge-to-edge, big
+  keys) → OK = disarm into the app** (uses the app PIN; 3 wrong tries
+  = 15 s lockout, 20 s idle falls back to standby). Phone/PIN disarm
+  is **sticky**: display on + no auto re-arm until the app sends `ARM`
+  (or a real fob shows up and later leaves).
+- **Change the PIN on the device:** SYS → CONFIG → **CHANGE PIN** —
+  enter the new PIN twice on the keypad (empty OK = cancel). Sleep = black fill (NOT panel DISPOFF: the hardwired backlight
   shines through an undriven panel as WHITE — known mcufriend quirk);
   wake redraws instantly. Register/replace the fob via serial
   (`i` scan, `f <mac>` set, `m` learn by name, `M` clear) or the webapp
