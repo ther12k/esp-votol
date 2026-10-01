@@ -35,6 +35,12 @@
  * SECRET = 128-bit pair key (QR shown in SYS->SET) or the PIN.
  * Any BLE phone works (Android AND iPhone — this is a connection, not
  * the Android-only fob advertising). 3 bad keys = 15 s lockout.
+ * Phone/PIN DISARM is sticky: display on + no auto re-arm until the
+ * app sends ARM (a real fob sighting also restores normal mode).
+ *
+ * ARMED standby: the backlight can't be turned off on this shield, so
+ * armed idle shows a STILL image (closed lock + battery voltage) — no
+ * animation. Double-tap it -> PIN keypad -> OK disarms into the app.
  *
  * TELE has three panes (tap the content to page through): RIDE = one big
  * speed number (km/h once the wheel circumference is set, else motor rpm),
@@ -447,6 +453,9 @@ WebServer web(80);
 uint32_t bootMs = 0, lastPollMs = 0, lastTouchMs = 0, lastCycleMs = 0, lastBtTryMs = 0;
 uint32_t btPauseUntilMs = 0;
 bool btLinkOn = true;               // false = don't dial VOTOL-BT (bridge now talks CAN to the VOTOL)
+bool klArmed = false;               // declared early: display logic reads them
+uint32_t absentSinceMs = 0;
+bool manualDisarmed = false;        // phone/PIN disarm: stays disarmed until phone ARM
 bool wifiPhase = true;
 char toastTxt[80] = "";
 uint16_t toastCol = 0;
@@ -501,9 +510,13 @@ bool fobPresent() {
  * a serial 'd' override); off = panel DISPOFF (GRAM keeps the frame, so
  * waking redraws only what changed). */
 bool dispOn = true;
+bool pinScreen = false;              // PIN-entry gate over the standby screen
+char pinEntry[13]; uint8_t pinLen = 0;
+uint32_t pinAtMs = 0;
 uint32_t dispForceUntilMs = 0;
 uint16_t dotCache = 0xFFFF;
 int8_t btOffIconShown = -1;          // crossed-BT badge state (top right)
+void drawStandby();                  // fwd
 void drawChrome();                                   // fwd
 void uiInvalidate() {
   Slot *all[] = {&sTeleBig, &sTeleCur, &sTelePow, &sTeleRpm, &sTeleGear, &sTeleTc,
@@ -517,58 +530,57 @@ void setDisplay(bool on) {
   if (on == dispOn) return;
   dispOn = on;
   if (on) {
+    pinScreen = false;
     uiInvalidate();
     dotCache = 0xFFFF;                   // force header dot repaint
     btOffIconShown = -1;                 // and the BT-off badge
     drawChrome();
+  } else if (pinScreen) {
+    // PIN screen stays as-is (it's its own mode)
+  } else if (klArmed) {
+    // backlight can't be killed on this shield — armed idle shows a
+    // STILL image (lock + battery) instead of black; double-tap = PIN
+    drawStandby();
+    Serial.println("[disp] standby (armed)");
   } else {
-    // NOT panel DISPOFF: on these shields the always-on backlight shines
-    // through an undriven panel as WHITE. Black fill = visually off.
-    pendingAnim = 0;                         // stale animation would be confusing
-    tft.fillRect(0, 0, W, H, 0x0000);
+    tft.fillRect(0, 0, W, H, 0x0000);    // not armed: plain dark
+    Serial.println("[disp] off");
   }
 }
 void displayTick() {
   // screen follows the fob from the very first boot second — the wifi/OTA
   // window runs headless unless the fob (or an override) is present
   bool want = (fobCount == 0) ||
-              (millis() < dispForceUntilMs) || fobPresent();
-  if (want != dispOn) {
-    setDisplay(want);
-    Serial.printf("[disp] %s (%s)\n", dispOn ? "on" : "off",
-                  fobCount == 0 ? "no fob registered" :
-                  millis() < dispForceUntilMs ? "override" :
-                  fobPresent() ? "fob near" : "fob away");
-  }
+              (millis() < dispForceUntilMs) || fobPresent() || manualDisarmed;
+  if (want != dispOn) setDisplay(want);
 }
 
 /* ---- keyless state machine ---- */
-bool klArmed = false;
-uint32_t absentSinceMs = 0;
-uint32_t disarmHoldUntilMs = 0;       // app DISARM: hold auto re-arm 10 min
+void drawStandby();                  // fwd (defined after playAnim)
 void klTick() {
   if (fobCount == 0) return;                  // no fob learned yet
   uint32_t now = millis();
   if (now - bootMs < BOOT_GRACE_S * 1000UL) { absentSinceMs = now; return; }
   if (fobPresent()) {
     absentSinceMs = now;
-    disarmHoldUntilMs = 0;                    // owner is here again
+    manualDisarmed = false;                   // owner (fob) is here — normal mode
     if (klArmed) { klArmed = false; chirp(1); toast("DISARMED - fob back", cGood); pendingAnim = 2; }
   } else {
     if (absentSinceMs == 0) absentSinceMs = now;
-    if (now < disarmHoldUntilMs) absentSinceMs = now;   // app disarm holds
+    if (manualDisarmed) absentSinceMs = now;  // manual disarm: never auto-arm
     // arm counted from the LAST SIGHTING: fires the moment the 12s fob
     // TTL lapses — BEFORE the display would sleep — so the sequence is
     // animation FIRST, screen off ~6s later (same 12s of silence needed
     // as before; no robustness change)
-    if (!klArmed && (now - fobLastSeenMs) > ARM_AFTER_S * 1000UL) {
+    if (!klArmed && !manualDisarmed && (now - fobLastSeenMs) > ARM_AFTER_S * 1000UL) {
       klArmed = true; chirp(2);
       if (fobLastSeenMs >= bootMs) {       // fob was around this boot: show it
         toast("ARMED - fob away", cWarn); pendingAnim = 1;
         dispForceUntilMs = now + 6000;     // keep the screen lit through it
       } else {                             // powered on with fob already off:
         Serial.println("[kl] armed silently — fob off since boot");
-      }                                    // never light the screen at all
+        if (!dispOn) drawStandby();        // silent = no anim, straight to still
+      }                                    // image (lock + battery)
       absentSinceMs = now;
     }
   }
@@ -736,6 +748,60 @@ void handleTouch() {
   } else if (klArmed) {
     panicUntilMs = 0;                       // any tap elsewhere silences the wail
   }
+}
+
+/* ---- touch on the standby/PIN screens ----
+ * (mapping duplicated from handleTouch — these run when the app UI doesn't) */
+void drawPinScreen();                // fwd (defined after playAnim)
+void pinTryDisarm();
+void pinDrawEntry();
+bool mapTouch(int &px, int &py) {
+  static uint32_t lastSample = 0;
+  if (millis() - lastSample < 30) return false;
+  lastSample = millis();
+  int z = filmZ();
+  if (z < 300 || z > 3800) return false;
+  RawTouch r = readFilm();
+  if (!r.valid) return false;
+  px = map(r.x, TR_MIN, TR_MAX, 0, W);
+  py = map(r.y, TR_MIN, TR_MAX, 0, H);
+  if (tSwapXY) { int t = px; px = py * W / H; py = t * H / W; }
+  if (tFlipX) px = W - 1 - px;
+  if (tFlipY) py = H - 1 - py;
+  px = constrain(px, 0, W - 1); py = constrain(py, 0, H - 1);
+  return true;
+}
+void standbyTouch() {                 // double-tap anywhere -> PIN gate
+  static uint32_t lastTapMs = 0, lastAnyMs = 0;
+  static uint8_t taps = 0;
+  int px, py;
+  if (!mapTouch(px, py)) return;
+  if (millis() - lastAnyMs < 180) return;
+  lastAnyMs = millis();
+  taps = (millis() - lastTapMs < 500) ? taps + 1 : 1;
+  lastTapMs = millis();
+  Serial.printf("[tap] standby (%d)\n", taps);
+  if (taps >= 2) {
+    taps = 0;
+    Serial.println("[pin] gate open");
+    drawPinScreen();
+  }
+}
+void pinTouch() {
+  int px, py;
+  if (!mapTouch(px, py)) return;
+  static uint32_t lastTapMs = 0;
+  if (millis() - lastTapMs < 180) return;
+  lastTapMs = millis(); pinAtMs = millis();
+  if (px < 8 || px > 232 || py < 86 || py > 258) return;
+  uint8_t col = (px - 8) / 76;
+  uint8_t row = (py - 86) / 44;
+  uint8_t i = row * 3 + col;               // 0..8 digits, 9=C, 10=0, 11=OK
+  if (i <= 8 && pinLen < 12) pinEntry[pinLen++] = '1' + i;
+  else if (i == 10 && pinLen < 12) pinEntry[pinLen++] = '0';
+  else if (i == 9) pinLen = 0;
+  else if (i == 11) { pinTryDisarm(); return; }
+  pinDrawEntry();
 }
 
 /* =========================================================== drawing */
@@ -1022,12 +1088,13 @@ void bleExec(const char *cmd, const char *sec) {
   }
   if (!strcmp(cmd, "ARM")) {
     if (fobPresent()) { snprintf(bleReply, sizeof(bleReply), "ERR FOB NEAR"); return; }
-    klArmed = true; disarmHoldUntilMs = 0; chirp(2);
+    klArmed = true; manualDisarmed = false; chirp(2);
     toast("ARMED - app", cWarn);
     if (dispOn) pendingAnim = 1;
     snprintf(bleReply, sizeof(bleReply), "OK ARMED");
   } else if (!strcmp(cmd, "DISARM")) {
-    klArmed = false; disarmHoldUntilMs = millis() + 600000UL; chirp(1);
+    // sticky: stays disarmed + display on until ARM is sent (or fob seen)
+    klArmed = false; manualDisarmed = true; absentSinceMs = millis(); chirp(1);
     toast("DISARMED - app", cGood);
     if (dispOn) pendingAnim = 2;
     snprintf(bleReply, sizeof(bleReply), "OK DISARM");
@@ -1094,12 +1161,94 @@ void playAnim(uint8_t kind) {            // 1 = ARM (close), 2 = DISARM (open)
   }
   delay(200);                            // brief beat on the zoomed text
   if (kind == 1 && !fobPresent()) {      // armed & fob still gone: the animation
-    dispForceUntilMs = 0;                // was the goodbye — dark right after
-    setDisplay(false);                   // (clear the hold or it would re-wake)
-    Serial.println("[disp] off (armed)");
+    dispForceUntilMs = 0;                // was the hello — now rest on the
+    setDisplay(false);                   // still standby image (lock + battery)
     return;
   }
   uiInvalidate(); drawChrome();          // restore the page underneath
+}
+
+/* ---- armed standby screen: STILL image, no animation ----
+ * The backlight can't be turned off on this shield, so armed idle shows
+ * a static lock + battery instead of black. Double-tap wakes a PIN gate. */
+void drawStandby() {
+  pinScreen = false;
+  animLock(cBad, 92, 52);                // final closed-lock pose (clears area)
+  tft.setTextColor(cBad); tft.setTextSize(3);
+  tft.setCursor(120 - 3 * 18, 150);      // under the lock body
+  tft.print("ARMED");
+  tft.setTextSize(2); tft.setTextColor(cTxt);
+  char b[24];
+  if (tele.has && millis() - tele.atMs < 30000)
+    snprintf(b, sizeof(b), "BAT %.1fV", tele.v);
+  else
+    snprintf(b, sizeof(b), "BAT --.-V");
+  tft.setCursor(120 - strlen(b) * 6, 186);
+  tft.print(b);
+  tft.setTextSize(1); tft.setTextColor(cDim);
+  tft.setCursor(120 - 23 * 3, 216);
+  tft.print("double-tap: enter PIN");
+}
+
+/* ---- PIN entry gate (over the standby screen) ---- */
+Slot sPinDisp, sPinMsg;
+void drawPinScreen() {
+  pinScreen = true; pinAtMs = millis(); pinLen = 0;
+  tft.fillRect(0, 0, W, H, cBg);
+  tft.fillRect(0, 278, W, 42, cBg2);
+  tft.setTextSize(2); tft.setTextColor(cDim);
+  tft.setCursor(8, 32); tft.print("PIN TO DISARM");
+  // entry display
+  tft.fillRect(8, 50, 224, 26, cBg2); tft.drawRect(8, 50, 224, 26, cDim);
+  // keypad: 1-9 grid, C/0/OK bottom row
+  const char *lab[12] = {"1","2","3","4","5","6","7","8","9","C","0","OK"};
+  for (uint8_t r = 0; r < 4; r++)
+    for (uint8_t c = 0; c < 3; c++) {
+      uint8_t i = r * 3 + c;
+      uint16_t x = 8 + c * 76, y = 86 + r * 44;
+      bool ok = (i == 11);
+      tft.fillRect(x, y, 72, 40, ok ? cGood : cBg2);
+      tft.drawRect(x, y, 72, 40, ok ? cGood : cDim);
+      tft.setTextSize(2);
+      tft.setTextColor(ok ? cBg : cTxt);
+      tft.setCursor(x + (72 - 12) / 2, y + 13);
+      tft.print(lab[i]);
+    }
+  if (!pairPin[0]) {
+    slotPrint(sPinMsg, 8, 268, 224, 14, 1, "no PIN set — serial 'P <pin>'", cWarn, cBg);
+  } else {
+    slotPrint(sPinMsg, 8, 268, 224, 14, 1, "wrong PIN locks 15 s after 3 tries", cDim, cBg);
+  }
+  sPinDisp.last[0] = 1;                  // force entry redraw
+}
+void pinDrawEntry() {
+  char dots[14] = "";
+  for (uint8_t i = 0; i < pinLen; i++) dots[i] = '*';
+  dots[pinLen] = 0;
+  slotPrint(sPinDisp, 12, 53, 216, 20, 2, dots, cTxt, cBg2);
+}
+void pinExitToStandby() {
+  pinScreen = false;
+  drawStandby();
+}
+void pinTryDisarm() {
+  pinEntry[pinLen] = 0;
+  if (!pairPin[0]) { slotPrint(sPinMsg, 8, 268, 224, 14, 1, "no PIN set", cWarn, cBg); pinLen = 0; pinDrawEntry(); return; }
+  if (authOk(pinEntry)) {
+    klArmed = false; manualDisarmed = true;
+    absentSinceMs = millis();
+    chirp(1);
+    Serial.println("[pin] disarm OK (manual)");
+    pendingAnim = 2;                     // unlock animation, then the app
+    dispOn = false;                      // force a clean wake to full UI
+    setDisplay(true);
+  } else {
+    Serial.println("[pin] wrong");
+    pinLen = 0; pinDrawEntry();
+    slotPrint(sPinMsg, 8, 268, 224, 14, 1,
+              millis() < authLockUntilMs ? "LOCKED — wait" : "wrong PIN", cBad, cBg);
+  }
+  pinAtMs = millis();
 }
 
 /* ---- SET page: pairing QR for the phone app ---- */
@@ -1452,7 +1601,7 @@ void loop() {
     if (pendingAnim) {
       uint8_t a = pendingAnim; pendingAnim = 0;
       playAnim(a);
-      if (!dispOn) return;   // ARM animation put us to dark — don't repaint
+      if (!dispOn) return;   // ARM animation put us on standby — don't repaint
     }
     handleTouch();
     if (page == PG_TELE) {         // riding locks RIDE; idle rotates ELEC/MOTOR
@@ -1471,6 +1620,14 @@ void loop() {
       case PG_SETUP:   setupTab == 0 ? drawSystem() :
                        setupTab == 1 ? drawCfg() : drawSet(); break;
   }
+  } else if (pinScreen) {
+    pinTouch();
+    if (millis() - pinAtMs > 20000) {    // idle gate falls back to standby
+      Serial.println("[pin] timeout -> standby");
+      pinExitToStandby();
+    }
+  } else if (klArmed) {
+    standbyTouch();                      // double-tap opens the PIN gate
   }
   delay(10);
 }
