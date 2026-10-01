@@ -111,7 +111,7 @@ void bleTask(void *) {
   BLEDevice::init("");
   bleScan = BLEDevice::getScan();
   bleScan->setAdvertisedDeviceCallbacks(&fobCb, false);
-  bleScan->setActiveScan(false);        // passive: less airtime, enough for iTag
+  bleScan->setActiveScan(true);         // active: fetch names (iTag identifies itself)
   for (;;) {
     BLEScanResults r = bleScan->start(1.5, false);
     bleScan->clearResults();
@@ -294,6 +294,48 @@ Slot sKlState, sKlFob, sKlInfo;
 int8_t btnCache = -1;
 
 bool fobPresent() { return fobMacLen == 6 && (millis() - fobLastSeenMs) < FOB_TTL_S * 1000UL; }
+
+/* ---- display power: follows the registered iTag ----
+ * unregistered fob -> always on (you must be able to see what you do);
+ * registered: on while the fob is near (or during the boot wifi window /
+ * a serial 'd' override); off = panel DISPOFF (GRAM keeps the frame, so
+ * waking redraws only what changed). */
+bool dispOn = true;
+uint32_t dispForceUntilMs = 0;
+uint16_t dotCache = 0xFFFF;
+void drawChrome();                                   // fwd
+void uiInvalidate() {
+  Slot *all[] = {&sTeleBig, &sTeleCur, &sTelePow, &sTeleRpm, &sTeleGear, &sTeleTc,
+                 &sTeleStat, &sTeleLink, &sKlState, &sKlFob, &sKlInfo,
+                 &sToast, &sHeader, sSys, sSys + 1, sSys + 2, sSys + 3,
+                 sSys + 4, sSys + 5, sSys + 6, sSys + 7};
+  for (Slot *s : all) { s->last[0] = 1; s->last[1] = 0; s->lastCol = 0xFFFF; }
+}
+void setDisplay(bool on) {
+  if (on == dispOn) return;
+  dispOn = on;
+  if (on) {
+    uiInvalidate();
+    dotCache = 0xFFFF;                   // force header dot repaint
+    drawChrome();
+  } else {
+    // NOT panel DISPOFF: on these shields the always-on backlight shines
+    // through an undriven panel as WHITE. Black fill = visually off.
+    tft.fillRect(0, 0, W, H, 0x0000);
+  }
+}
+void displayTick() {
+  bool want = (fobMacLen != 6) || wifiPhase ||
+              (millis() < dispForceUntilMs) || fobPresent();
+  if (want != dispOn) {
+    setDisplay(want);
+    Serial.printf("[disp] %s (%s)\n", dispOn ? "on" : "off",
+                  fobMacLen != 6 ? "no fob registered" :
+                  wifiPhase ? "setup window" :
+                  millis() < dispForceUntilMs ? "override" :
+                  fobPresent() ? "fob near" : "fob away");
+  }
+}
 
 /* ---- keyless state machine ---- */
 bool klArmed = false;
@@ -494,11 +536,10 @@ void drawHeader() {
   if (!wifiPhase && tele.has) {
     if (age < 5) dot = cGood; else if (age < 30) dot = cWarn;
   } else if (!wifiPhase && SerialBT.connected()) dot = cWarn;
-  static uint16_t lastDot = 0xFFFF;
-  if (dot != lastDot) {
+  if (dot != dotCache) {
     tft.fillRect(216, 7, 18, 12, cBg2);
     tft.fillCircle(225, 13, 6, dot);
-    lastDot = dot;
+    dotCache = dot;
   }
 }
 
@@ -723,6 +764,11 @@ void cliProcess(const char *line) {
       break;
     case 'p': sendShow(); Serial.println("[cli] SHOW sent"); break;
     case 'b': btPauseToggle(); break;
+    case 'd':
+      dispForceUntilMs = millis() + 120000UL;
+      if (!dispOn) setDisplay(true);
+      Serial.println("[cli] display on (2 min override)");
+      break;
     case 'i':
       Serial.println("[cli] scanning 2 s — devices print below");
       bleScanDump = true;
@@ -793,6 +839,10 @@ void setup() {
   fobLoad();
   uiLoad();
   buzzInit();
+  {
+    char ms[24]; fobMacStr(ms, sizeof(ms));
+    Serial.printf("[tft-dash] fob: %s\n", ms);
+  }
 
   tft.fillScreen(cBg);
   drawChrome();
@@ -846,21 +896,23 @@ void loop() {
 
   klTick();
   buzzTick();
-  handleTouch();
+  displayTick();
 
-  // no-touch fallback: slow auto-cycle if the screen was never touched
-  if (millis() - lastTouchMs > 60000 && millis() - lastCycleMs > 15000) {
-    lastCycleMs = millis();
-    page = (Page)((page + 1) % 4);
-    drawChrome();
-  }
-
-  drawHeader();
-  switch (page) {
-    case PG_TELE:    drawTelemetry(); break;
-    case PG_KEYLESS: drawKeyless();   break;
-    case PG_SYS:     drawSystem();    break;
-    case PG_CFG:     drawCfg();       break;
+  if (dispOn) {
+    handleTouch();
+    // no-touch fallback: slow auto-cycle if the screen was never touched
+    if (millis() - lastTouchMs > 60000 && millis() - lastCycleMs > 15000) {
+      lastCycleMs = millis();
+      page = (Page)((page + 1) % 4);
+      drawChrome();
+    }
+    drawHeader();
+    switch (page) {
+      case PG_TELE:    drawTelemetry(); break;
+      case PG_KEYLESS: drawKeyless();   break;
+      case PG_SYS:     drawSystem();    break;
+      case PG_CFG:     drawCfg();       break;
+    }
   }
   delay(10);
 }

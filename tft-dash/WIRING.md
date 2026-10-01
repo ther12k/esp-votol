@@ -182,6 +182,20 @@ Module endpoints: `/state.json` (page, poll stats, RSSI), `/sethost?host=…&por
   Selections apply live and auto-save to NVS. Fit guarantee: long values
   (e.g. 120.1 V) auto-shrink a size so nothing ever overflows the layout.
 
+## 5b. Display power — follows the registered iTag
+
+- **No fob registered** → display always on (you can never be locked out).
+- **Fob registered** (NVS `fob`): display **on while the iTag is near**
+  (BLE sighting within 12 s), **off** when it leaves or is switched off —
+  including at startup (registered + fob absent = dark until the fob
+  returns). Sleep = black fill (NOT panel DISPOFF: the hardwired backlight
+  shines through an undriven panel as WHITE — known mcufriend quirk);
+  wake redraws instantly. Register/replace the fob via serial
+  (`i` scan, `f <mac>` set, `m` learn by name, `M` clear) or the webapp
+  debug endpoint during the boot window. Serial `d` = 2-minute
+  display-on override for bench work. True backlight cutoff needs a
+  transistor on the LED supply (future hardware mod).
+
 ## 6. Pin budget after LCD (touch unused)
 
 Occupied — LCD (13): data `12,13,26,25,17,16,27,14` · RD `2` (also the
