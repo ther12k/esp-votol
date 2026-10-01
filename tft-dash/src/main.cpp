@@ -43,6 +43,7 @@
 #endif
 #define WIFI_WINDOW_S 30
 
+Preferences prefs;   // NVS (declared early: fob fns + setup use it)
 /* ---- bluetooth ---- */
 #include "BluetoothSerial.h"
 BluetoothSerial SerialBT;
@@ -55,6 +56,108 @@ void btConnectTask(void *) {
   Serial.printf("[bt] connect %s\n", ok ? "ok" : "failed");
   btConnecting = false;
   vTaskDelete(nullptr);
+}
+
+/* ---- iTag keyless (BLE) ----
+ * The fob is a BLE advertiser; presence = seen within FOB_TTL_S.
+ * BLE scan runs in its own task, coexisting with the SPP client
+ * (same Bluedroid stack as the one-chip bridge build). Buzzer on IO5
+ * = the reserved "alarm out 1" pin (active-buzzer friendly square wave). */
+#include <BLEDevice.h>
+#include <BLEScan.h>
+#include <BLEAdvertisedDevice.h>
+#define FOB_TTL_S       12     // absent if silent this long
+#define ARM_AFTER_S     8      // sustained absence before ARM chirp
+#define BOOT_GRACE_S    45
+#define PANIC_S         30
+#define BUZZ_PIN        5
+#define BUZZ_CH         4
+
+uint8_t fobMac[6]; int fobMacLen = 0;
+volatile int fobRssi = -128;
+volatile uint32_t fobLastSeenMs = 0;
+volatile bool bleScanDump = false;      // CLI 'i': print next scan's devices
+volatile bool bleLearn = false;         // CLI 'm': adopt strongest ITAG-named device
+uint8_t learnMac[6]; int learnRssi = -128;
+uint32_t learnAtMs = 0;
+
+class FobCb : public BLEAdvertisedDeviceCallbacks {
+  void onResult(BLEAdvertisedDevice dev) override {
+    if (bleScanDump) {
+      Serial.printf("[ble] %s  rssi %d  name \"%s\"\n",
+                    dev.getAddress().toString().c_str(), dev.getRSSI(),
+                    dev.haveName() ? dev.getName().c_str() : "");
+    }
+    std::string s = dev.getAddress().toString();   // "aa:bb:cc:dd:ee:ff"
+    uint8_t mac[6];
+    for (int i = 0; i < 6; i++)
+      mac[i] = (uint8_t)strtoul(s.substr(i * 3, 2).c_str(), nullptr, 16);
+    bool match = (fobMacLen == 6 && memcmp(mac, fobMac, 6) == 0);
+    if (!match && bleLearn && dev.haveName()) {
+      std::string n = dev.getName();
+      for (auto &ch : n) ch = tolower((unsigned char)ch);
+      if (n.find("itag") != std::string::npos && dev.getRSSI() > learnRssi) {
+        memcpy(learnMac, mac, 6);
+        learnRssi = dev.getRSSI(); learnAtMs = millis();
+      }
+    }
+    if (match) { fobRssi = dev.getRSSI(); fobLastSeenMs = millis(); }
+  }
+};
+FobCb fobCb;
+BLEScan *bleScan = nullptr;
+
+void bleTask(void *) {
+  BLEDevice::init("");
+  bleScan = BLEDevice::getScan();
+  bleScan->setAdvertisedDeviceCallbacks(&fobCb, false);
+  bleScan->setActiveScan(false);        // passive: less airtime, enough for iTag
+  for (;;) {
+    BLEScanResults r = bleScan->start(1.5, false);
+    bleScan->clearResults();
+    vTaskDelay(pdMS_TO_TICKS(400));
+  }
+}
+
+void fobSave() {
+  prefs.putBytes("fob", fobMac, 6);
+  prefs.putUChar("foblen", fobMacLen);
+}
+void fobLoad() {
+  fobMacLen = 0;
+  if (prefs.getBytesLength("fob") == 6) {
+    prefs.getBytes("fob", fobMac, 6);
+    fobMacLen = prefs.getUChar("foblen", 0);
+  }
+}
+void fobMacStr(char *out, size_t n) {
+  if (fobMacLen != 6) { snprintf(out, n, "not set"); return; }
+  snprintf(out, n, "%02X:%02X:%02X:%02X:%02X:%02X",
+           fobMac[0], fobMac[1], fobMac[2], fobMac[3], fobMac[4], fobMac[5]);
+}
+
+/* ---- buzzer ---- */
+bool sirenOn = false;
+uint32_t panicUntilMs = 0;
+void buzzInit() {
+  ledcSetup(BUZZ_CH, 2000, 8);
+  ledcAttachPin(BUZZ_PIN, BUZZ_CH);
+  ledcWriteTone(BUZZ_CH, 0);
+}
+void chirp(int n) {
+  for (int i = 0; i < n; i++) {
+    ledcWriteTone(BUZZ_CH, 2300); delay(110);
+    ledcWriteTone(BUZZ_CH, 0);    delay(90);
+  }
+}
+void buzzTick() {
+  if (millis() < panicUntilMs) {
+    ledcWriteTone(BUZZ_CH, ((millis() / 250) & 1) ? 2500 : 0);   // wail
+    sirenOn = true;
+  } else if (sirenOn) {
+    ledcWriteTone(BUZZ_CH, 0);
+    sirenOn = false;
+  }
 }
 
 /* ---- display ---- */
@@ -78,8 +181,12 @@ struct FilmMap { uint8_t xp, yp, xm, ym; };
 const FilmMap FILMS[2] = {{27, 4, 15, 14}, {14, 15, 4, 27}};
 int touchVariant = 0;
 bool tSwapXY = false, tFlipX = false, tFlipY = false;
-#define TR_MIN 250
-#define TR_MAX 3850
+/* Calibrated 2026-10-01 from two real presses:
+ * center -> raw(2156,2344), bottom-left TELE tab -> raw(1040,745).
+ * X natural, Y INVERTED (larger raw = higher on screen) -> tFlipY.
+ * Serial 'g' + 'w' persist the flip after this build. */
+#define TR_MIN 500
+#define TR_MAX 4095
 
 /* ---- VOTOL protocol (ported from webapp/app.py) ---- */
 uint8_t xor8(const uint8_t *d, int n) { uint8_t c = 0; while (n--) c ^= *d++; return c; }
@@ -145,11 +252,17 @@ void parseRx() {
 }
 
 /* ---- module state ---- */
-Preferences prefs;
 WebServer web(80);
 uint32_t bootMs = 0, lastPollMs = 0, lastTouchMs = 0, lastCycleMs = 0, lastBtTryMs = 0;
 uint32_t btPauseUntilMs = 0;
-void toast(const char *t, uint16_t c);               // fwd
+bool wifiPhase = true;
+char toastTxt[80] = "";
+uint16_t toastCol = 0;
+uint32_t toastAtMs = 0;
+void toast(const char *t, uint16_t c) {
+  strncpy(toastTxt, t, sizeof(toastTxt) - 1); toastTxt[sizeof(toastTxt) - 1] = 0;
+  toastCol = c; toastAtMs = millis();
+}
 bool btPaused() { return millis() < btPauseUntilMs; }
 void btPauseToggle() {
   if (btPaused()) {
@@ -161,14 +274,6 @@ void btPauseToggle() {
     toast("BT released 5min - connect phone", cAcc);
   }
   Serial.printf("[bt] %s\n", btPaused() ? "paused 5 min" : "resumed");
-}
-bool wifiPhase = true;
-char toastTxt[80] = "";
-uint16_t toastCol = 0;
-uint32_t toastAtMs = 0;
-void toast(const char *t, uint16_t c) {
-  strncpy(toastTxt, t, sizeof(toastTxt) - 1); toastTxt[sizeof(toastTxt) - 1] = 0;
-  toastCol = c; toastAtMs = millis();
 }
 
 /* ---- slot-cached painter (fixed box, repaint on change) ---- */
@@ -185,7 +290,33 @@ void slotPrint(Slot &s, uint16_t x, uint16_t y, uint16_t w, uint16_t h,
 }
 Slot sTeleBig, sTeleCur, sTelePow, sTeleRpm, sTeleGear, sTeleTc, sTeleStat, sTeleLink;
 Slot sSys[8], sToast, sHeader;
+Slot sKlState, sKlFob, sKlInfo;
 int8_t btnCache = -1;
+
+bool fobPresent() { return fobMacLen == 6 && (millis() - fobLastSeenMs) < FOB_TTL_S * 1000UL; }
+
+/* ---- keyless state machine ---- */
+bool klArmed = false;
+uint32_t absentSinceMs = 0;
+void klTick() {
+  if (fobMacLen != 6) return;                 // no fob learned yet
+  uint32_t now = millis();
+  if (now - bootMs < BOOT_GRACE_S * 1000UL) { absentSinceMs = now; return; }
+  if (fobPresent()) {
+    absentSinceMs = now;
+    if (klArmed) { klArmed = false; chirp(1); toast("DISARMED - fob back", cGood); }
+  } else {
+    if (absentSinceMs == 0) absentSinceMs = now;
+    if (!klArmed && (now - absentSinceMs) > ARM_AFTER_S * 1000UL) {
+      klArmed = true; chirp(2); toast("ARMED - fob away", cWarn);
+    }
+  }
+}
+void panicToggle() {
+  if (millis() < panicUntilMs) { panicUntilMs = 0; toast("siren stopped", cGood); }
+  else if (klArmed) { panicUntilMs = millis() + PANIC_S * 1000UL; toast("SIREN 30s", cBad); }
+  else toast("arm first (fob away)", cWarn);
+}
 
 /* =========================================================== touch */
 void lcdQuiesce() {                 // deafen the LCD while nets are borrowed
@@ -199,36 +330,49 @@ void lcdRestore() {
   digitalWrite(33, LOW);            // CS active again
 }
 
+int median3(int a, int b, int c) {
+  int mx = max(a, max(b, c)), mn = min(a, min(b, c));
+  return a + b + c - mx - mn;
+}
+
+// quick pressure-only probe (2 analog reads) — keeps idle loop light
+int filmZ() {
+  const FilmMap &m = FILMS[touchVariant];
+  lcdQuiesce();
+  pinMode(m.xp, OUTPUT); digitalWrite(m.xp, LOW);
+  pinMode(m.ym, OUTPUT); digitalWrite(m.ym, HIGH);
+  pinMode(m.xm, INPUT); pinMode(m.yp, INPUT);
+  delayMicroseconds(250);
+  int z1 = analogRead(m.xm), z2 = analogRead(m.yp);
+  lcdRestore();
+  return 4095 - (z2 - z1);
+}
+
 struct RawTouch { int x, y, z; bool valid; };
 RawTouch readFilm() {
   RawTouch r{0, 0, 0, false};
   const FilmMap &m = FILMS[touchVariant];
+  int z = filmZ();
+  if (z < 200 || z > 3900) return r;
   lcdQuiesce();
-  int s[2];
+  int s[3];
   // X: drive X+ high / X- low, sense on Y+
   pinMode(m.yp, INPUT); pinMode(m.ym, INPUT);
   pinMode(m.xp, OUTPUT); pinMode(m.xm, OUTPUT);
   digitalWrite(m.xp, HIGH); digitalWrite(m.xm, LOW);
-  delayMicroseconds(300);
-  s[0] = analogRead(m.yp); s[1] = analogRead(m.yp);
-  if (abs(s[0] - s[1]) < 8) { r.x = 4095 - ((s[0] + s[1]) / 2); r.valid = true; }
+  delayMicroseconds(500);
+  s[0] = analogRead(m.yp); s[1] = analogRead(m.yp); s[2] = analogRead(m.yp);
+  r.x = 4095 - median3(s[0], s[1], s[2]);
   // Y: drive Y+ high / Y- low, sense on X-
   pinMode(m.xp, INPUT); pinMode(m.xm, INPUT);
   pinMode(m.yp, OUTPUT); pinMode(m.ym, OUTPUT);
   digitalWrite(m.yp, HIGH); digitalWrite(m.ym, LOW);
-  delayMicroseconds(300);
-  s[0] = analogRead(m.xm); s[1] = analogRead(m.xm);
-  if (abs(s[0] - s[1]) < 8 && r.valid) r.y = 4095 - ((s[0] + s[1]) / 2);
-  else r.valid = false;
-  // pressure: X+ low, Y- high, read X- and Y+
-  pinMode(m.xp, OUTPUT); digitalWrite(m.xp, LOW);
-  pinMode(m.yp, INPUT);
-  pinMode(m.ym, OUTPUT); digitalWrite(m.ym, HIGH);
-  delayMicroseconds(300);
-  int z1 = analogRead(m.xm), z2 = analogRead(m.yp);
-  r.z = 4095 - (z2 - z1);
+  delayMicroseconds(500);
+  s[0] = analogRead(m.xm); s[1] = analogRead(m.xm); s[2] = analogRead(m.xm);
+  r.y = 4095 - median3(s[0], s[1], s[2]);
   lcdRestore();
-  if (!r.valid) r.z = 0;
+  r.z = z;
+  r.valid = true;
   return r;
 }
 
@@ -236,25 +380,33 @@ int lastRawX = -1, lastRawY = -1, lastRawZ = -1;
 void drawChrome();                                   // fwd (used by handleTouch)
 void handleTouch() {
   static uint32_t lastSample = 0;
-  if (millis() - lastSample < 60) return;
+  if (millis() - lastSample < 30) return;
   lastSample = millis();
-  RawTouch r = readFilm();
+  int z = filmZ();                          // cheap probe first
+  if (z < 300 || z > 3800) return;          // idle: 2 reads, no spam
+  RawTouch r = readFilm();                  // pressed: full x/y now
   lastRawX = r.x; lastRawY = r.y; lastRawZ = r.z;
-  if (r.z < 300 || r.z > 3800) return;      // not a real press
+  if (!r.valid) return;
   int px = map(r.x, TR_MIN, TR_MAX, 0, W);
   int py = map(r.y, TR_MIN, TR_MAX, 0, H);
   if (tSwapXY) { int t = px; px = py * W / H; py = t * H / W; }
   if (tFlipX) px = W - 1 - px;
   if (tFlipY) py = H - 1 - py;
-  if ((uint32_t)px >= W || (uint32_t)py >= H) return;
+  px = constrain(px, 0, W - 1);
+  py = constrain(py, 0, H - 1);
+  Serial.printf("[tap] raw(%d,%d,%d) -> px=%d py=%d\n", r.x, r.y, r.z, px, py);
   static uint32_t lastTapMs = 0;
-  if (millis() - lastTapMs < 350) return;
+  if (millis() - lastTapMs < 180) return;   // fast debounce — taps feel instant
   lastTapMs = millis(); lastTouchMs = millis();
-  if (py >= 278) {                          // tab bar
+  if (py >= 270) {                          // tab bar (+margin for finger size)
     uint8_t np = px / 80;
-    if (np != page) { page = (Page)np; drawChrome(); }
+    if (np != page) { page = (Page)np; drawChrome(); toast(PAGE_NAMES[page], cAcc); }
   } else if (page == PG_SYS && py >= 168 && py <= 212 && px >= 8 && px <= 232) {
     btPauseToggle();                        // release BT for the phone app
+  } else if (page == PG_KEYLESS && py >= 190 && py <= 250 && px >= 8 && px <= 232) {
+    panicToggle();                          // siren on/off
+  } else if (klArmed) {
+    panicUntilMs = 0;                       // any tap elsewhere silences the wail
   }
 }
 
@@ -350,16 +502,40 @@ void drawTelemetry() {
 }
 
 void drawKeyless() {
-  slotPrint(sToast, 8, 44, 224, 26, 2, "KEYLESS", cAcc, cBg);
-  const char *l1 = "Phase 2: rides on a small bridge";
-  const char *l2 = "firmware update (BT side-channel).";
-  const char *l3 = "Until then use the phone dashboard";
-  const char *l4 = "to arm/disarm.";
-  tft.setTextSize(1); tft.setTextColor(cDim);
-  tft.setCursor(8, 84);  tft.print(l1);
-  tft.setCursor(8, 98);  tft.print(l2);
-  tft.setCursor(8, 112); tft.print(l3);
-  tft.setCursor(8, 126); tft.print(l4);
+  char b[48], macs[24];
+  if (fobMacLen != 6) {
+    slotPrint(sKlState, 8, 44, 224, 32, 4, "NO FOB", cDim, cBg);
+    fobMacStr(macs, sizeof(macs));
+    snprintf(b, sizeof(b), "learn: serial 'i' then 'f <mac>'");
+    slotPrint(sKlFob, 8, 90, 224, 16, 1, b, cWarn, cBg);
+    snprintf(b, sizeof(b), "now: %s", macs);
+    slotPrint(sKlInfo, 8, 108, 224, 16, 1, b, cDim, cBg);
+    tft.fillRect(8, 190, 224, 60, cBg);
+    return;
+  }
+  bool grace = (millis() - bootMs) < BOOT_GRACE_S * 1000UL;
+  snprintf(b, sizeof(b), "%s", klArmed ? "ARMED" : (grace ? "grace" : "DISARMED"));
+  slotPrint(sKlState, 8, 44, 224, 32, 4, b, klArmed ? cBad : cGood, cBg);
+  if (fobPresent()) snprintf(b, sizeof(b), "fob: near  %d dBm", fobRssi);
+  else              snprintf(b, sizeof(b), "fob: away  %lds",
+                             (long)((millis() - fobLastSeenMs) / 1000));
+  slotPrint(sKlFob, 8, 90, 224, 18, 2, b, fobPresent() ? cGood : cDim, cBg);
+  fobMacStr(macs, sizeof(macs));
+  snprintf(b, sizeof(b), "%.23s", macs);
+  slotPrint(sKlInfo, 8, 112, 224, 14, 1, b, cDim, cBg);
+
+  bool panic = millis() < panicUntilMs;
+  int8_t st = (klArmed ? 1 : 0) | (panic ? 2 : 0);
+  if (st != btnCache) {
+    btnCache = st;
+    tft.fillRect(8, 190, 224, 60, cBg2);
+    tft.drawRect(8, 190, 224, 60, panic ? cGood : cBad);
+    tft.setTextSize(3);
+    tft.setTextColor(panic ? cGood : cBad);
+    const char *t = panic ? "STOP" : "PANIC";
+    tft.setCursor(8 + (224 - strlen(t) * 18) / 2, 208);
+    tft.print(t);
+  }
 }
 
 void drawSystem() {
@@ -441,32 +617,77 @@ void wifiWindowRun() {          // returns when the window is over
 }
 
 /* =========================================================== serial CLI */
+char cliLine[24]; uint8_t cliLen = 0;
+void cliProcess(const char *line) {
+  if (line[0] == 'f' && (line[1] == ' ' || line[1] == '=')) {
+    // 'f AA:BB:CC:DD:EE:FF' or 'f AABBCCDDEEFF' — set fob MAC
+    uint8_t mac[6]; int n = 0; const char *p = line + 2;
+    while (*p && n < 6) {
+      if (*p == ':' || *p == '-') { p++; continue; }
+      char hb[3] = {p[0], p[1], 0};
+      if (!isxdigit((unsigned char)p[0]) || !isxdigit((unsigned char)p[1])) {
+        Serial.println("[cli] bad mac"); return;
+      }
+      mac[n++] = (uint8_t)strtoul(hb, nullptr, 16);
+      p += 2;
+    }
+    if (n != 6) { Serial.println("[cli] need 6 bytes"); return; }
+    memcpy(fobMac, mac, 6); fobMacLen = 6; fobLastSeenMs = 0; absentSinceMs = 0;
+    fobSave();
+    char ms[24]; fobMacStr(ms, sizeof(ms));
+    Serial.printf("[cli] fob set %s\n", ms);
+    toast("fob saved", cGood);
+    return;
+  }
+  switch (line[0]) {
+    case 'v': touchVariant ^= 1; Serial.printf("[cli] variant=%d\n", touchVariant); break;
+    case 's': tSwapXY = !tSwapXY; Serial.printf("[cli] swap=%d\n", tSwapXY); break;
+    case 'f': tFlipX = !tFlipX; Serial.printf("[cli] flipx=%d\n", tFlipX); break;
+    case 'g': tFlipY = !tFlipY; Serial.printf("[cli] flipy=%d\n", tFlipY); break;
+    case 'w':
+      prefs.putUChar("tvar", touchVariant); prefs.putBool("tswap", tSwapXY);
+      prefs.putBool("tfx", tFlipX); prefs.putBool("tfy", tFlipY);
+      Serial.println("[cli] touch setup saved");
+      break;
+    case 'p': sendShow(); Serial.println("[cli] SHOW sent"); break;
+    case 'b': btPauseToggle(); break;
+    case 'i':
+      Serial.println("[cli] scanning 2 s — devices print below");
+      bleScanDump = true;
+      break;
+    case 'm':
+      Serial.println("[cli] learning strongest ITAG-named device for 4 s");
+      bleLearn = true; learnRssi = -128;
+      break;
+    case 'M':
+      fobMacLen = 0; prefs.putUChar("foblen", 0);
+      Serial.println("[cli] fob cleared");
+      break;
+    case 'r': {
+      Serial.println("[cli] raw dump 6 s — press the panel");
+      uint32_t t0 = millis();
+      while (millis() - t0 < 6000) {
+        RawTouch rr = readFilm();
+        Serial.printf("v%d x=%4d y=%4d z=%4d\n", touchVariant, rr.x, rr.y, rr.z);
+        delay(100);
+      }
+      break;
+    }
+    default: break;
+  }
+}
 void serialCli() {
   while (Serial.available()) {
     char c = Serial.read();
-    switch (c) {
-      case 'v': touchVariant ^= 1; Serial.printf("[cli] variant=%d\n", touchVariant); break;
-      case 's': tSwapXY = !tSwapXY; Serial.printf("[cli] swap=%d\n", tSwapXY); break;
-      case 'f': tFlipX = !tFlipX; Serial.printf("[cli] flipx=%d\n", tFlipX); break;
-      case 'g': tFlipY = !tFlipY; Serial.printf("[cli] flipy=%d\n", tFlipY); break;
-      case 'w':
-        prefs.putUChar("tvar", touchVariant); prefs.putBool("tswap", tSwapXY);
-        prefs.putBool("tfx", tFlipX); prefs.putBool("tfy", tFlipY);
-        Serial.println("[cli] touch setup saved");
-        break;
-      case 'p': sendShow(); Serial.println("[cli] SHOW sent"); break;
-      case 'b': btPauseToggle(); break;
-      case 'r': {
-        Serial.println("[cli] raw dump 6 s — press the panel");
-        uint32_t t0 = millis();
-        while (millis() - t0 < 6000) {
-          RawTouch r = readFilm();
-          Serial.printf("v%d x=%4d y=%4d z=%4d\n", touchVariant, r.x, r.y, r.z);
-          delay(100);
-        }
-        break;
-      }
-      default: break;
+    if (c == '\n' || c == '\r') {
+      if (cliLen) { cliLine[cliLen] = 0; cliProcess(cliLine); cliLen = 0; }
+    } else if (cliLen < sizeof(cliLine) - 1) {
+      // single-letter commands fire immediately (no newline needed);
+      // anything starting with 'f ' (fob MAC) waits for the newline
+      if (c != ' ' && cliLen == 0 && c != 'f') {
+        char one[2] = {c, 0};
+        cliProcess(one);
+      } else cliLine[cliLen++] = c;
     }
   }
 }
@@ -497,6 +718,8 @@ void setup() {
   tSwapXY = prefs.getBool("tswap", false);
   tFlipX = prefs.getBool("tfx", false);
   tFlipY = prefs.getBool("tfy", false);
+  fobLoad();
+  buzzInit();
 
   tft.fillScreen(cBg);
   drawChrome();
@@ -504,7 +727,9 @@ void setup() {
   wifiWindowSetup();
   SerialBT.begin("votol-dash", true);   // true = master/SPP-client mode
   SerialBT.setPin(BT_SERVER_PIN);
-  Serial.printf("[tft-dash] wifi window %ds, then BT->%s\n", WIFI_WINDOW_S, BT_SERVER_NAME);
+  xTaskCreate(bleTask, "ble", 6144, nullptr, 1, nullptr);
+  Serial.printf("[tft-dash] wifi window %ds, then BT->%s + iTag BLE\n",
+                WIFI_WINDOW_S, BT_SERVER_NAME);
 }
 
 void loop() {
@@ -535,6 +760,19 @@ void loop() {
     sendShow(); txCount++;
   }
 
+  // learn-mode completion: adopt the strongest ITAG seen
+  if (bleLearn && learnRssi > -128 && millis() - learnAtMs > 2000) {
+    bleLearn = false;
+    memcpy(fobMac, learnMac, 6); fobMacLen = 6;
+    fobLastSeenMs = 0; absentSinceMs = 0;
+    fobSave();
+    char ms[24]; fobMacStr(ms, sizeof(ms));
+    Serial.printf("[ble] fob learned: %s (rssi %d)\n", ms, learnRssi);
+    toast("fob learned", cGood);
+  }
+
+  klTick();
+  buzzTick();
   handleTouch();
 
   // no-touch fallback: slow auto-cycle if the screen was never touched
