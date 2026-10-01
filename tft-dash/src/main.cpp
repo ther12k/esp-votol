@@ -849,8 +849,14 @@ void playAnim(uint8_t kind) {            // 1 = ARM (close), 2 = DISARM (open)
     tft.print(txt);
     delay(80);
   }
-  delay(200);                            // hold, then restore the page
-  uiInvalidate(); drawChrome();
+  delay(200);                            // brief beat on the zoomed text
+  if (kind == 1 && !fobPresent()) {      // armed & fob still gone: the animation
+    dispForceUntilMs = 0;                // was the goodbye — dark right after
+    setDisplay(false);                   // (clear the hold or it would re-wake)
+    Serial.println("[disp] off (armed)");
+    return;
+  }
+  uiInvalidate(); drawChrome();          // restore the page underneath
 }
 
 /* =========================================================== wifi window */
@@ -1106,6 +1112,7 @@ void loop() {
     if (pendingAnim) {
       uint8_t a = pendingAnim; pendingAnim = 0;
       playAnim(a);
+      if (!dispOn) return;   // ARM animation put us to dark — don't repaint
     }
     handleTouch();
     if (page == PG_TELE) {         // riding locks RIDE; idle rotates ELEC/MOTOR
