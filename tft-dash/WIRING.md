@@ -19,6 +19,11 @@ the controller and (phase 2) the keyless panel, driven by touch. It never
 writes to the controller — the SHOW poll is LOCAL mode (0xAA), observe
 only.
 
+**Handing the display off to another project/app? Read
+[`LCD-HANDOFF.md`](LCD-HANDOFF.md)** — self-contained guide: pin map,
+toolchain setup, minimal LCD + touch code, calibration, and every
+hardware gotcha.
+
 ```
                  ┌────────────────────────────┐
    VOTOL ──UART──│ bridge ESP32  "VOTOL-BT"   │
