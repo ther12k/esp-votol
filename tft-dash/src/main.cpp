@@ -811,10 +811,11 @@ void pinTouch() {
   static uint32_t lastTapMs = 0;
   if (millis() - lastTapMs < 180) return;
   lastTapMs = millis(); pinAtMs = millis();
-  if (px < 8 || px > 232 || py < 86 || py > 258) return;
-  uint8_t col = (px - 8) / 76;
-  uint8_t row = (py - 86) / 44;
-  uint8_t i = row * 3 + col;               // 0..8 digits, 9=C, 10=0, 11=OK
+  if (py < 78) return;                   // full 60px bands = forgiving hits
+  uint8_t col = px / 80;
+  uint8_t row = (py - 78) / 60;
+  if (col > 2 || row > 3) return;
+  uint8_t i = row * 3 + col;             // 0..8 digits, 9=C, 10=0, 11=OK
   if (i <= 8 && pinLen < 12) pinEntry[pinLen++] = '1' + i;
   else if (i == 10 && pinLen < 12) pinEntry[pinLen++] = '0';
   else if (i == 9) pinLen = 0;
@@ -1224,37 +1225,40 @@ Slot sPinDisp, sPinMsg;
 void drawPinScreen() {
   pinScreen = true; pinAtMs = millis(); pinLen = 0;
   tft.fillRect(0, 0, W, H, cBg);
-  tft.fillRect(0, 278, W, 42, cBg2);
-  tft.setTextSize(2); tft.setTextColor(cDim);
-  tft.setCursor(8, 32); tft.print("PIN TO DISARM");
+  // small title, centered
+  tft.setTextSize(1); tft.setTextColor(cDim);
+  tft.setCursor(81, 22); tft.print("PIN TO DISARM");
   // entry display
-  tft.fillRect(8, 50, 224, 26, cBg2); tft.drawRect(8, 50, 224, 26, cDim);
-  // keypad: 1-9 grid, C/0/OK bottom row
+  tft.fillRect(30, 34, 180, 26, cBg2); tft.drawRect(30, 34, 180, 26, cDim);
+  // keypad edge-to-edge: 4 rows to the bottom, big keys (76x54)
   const char *lab[12] = {"1","2","3","4","5","6","7","8","9","C","0","OK"};
   for (uint8_t r = 0; r < 4; r++)
     for (uint8_t c = 0; c < 3; c++) {
       uint8_t i = r * 3 + c;
-      uint16_t x = 8 + c * 76, y = 86 + r * 44;
-      bool ok = (i == 11);
-      tft.fillRect(x, y, 72, 40, ok ? cGood : cBg2);
-      tft.drawRect(x, y, 72, 40, ok ? cGood : cDim);
-      tft.setTextSize(2);
-      tft.setTextColor(ok ? cBg : cTxt);
-      tft.setCursor(x + (72 - 12) / 2, y + 13);
+      uint16_t x = 2 + c * 79, y = 78 + r * 60;
+      bool ok = (i == 11), clr = (i == 9);
+      tft.fillRect(x, y, 76, 54, ok ? cGood : cBg2);
+      tft.drawRect(x, y, 76, 54, ok ? cGood : clr ? cWarn : cDim);
+      tft.setTextSize(3);
+      tft.setTextColor(ok ? cBg : clr ? cWarn : cTxt);
+      tft.setCursor(x + (76 - 18 * strlen(lab[i])) / 2, y + 15);
       tft.print(lab[i]);
     }
   if (!pairPin[0]) {
-    slotPrint(sPinMsg, 8, 268, 224, 14, 1, "no PIN set — serial 'P <pin>'", cWarn, cBg);
+    slotPrint(sPinMsg, 8, 64, 224, 12, 1, "no PIN set — serial 'P <pin>'", cWarn, cBg);
   } else {
-    slotPrint(sPinMsg, 8, 268, 224, 14, 1, "wrong PIN locks 15 s after 3 tries", cDim, cBg);
+    slotPrint(sPinMsg, 8, 64, 224, 12, 1, "wrong PIN locks 15 s after 3 tries", cDim, cBg);
   }
   sPinDisp.last[0] = 1;                  // force entry redraw
 }
 void pinDrawEntry() {
-  char dots[14] = "";
-  for (uint8_t i = 0; i < pinLen; i++) dots[i] = '*';
-  dots[pinLen] = 0;
-  slotPrint(sPinDisp, 12, 53, 216, 20, 2, dots, cTxt, cBg2);
+  // asterisks centered in the entry box (spaces do the centering)
+  char line[17] = "";
+  uint8_t pad = (15 - pinLen) / 2;
+  for (uint8_t i = 0; i < pad; i++) line[i] = ' ';
+  for (uint8_t i = 0; i < pinLen; i++) line[pad + i] = '*';
+  line[pad + pinLen] = 0;
+  slotPrint(sPinDisp, 34, 38, 172, 18, 2, line, cTxt, cBg2);
 }
 void pinExitToStandby() {
   pinScreen = false;
@@ -1262,7 +1266,7 @@ void pinExitToStandby() {
 }
 void pinTryDisarm() {
   pinEntry[pinLen] = 0;
-  if (!pairPin[0]) { slotPrint(sPinMsg, 8, 268, 224, 14, 1, "no PIN set", cWarn, cBg); pinLen = 0; pinDrawEntry(); return; }
+  if (!pairPin[0]) { slotPrint(sPinMsg, 8, 64, 224, 12, 1, "no PIN set", cWarn, cBg); pinLen = 0; pinDrawEntry(); return; }
   if (authOk(pinEntry)) {
     klArmed = false; manualDisarmed = true;
     absentSinceMs = millis();
@@ -1274,7 +1278,7 @@ void pinTryDisarm() {
   } else {
     Serial.println("[pin] wrong");
     pinLen = 0; pinDrawEntry();
-    slotPrint(sPinMsg, 8, 268, 224, 14, 1,
+    slotPrint(sPinMsg, 8, 64, 224, 12, 1,
               millis() < authLockUntilMs ? "LOCKED — wait" : "wrong PIN", cBad, cBg);
   }
   pinAtMs = millis();
