@@ -517,6 +517,10 @@ void slotPrintC(Slot &s, uint16_t x, uint16_t y, uint16_t w, uint16_t h,
 
 /* ---- Oct-2026 mockup kit widgets ---- */
 int barBattCache = -1, barCurrCache = -1, pctBattCache = -1, pctCurrCache = -1;
+int sigCache = 9999;                 // LOCK signal bars (cached on bar level)
+int8_t lockShown = -1;               // LOCK padlock: 0 no-fob, 1 open, 2 closed
+int8_t setBoxShown = -1;             // SET page key-box furniture
+bool cfgDrawn = false;               // CFG page static furniture
 float tripKm = 0;                      // RAM-only trip meter (resets at boot)
 uint32_t lastTripMs = 0;
 const char *GEAR_NAMES[4] = {"LOW", "MID", "HIGH", "SPORT"};
@@ -525,7 +529,10 @@ int battPct() {                        // crude SOC from pack voltage (20S)
   if (!tele.has || millis() - tele.atMs > 30000 || tele.v < 30) return -1;
   return (int)constrain((tele.v - 63.0f) / 21.0f * 100.0f, 0.0f, 100.0f);
 }
-void drawBar(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int pct, uint16_t col) {
+void drawBar(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int pct,
+             uint16_t col, int &cache) {
+  if (pct == cache) return;            // cached: repaint only on level change
+  cache = pct;
   for (uint8_t i = 0; i < 10; i++)
     tft.fillRect(x + i * (w / 10), y, w / 10 - 1, h, pct > i * 10 ? col : cBrd);
 }
@@ -539,10 +546,15 @@ void drawPct(uint16_t x, uint16_t y, int pct, int &cache) {
   tft.setCursor(x, y); tft.print(b);
 }
 void drawSig(uint16_t x, uint16_t y, int rssi) {   // 4 ascending signal bars
+  int lvl = 0;                                  // cache on bar LEVEL, not raw
+  for (uint8_t i = 0; i < 4; i++)               // RSSI (jitters every scan)
+    if (rssi > (-90 + i * 10)) lvl++;
+  if (lvl == sigCache) return;
+  sigCache = lvl;
+  tft.fillRect(x - 2, y - 2, 46, 18, cBg);
   for (uint8_t i = 0; i < 4; i++) {
     uint8_t th = 4 + i * 3;
-    bool on = rssi > (-90 + i * 10);
-    tft.fillRect(x + i * 6, y + 14 - th, 4, th, on ? cGood : cBrd);
+    tft.fillRect(x + i * 6, y + 14 - th, 4, th, i < lvl ? cGood : cBrd);
   }
 }
 void drawLockIcon(uint16_t cx, uint16_t top, uint16_t col, bool closed) {
@@ -1005,6 +1017,7 @@ void drawChrome() {
   tft.fillRect(0, 0, W, 278, cBg);
   tft.fillRect(0, 29, W, 1, cBrd);             // header divider
   barBattCache = barCurrCache = pctBattCache = pctCurrCache = -1;
+  sigCache = 9999; lockShown = -1; setBoxShown = -1; cfgDrawn = false;
   dotCache = 0xFFFF; btOffIconShown = -1; battCache = 0xFF;   // header repaints
   drawTabBar();
   tft.setTextSize(2); tft.setTextColor(cDim);
@@ -1134,11 +1147,11 @@ void drawTelemetry() {
       slotPrint(sTeleRpm, 128, 236, 110, 16, 2, b,
                 wheelCircM > 0 ? cTxt : cDim, cBg);
     }
-    drawBar(8, 200, 88, 8, bp < 0 ? 0 : bp, battCol);
+    drawBar(8, 200, 88, 8, bp < 0 ? 0 : bp, battCol, barBattCache);
     drawPct(100, 198, bp, pctBattCache);
     int ap = tele.has ? (int)(constrain((tele.a < 0 ? -tele.a : tele.a) / 40.0f,
                                         0.0f, 1.0f) * 100) : 0;
-    drawBar(128, 200, 100, 8, ap, cAcc);
+    drawBar(128, 200, 100, 8, ap, cAcc, barCurrCache);
   } else if (telePane == 1) {                // ELEC
     if (tele.has) {
       dtostrf(tele.v, 4, 1, b); strcat(b, "V");
@@ -1158,11 +1171,11 @@ void drawTelemetry() {
       slotPrint(sTeleGear, 128, 138, 110, 28, 3, "-", cDim, cBg);
       bp = -1;
     }
-    drawBar(8, 104, 88, 8, bp < 0 ? 0 : bp, battCol);
+    drawBar(8, 104, 88, 8, bp < 0 ? 0 : bp, battCol, barBattCache);
     drawPct(100, 102, bp, pctBattCache);
     int ap = tele.has ? (int)(constrain((tele.a < 0 ? -tele.a : tele.a) / 40.0f,
                                         0.0f, 1.0f) * 100) : 0;
-    drawBar(128, 104, 100, 8, ap, cAcc);
+    drawBar(128, 104, 100, 8, ap, cAcc, barCurrCache);
   } else {                                   // MOTOR
     if (tele.has) {
       snprintf(b, sizeof(b), "%ld", (long)tele.rpm);
@@ -1199,8 +1212,16 @@ void drawTelemetry() {
 
 void drawKeyless() {
   char b[48];
+  // padlock + divider repaint on STATE CHANGE only — per-frame redraws
+  // flicker badly on this parallel bus
+  int8_t lk = fobCount == 0 ? 0 : (klArmed ? 2 : 1);
+  if (lk != lockShown) {
+    lockShown = lk;
+    tft.fillRect(60, 46, 120, 90, cBg);        // clear the icon region
+    drawLockIcon(120, 50, lk == 2 ? cBad : lk == 0 ? cDim : cGood, lk != 1);
+    if (lk) tft.fillRect(8, 176, 224, 1, cBrd);
+  }
   if (fobCount == 0) {
-    drawLockIcon(120, 50, cDim, true);
     slotPrintC(sKlState, 0, 138, 240, 32, 4, "NO FOB", cDim, cBg);
     slotPrint(sKlFob, 8, 182, 224, 14, 1, "register a fob over USB serial:", cWarn, cBg);
     slotPrint(sKlInfo, 8, 196, 224, 14, 1, "'m' iTag  'f <mac>'  'f N:<name>' phone", cWarn, cBg);
@@ -1209,22 +1230,14 @@ void drawKeyless() {
   }
   bool grace = (millis() - bootMs) < BOOT_GRACE_S * 1000UL;
   bool armed = klArmed;
-  drawLockIcon(120, 50, armed ? cBad : cGood, armed);
   slotPrintC(sKlState, 0, 138, 240, 32, 4, armed ? "ARMED" : "DISARMED",
              armed ? cBad : cGood, cBg);
-  tft.fillRect(8, 176, 224, 1, cBrd);
   if (fobPresent()) snprintf(b, sizeof(b), "FOB: NEAR");
   else if (fobLastSeenMs) snprintf(b, sizeof(b), "FOB: AWAY %lds",
                                    (long)((millis() - fobLastSeenMs) / 1000));
   else snprintf(b, sizeof(b), "FOB: NO SIGNAL");
   slotPrint(sKlFob, 8, 182, 160, 16, 2, b, fobPresent() ? cGood : cWarn, cBg);
-  static int sigCache = 999;
-  int sig = fobPresent() ? fobRssi : -128;
-  if (sig != sigCache) {
-    sigCache = sig;
-    tft.fillRect(186, 182, 46, 16, cBg);
-    drawSig(188, 184, sig);
-  }
+  drawSig(188, 184, fobPresent() ? fobRssi : -128);
   if (grace) snprintf(b, sizeof(b), "boot grace %lus",
                       (unsigned)((BOOT_GRACE_S * 1000UL - (millis() - bootMs)) / 1000));
   else if (fobPresent()) snprintf(b, sizeof(b), "rssi %d dBm", fobRssi);
@@ -1299,38 +1312,44 @@ void drawSystem() {
 }
 
 void drawCfg() {
-  // content starts BELOW the sub-tab band (y28-68): nothing may paint there
-  tft.setTextSize(1); tft.setTextColor(cDim);
-  tft.setCursor(8, 72); tft.print("TEXT SIZE");
-  const char *sz[3] = {"S", "M", "L"};
-  for (uint8_t i = 0; i < 3; i++) {
-    uint16_t x = 8 + i * 78;
-    bool act = (uiScale == i);
-    tft.fillRect(x, 84, 68, 40, act ? uiAcc : cBg2);
-    tft.drawRect(x, 84, 68, 40, act ? uiAcc : cBrd);
-    tft.setTextSize(3); tft.setTextColor(act ? cBg : cTxt);
-    tft.setCursor(x + (68 - 18) / 2, 95);
-    tft.print(sz[i]);
-  }
-  for (uint8_t row = 0; row < 2; row++) {        // value then accent swatches
-    uint16_t y = row == 0 ? 134 : 180;
-    uint16_t cur = row == 0 ? uiVal : uiAcc;
+  // content starts BELOW the sub-tab band (y28-68): nothing may paint there.
+  // Static furniture drawn ONCE per chrome repaint — every control change
+  // (size/color/PIN handlers) calls drawChrome, so this never goes stale.
+  // Per-frame redraws flicker on this bus.
+  if (!cfgDrawn) {
+    cfgDrawn = true;
     tft.setTextSize(1); tft.setTextColor(cDim);
-    tft.setCursor(8, y - 12);
-    tft.print(row == 0 ? "VALUE COLOR" : "ACCENT COLOR");
-    for (uint8_t i = 0; i < 6; i++) {
-      uint16_t x = 8 + i * 38;
-      tft.fillRect(x, y, 32, 28, PALETTE[i]);
-      if (PALETTE[i] == cur) tft.drawRect(x - 2, y - 2, 36, 32, cTxt);
+    tft.setCursor(8, 72); tft.print("TEXT SIZE");
+    const char *sz[3] = {"S", "M", "L"};
+    for (uint8_t i = 0; i < 3; i++) {
+      uint16_t x = 8 + i * 78;
+      bool act = (uiScale == i);
+      tft.fillRect(x, 84, 68, 40, act ? uiAcc : cBg2);
+      tft.drawRect(x, 84, 68, 40, act ? uiAcc : cBrd);
+      tft.setTextSize(3); tft.setTextColor(act ? cBg : cTxt);
+      tft.setCursor(x + (68 - 18) / 2, 95);
+      tft.print(sz[i]);
     }
+    for (uint8_t row = 0; row < 2; row++) {        // value then accent swatches
+      uint16_t y = row == 0 ? 134 : 180;
+      uint16_t cur = row == 0 ? uiVal : uiAcc;
+      tft.setTextSize(1); tft.setTextColor(cDim);
+      tft.setCursor(8, y - 12);
+      tft.print(row == 0 ? "VALUE COLOR" : "ACCENT COLOR");
+      for (uint8_t i = 0; i < 6; i++) {
+        uint16_t x = 8 + i * 38;
+        tft.fillRect(x, y, 32, 28, PALETTE[i]);
+        if (PALETTE[i] == cur) tft.drawRect(x - 2, y - 2, 36, 32, cTxt);
+      }
+    }
+    tft.setTextSize(1); tft.setTextColor(cDim);
+    tft.setCursor(8, 222); tft.print("SECURITY");
+    tft.fillRect(8, 232, 224, 34, cBg2);
+    tft.drawRect(8, 232, 224, 34, cBrd);
+    tft.setTextSize(2); tft.setTextColor(cTxt);
+    tft.setCursor(8 + (224 - 10 * 12) / 2, 241);
+    tft.print("CHANGE PIN");
   }
-  tft.setTextSize(1); tft.setTextColor(cDim);
-  tft.setCursor(8, 222); tft.print("SECURITY");
-  tft.fillRect(8, 232, 224, 34, cBg2);
-  tft.drawRect(8, 232, 224, 34, cBrd);
-  tft.setTextSize(2); tft.setTextColor(cTxt);
-  tft.setCursor(8 + (224 - 10 * 12) / 2, 241);
-  tft.print("CHANGE PIN");
   slotPrint(sToast, 8, 270, 224, 14, 1,
             millis() - toastAtMs < 4000 ? toastTxt : "", toastCol, cBg);
 }
@@ -1661,9 +1680,9 @@ void drawQr(const char *text) {
     return;
   }
   int n = qrcodegen_getSize(qr);
-  int sc = 150 / n; if (sc > 6) sc = 6;      // 25*6=150, leaves room for the key box
-  int px = n * sc;
-  int ox = (W - (px + 16)) / 2, oy = 72;     // +16 = white quiet border
+  int sc = 100 / n; if (sc > 4) sc = 4;      // 25*4=100 — compact; manual entry
+  int px = n * sc;                           // rides on the BIG key text below
+  int ox = (W - (px + 16)) / 2, oy = 76;     // +16 = white quiet border
   tft.fillRect(ox, oy, px + 16, px + 16, 0xFFFF);
   for (int y = 0; y < n; y++)
     for (int x = 0; x < n; x++)
@@ -1676,11 +1695,19 @@ void drawSet() {
   uint32_t h = 0x9E3779B9;                 // redraw only when key/screen changed
   for (int i = 0; i < 16; i++) h = (h << 5) ^ (h >> 27) ^ pairKey[i];
   if (h != qrStamp) { qrStamp = h; drawQr(kh); }
-  // the key itself in a cyan-outlined box — both QR and text carry the secret
-  slotPrintC(sSys[6], 0, 244, 240, 12, 1, "PAIRING KEY", cDim, cBg);
-  tft.fillRect(10, 258, 220, 19, cBg2);
-  tft.drawRect(10, 258, 220, 19, uiAcc);
-  slotPrintC(sSys[7], 10, 258, 220, 19, 1, kh, uiAcc, cBg2);
+  if (setBoxShown != 1) {                  // label + box once (flicker fix)
+    setBoxShown = 1;
+    tft.setTextSize(1); tft.setTextColor(cDim);
+    const char *lb = "SCAN QR - OR TYPE THE KEY";
+    tft.setCursor((W - (int)strlen(lb) * 6) / 2, 202); tft.print(lb);
+    tft.fillRect(18, 212, 204, 50, cBg2);
+    tft.drawRect(18, 212, 204, 50, uiAcc);
+  }
+  char l1[17], l2[17];                     // big 2-line key = easy manual typing
+  memcpy(l1, kh, 16);      l1[16] = 0;
+  memcpy(l2, kh + 16, 16); l2[16] = 0;
+  slotPrintC(sSys[6], 18, 216, 204, 18, 2, l1, uiAcc, cBg2);
+  slotPrintC(sSys[7], 18, 238, 204, 18, 2, l2, uiAcc, cBg2);
 }
 
 /* =========================================================== wifi window */

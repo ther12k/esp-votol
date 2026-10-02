@@ -364,9 +364,10 @@ const SCREENS = {
   },
   set(){ chrome(2,0,2); header('VOTOL POD', C.txt, C.good);
     drawQr(KEY);
-    slotC(0,244,240,12,1,'PAIRING KEY',C.dim,C.bg);
-    fillRect(10,258,220,19,C.bg2); drawRect(10,258,220,19,uiAcc);
-    slotC(10,258,220,19,1, KEY, uiAcc, C.bg2);
+    textC(202,1,'SCAN QR - OR TYPE THE KEY',C.dim);
+    fillRect(18,212,204,50,C.bg2); drawRect(18,212,204,50,uiAcc);
+    slotC(18,216,204,18,2, KEY.slice(0,16), uiAcc, C.bg2);
+    slotC(18,238,204,18,2, KEY.slice(16), uiAcc, C.bg2);
   },
   standby(){                                     // armed idle: prohibition sign
     fillRect(0,0,W,H,C.bg);
@@ -448,7 +449,7 @@ function swatchRow(label, y, cur, pick){
 }
 /* deterministic QR v2 mock (finder/timing/alignment real, data seeded) */
 function drawQr(str){
-  const n=25, sc=6, px=n*sc, ox=(W-(px+16))/2, oy=72;
+  const n=25, sc=4, px=n*sc, ox=(W-(px+16))/2, oy=76;   // compact — manual entry uses the big key text
   fillRect(ox,oy,px+16,px+16,C.white);
   let seed=0x9E37; for(const ch of str) seed=(seed*33+ch.charCodeAt(0))>>>0;
   const rnd=()=>{ seed^=seed<<13; seed^=seed>>>17; seed^=seed<<5; seed>>>=0; return seed/4294967296; };
