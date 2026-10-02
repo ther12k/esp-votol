@@ -32,7 +32,7 @@
  *
  * Phone-app link (BLE GATT server, service c9d01402-…): write
  * "ARM:SECRET" / "DISARM:SECRET" / "PANIC:SECRET" / "STAT:SECRET".
- * SECRET = 128-bit pair key (QR shown in SYS->SET) or the PIN.
+ * SECRET = 8-char pair key (QR shown in SYS->SET) or the PIN.
  * Any BLE phone works (Android AND iPhone — this is a connection, not
  * the Android-only fob advertising). 3 bad keys = 15 s lockout.
  * Phone/PIN DISARM is sticky: display on + no auto re-arm until the
@@ -122,7 +122,7 @@ uint32_t learnAtMs = 0;
 /* ---- phone-app command link (BLE GATT) ----
  * The pod also runs a GATT server: an app connects, writes
  * "CMD:SECRET" (ARM/DISARM/PANIC/STAT) and reads status. SECRET =
- * the 128-bit pair key (QR in SYS->SET) or the optional short PIN.
+ * the 8-char pair key (QR in SYS->SET) or the optional short PIN.
  * v1 caveat: no BLE bonding — the secret rides the (unencrypted) link,
  * guarded by a 3-strike 15 s lockout. */
 uint8_t pairKey[16];
@@ -140,17 +140,18 @@ void pairKeyLoad() {
   if (prefs.getBytesLength("pairkey") == 16) prefs.getBytes("pairkey", pairKey, 16);
   else pairKeyGen();
 }
-void pairKeyHex(char *out) {           // 32 hex chars
-  for (int i = 0; i < 16; i++) sprintf(out + i * 2, "%02X", pairKey[i]);
+void pairKeyHex(char *out) {           // 8 hex chars (32-bit secret — safe
+  for (int i = 0; i < 4; i++)            // only because authOk rate-limits:
+    sprintf(out + i * 2, "%02X", pairKey[i]);   // 3 misses = 15 s lockout)
 }
 uint8_t authFails = 0; uint32_t authLockUntilMs = 0;
 bool authOk(const char *sec) {
   if (millis() < authLockUntilMs) return false;
   bool ok = false;
-  if (strlen(sec) == 32) {             // pair key, case-insensitive
-    char kh[33]; pairKeyHex(kh);
+  if (strlen(sec) == 8) {              // pair key (8 hex, case-insensitive)
+    char kh[9]; pairKeyHex(kh);
     ok = true;
-    for (int i = 0; i < 32; i++)
+    for (int i = 0; i < 8; i++)
       if (toupper((unsigned char)sec[i]) != kh[i]) { ok = false; break; }
   }
   if (!ok && pairPin[0] && !strcmp(sec, pairPin)) ok = true;
@@ -1670,18 +1671,18 @@ void pinOk() {
 
 /* ---- SET page: pairing QR for the phone app ---- */
 void drawQr(const char *text) {
-  // bare 32-hex at ECC LOW -> version 2 (25 modules): fewer, bigger
-  // modules scan far more easily from a 2.4" glass than v4@6px did
+  // bare 8-hex at ECC LOW -> version 1 (21 modules) — smallest QR there
+  // is; scanning is a convenience, typing the 8 chars is the real path
   static uint8_t qr[qrcodegen_BUFFER_LEN_FOR_VERSION(4)];
   static uint8_t tmp[qrcodegen_BUFFER_LEN_FOR_VERSION(4)];
   if (!qrcodegen_encodeText(text, tmp, qr, qrcodegen_Ecc_LOW,
-                            2, 4, qrcodegen_Mask_AUTO, true)) {
+                            1, 4, qrcodegen_Mask_AUTO, true)) {
     Serial.println("[qr] encode failed");
     return;
   }
   int n = qrcodegen_getSize(qr);
-  int sc = 100 / n; if (sc > 4) sc = 4;      // 25*4=100 — compact; manual entry
-  int px = n * sc;                           // rides on the BIG key text below
+  int sc = 100 / n; if (sc > 4) sc = 4;      // 21*4=84 — compact
+  int px = n * sc;
   int ox = (W - (px + 16)) / 2, oy = 76;     // +16 = white quiet border
   tft.fillRect(ox, oy, px + 16, px + 16, 0xFFFF);
   for (int y = 0; y < n; y++)
@@ -1691,7 +1692,7 @@ void drawQr(const char *text) {
   Serial.printf("[qr] drawn %dx%d scale %d\n", n, n, sc);
 }
 void drawSet() {
-  char kh[33]; pairKeyHex(kh);
+  char kh[9]; pairKeyHex(kh);
   uint32_t h = 0x9E3779B9;                 // redraw only when key/screen changed
   for (int i = 0; i < 16; i++) h = (h << 5) ^ (h >> 27) ^ pairKey[i];
   if (h != qrStamp) { qrStamp = h; drawQr(kh); }
@@ -1700,14 +1701,10 @@ void drawSet() {
     tft.setTextSize(1); tft.setTextColor(cDim);
     const char *lb = "SCAN QR - OR TYPE THE KEY";
     tft.setCursor((W - (int)strlen(lb) * 6) / 2, 202); tft.print(lb);
-    tft.fillRect(18, 212, 204, 50, cBg2);
-    tft.drawRect(18, 212, 204, 50, uiAcc);
+    tft.fillRect(18, 212, 204, 40, cBg2);
+    tft.drawRect(18, 212, 204, 40, uiAcc);
   }
-  char l1[17], l2[17];                     // big 2-line key = easy manual typing
-  memcpy(l1, kh, 16);      l1[16] = 0;
-  memcpy(l2, kh + 16, 16); l2[16] = 0;
-  slotPrintC(sSys[6], 18, 216, 204, 18, 2, l1, uiAcc, cBg2);
-  slotPrintC(sSys[7], 18, 238, 204, 18, 2, l2, uiAcc, cBg2);
+  slotPrintC(sSys[6], 18, 214, 204, 36, 4, kh, uiAcc, cBg2);   // one BIG line
 }
 
 /* =========================================================== wifi window */

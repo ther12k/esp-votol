@@ -110,7 +110,7 @@ const T = { v:'72.4', a:'12.5', rpm:540, gear:'S', tc:42, tm:55, status:'RUN',
 const rideKmh = Math.round(T.rpm * T.wheel * 0.06);           // 66
 const battPct = Math.round((parseFloat(T.v) - 63) / 21 * 100); // 45 (crude 20S SOC)
 const FOBS = ['AA:BB:CC:DD:EE:FF', 'N:galaxy'];
-const KEY  = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
+const KEY  = 'a1b2c3d4';                    // 8-char pair key
 
 /* ---------- GFX primitives on a 240x320 offscreen ---------- */
 const off = document.createElement('canvas'); off.width = W; off.height = H;
@@ -365,9 +365,8 @@ const SCREENS = {
   set(){ chrome(2,0,2); header('VOTOL POD', C.txt, C.good);
     drawQr(KEY);
     textC(202,1,'SCAN QR - OR TYPE THE KEY',C.dim);
-    fillRect(18,212,204,50,C.bg2); drawRect(18,212,204,50,uiAcc);
-    slotC(18,216,204,18,2, KEY.slice(0,16), uiAcc, C.bg2);
-    slotC(18,238,204,18,2, KEY.slice(16), uiAcc, C.bg2);
+    fillRect(18,212,204,40,C.bg2); drawRect(18,212,204,40,uiAcc);
+    slotC(18,214,204,36,4, KEY, uiAcc, C.bg2);
   },
   standby(){                                     // armed idle: prohibition sign
     fillRect(0,0,W,H,C.bg);
@@ -447,9 +446,9 @@ function swatchRow(label, y, cur, pick){
     if(PALETTE[i]===cur) drawRect(x-2,y-2,36,32,C.txt);
   }
 }
-/* deterministic QR v2 mock (finder/timing/alignment real, data seeded) */
+/* deterministic QR v1 mock (8-hex payload: finders + timing real, data seeded) */
 function drawQr(str){
-  const n=25, sc=4, px=n*sc, ox=(W-(px+16))/2, oy=76;   // compact — manual entry uses the big key text
+  const n=21, sc=4, px=n*sc, ox=(W-(px+16))/2, oy=76;   // compact — manual entry is the big key text
   fillRect(ox,oy,px+16,px+16,C.white);
   let seed=0x9E37; for(const ch of str) seed=(seed*33+ch.charCodeAt(0))>>>0;
   const rnd=()=>{ seed^=seed<<13; seed^=seed>>>17; seed^=seed<<5; seed>>>=0; return seed/4294967296; };
@@ -460,17 +459,12 @@ function drawQr(str){
   const mod=(x,y,on)=>{ if(on) fillRect(ox+8+x*sc, oy+8+y*sc, sc, sc, C.black); };
   for(let y=0;y<n;y++) for(let x=0;x<n;x++){
     const inF = (x<9&&y<9)||(x>n-10&&y<9)||(x<9&&y>n-10);
-    const inA = x>=16&&x<=20&&y>=16&&y<=20;
-    if(inF||inA) continue;
+    if(inF) continue;
     const timing = (x===6) ? (y%2===0) : (y===6) ? (x%2===0) : null;
     if(timing!==null){ mod(x,y,timing); continue; }
     mod(x,y, rnd()<0.47);
   }
-  finder(0,0); finder(18,0); finder(0,18);
-  for(let y=-2;y<=2;y++) for(let x=-2;x<=2;x++){    // alignment 5x5 at (18,18)
-    const ring=Math.max(Math.abs(x),Math.abs(y));
-    mod(18+x,18+y, ring===0||ring===2);
-  }
+  finder(0,0); finder(n-7,0); finder(0,n-7);     // v1: no alignment pattern
 }
 
 /* ---------- render + UI wiring ---------- */
