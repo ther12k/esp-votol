@@ -365,7 +365,7 @@ void buzzTick() {
 MCUFRIEND_kbv tft;
 #define W 240
 #define H 320
-uint16_t cBg, cBg2, cTxt, cDim, cAcc, cGood, cWarn, cBad;
+uint16_t cBg, cBg2, cTxt, cDim, cAcc, cGood, cWarn, cBad, cBrd;
 
 /* ---- pages ---- */
 enum Page : uint8_t { PG_TELE = 0, PG_KEYLESS = 1, PG_SETUP = 2 };
@@ -501,6 +501,83 @@ void slotPrint(Slot &s, uint16_t x, uint16_t y, uint16_t w, uint16_t h,
   tft.setCursor(x + 2, y + ((h > 8 * size) ? (h - 8 * size) / 2 : 1));
   tft.print(txt);
 }
+/* ---- centered slot (hero numbers / state words) ---- */
+void slotPrintC(Slot &s, uint16_t x, uint16_t y, uint16_t w, uint16_t h,
+                uint8_t size, const char *txt, uint16_t col, uint16_t bg) {
+  if (!strcmp(s.last, txt) && s.lastCol == col && s.lastBg == bg) return;
+  strncpy(s.last, txt, sizeof(s.last) - 1); s.last[sizeof(s.last) - 1] = 0;
+  s.lastCol = col; s.lastBg = bg;
+  tft.fillRect(x, y, w, h, bg);
+  tft.setTextSize(size); tft.setTextColor(col);
+  uint16_t tw = strlen(txt) * 6 * size;
+  tft.setCursor(x + (w > tw ? (w - tw) / 2 : 0),
+                y + ((h > 8 * size) ? (h - 8 * size) / 2 : 1));
+  tft.print(txt);
+}
+
+/* ---- Oct-2026 mockup kit widgets ---- */
+int barBattCache = -1, barCurrCache = -1, pctBattCache = -1, pctCurrCache = -1;
+float tripKm = 0;                      // RAM-only trip meter (resets at boot)
+uint32_t lastTripMs = 0;
+const char *GEAR_NAMES[4] = {"LOW", "MID", "HIGH", "SPORT"};
+
+int battPct() {                        // crude SOC from pack voltage (20S)
+  if (!tele.has || millis() - tele.atMs > 30000 || tele.v < 30) return -1;
+  return (int)constrain((tele.v - 63.0f) / 21.0f * 100.0f, 0.0f, 100.0f);
+}
+void drawBar(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int pct, uint16_t col) {
+  for (uint8_t i = 0; i < 10; i++)
+    tft.fillRect(x + i * (w / 10), y, w / 10 - 1, h, pct > i * 10 ? col : cBrd);
+}
+void drawPct(uint16_t x, uint16_t y, int pct, int &cache) {
+  if (pct == cache) return;
+  cache = pct;
+  char b[8] = "--";
+  if (pct >= 0) snprintf(b, sizeof(b), "%d%%", pct);
+  tft.fillRect(x, y, 26, 11, cBg);
+  tft.setTextSize(1); tft.setTextColor(cDim);
+  tft.setCursor(x, y); tft.print(b);
+}
+void drawSig(uint16_t x, uint16_t y, int rssi) {   // 4 ascending signal bars
+  for (uint8_t i = 0; i < 4; i++) {
+    uint8_t th = 4 + i * 3;
+    bool on = rssi > (-90 + i * 10);
+    tft.fillRect(x + i * 6, y + 14 - th, 4, th, on ? cGood : cBrd);
+  }
+}
+void drawLockIcon(uint16_t cx, uint16_t top, uint16_t col, bool closed) {
+  // small padlock (~70x82): body 70x52 + shackle; open = right leg lifted
+  uint16_t by = top + 30;
+  tft.fillRect(cx - 23, top, 10, by + 12 - top, col);              // left (hinged)
+  tft.fillRect(cx + 13, top, 10, closed ? by + 12 - top : by - 8 - top, col);
+  tft.fillRect(cx - 23, top, 46, 10, col);                          // bridge
+  tft.fillRoundRect(cx - 35, by, 70, 52, 8, col);
+  tft.fillCircle(cx, by + 20, 7, cBg);
+  tft.fillRect(cx - 3, by + 10, 6, 13, cBg);
+}
+void drawLockShape(uint16_t col, int shY, int rLeg) {   // big anim padlock
+  tft.fillRect(80, shY, 12, 144 - shY, col);
+  tft.fillRect(80, shY, 80, 12, col);
+  tft.fillRect(148, shY, 12, rLeg, col);
+  tft.fillRoundRect(70, 138, 100, 74, 10, col);
+  tft.fillCircle(120, 176, 10, cBg);
+  tft.fillRect(115, 162, 10, 18, cBg);
+}
+void drawBackspace(int cx, int cy) {
+  tft.fillTriangle(cx - 16, cy, cx - 5, cy - 11, cx - 5, cy + 11, cDim);
+  tft.fillRect(cx - 5, cy - 9, 22, 18, cDim);
+  tft.drawLine(cx + 1, cy - 4, cx + 10, cy + 4, cBg);
+  tft.drawLine(cx + 10, cy - 4, cx + 1, cy + 4, cBg);
+}
+void tripTick() {
+  uint32_t now = millis();
+  float dt = (now - lastTripMs) / 1000.0f;
+  lastTripMs = now;
+  if (wheelCircM <= 0 || !tele.has || dt <= 0 || dt > 5) return;
+  if (tele.rpm > 0 && now - tele.atMs < 3000)
+    tripKm += tele.rpm * wheelCircM * 0.06f * dt / 3600.0f;
+}
+
 Slot sTeleBig, sTeleCur, sTelePow, sTeleRpm, sTeleGear, sTeleTc, sTeleStat, sTeleLink;
 Slot sSys[8], sToast, sHeader;
 Slot sKlState, sKlFob, sKlInfo, sKlEnt[4];
@@ -525,6 +602,7 @@ char pinEntry[13]; uint8_t pinLen = 0;
 uint32_t pinAtMs = 0;
 uint32_t dispForceUntilMs = 0;
 uint16_t dotCache = 0xFFFF;
+uint8_t battCache = 0xFF;            // header battery-gauge cache key
 int8_t btOffIconShown = -1;          // crossed-BT badge state (top right)
 void drawStandby();                  // fwd
 void drawChrome();                                   // fwd
@@ -622,18 +700,18 @@ void drawArmAsk() {
   tft.fillRect(0, 0, W, H, cBg);
   tft.setTextSize(2); tft.setTextColor(cTxt);
   const char *t = "ARM THE ALARM?";
-  tft.setCursor((W - (int)strlen(t) * 12) / 2, 92); tft.print(t);
+  tft.setCursor((W - (int)strlen(t) * 12) / 2, 78); tft.print(t);
   tft.setTextSize(1); tft.setTextColor(cDim);
   const char *s = "screen will rest at the lock screen";
-  tft.setCursor((W - (int)strlen(s) * 6) / 2, 120); tft.print(s);
-  tft.fillRect(8, 168, 224, 58, cBg2); tft.drawRect(8, 168, 224, 58, cGood);
-  tft.setTextSize(3); tft.setTextColor(cGood);
+  tft.setCursor((W - (int)strlen(s) * 6) / 2, 106); tft.print(s);
+  tft.fillRect(8, 148, 224, 56, cBg2); tft.drawRect(8, 148, 224, 56, cBrd);
+  tft.setTextSize(3); tft.setTextColor(cTxt);
   const char *n = "NO";
-  tft.setCursor((W - (int)strlen(n) * 18) / 2, 186); tft.print(n);
-  tft.fillRect(8, 242, 224, 58, cBg2); tft.drawRect(8, 242, 224, 58, cBad);
-  tft.setTextColor(cBad);
+  tft.setCursor((W - (int)strlen(n) * 18) / 2, 165); tft.print(n);
+  tft.fillRect(8, 218, 224, 58, cGood);
+  tft.setTextSize(3); tft.setTextColor(cBg);
   const char *y = "YES, ARM";
-  tft.setCursor((W - (int)strlen(y) * 18) / 2, 260); tft.print(y);
+  tft.setCursor((W - (int)strlen(y) * 18) / 2, 236); tft.print(y);
 }
 void doDeviceArm() {
   if (fobCount == 0) { toast("no fob registered", cDim); uiInvalidate(); drawChrome(); return; }
@@ -649,10 +727,10 @@ void armAskTouch() {
   static uint32_t lastTapMs = 0;
   if (millis() - lastTapMs < 180) return;
   lastTapMs = millis();
-  if (py >= 160 && py <= 232) {          // NO
+  if (py >= 140 && py <= 214) {          // NO
     armAsk = false; uiInvalidate(); drawChrome();
     Serial.println("[kl] arm cancelled");
-  } else if (py >= 234) {                // YES
+  } else if (py >= 216) {                // YES
     armAsk = false;
     doDeviceArm();
   }
@@ -701,16 +779,16 @@ void lcdRestore() {
 /* ---- UI settings (CFG page, NVS-persisted, live-applied) ---- */
 #define RGB565(r, g, b) ((((r) & 0xF8) << 8) | (((g) & 0xFC) << 3) | ((b) >> 3))
 const uint16_t PALETTE[6] = {
-  RGB565(0, 200, 255),   // cyan (default)
-  RGB565(0, 255, 120),   // green
+  RGB565(0, 208, 255),   // cyan #00D0FF (default)
+  RGB565(0, 255, 128),   // green
   RGB565(255, 200, 0),   // yellow
   RGB565(255, 150, 40),  // orange
   RGB565(235, 240, 245), // white
   RGB565(240, 90, 220),  // pink
 };
 uint8_t uiScale = 1;                 // 0 small, 1 medium (default), 2 large
-uint16_t uiVal = RGB565(0, 200, 255);   // telemetry value color
-uint16_t uiAcc = RGB565(0, 200, 255);   // accent (tabs, highlights)
+uint16_t uiVal = RGB565(0, 208, 255);   // telemetry value color
+uint16_t uiAcc = RGB565(0, 208, 255);   // accent (tabs, highlights)
 void uiSave() {
   prefs.putUChar("uiscale", uiScale);
   prefs.putUShort("uival", uiVal);
@@ -718,8 +796,8 @@ void uiSave() {
 }
 void uiLoad() {
   uiScale = prefs.getUChar("uiscale", 1);
-  uiVal = prefs.getUShort("uival", RGB565(0, 200, 255));
-  uiAcc = prefs.getUShort("uiacc", RGB565(0, 200, 255));
+  uiVal = prefs.getUShort("uival", RGB565(0, 208, 255));
+  uiAcc = prefs.getUShort("uiacc", RGB565(0, 208, 255));
 }
 uint8_t szBig()  { return uiScale == 0 ? 3 : uiScale == 1 ? 4 : 5; }
 uint8_t szMid()  { return uiScale == 2 ? 3 : 2; }
@@ -822,9 +900,11 @@ void handleTouch() {
   } else if (page == PG_SETUP && setupTab == 0 &&
              py >= 212 && py <= 256 && px >= 8 && px <= 232) {
     btPauseToggle();                        // release BT for the phone app
-  } else if (page == PG_KEYLESS && py >= 190 && py <= 250 && px >= 8 && px <= 232) {
-    if (klArmed) panicToggle();               // siren on/off
-    else         armAskOpen();                // YES/NO confirmation screen
+  } else if (page == PG_KEYLESS && py >= 224 && py <= 272) {
+    if (klArmed) {                            // DISARM asks the PIN, PANIC siren
+      if (px < 148) { pinEntryMode = 0; drawPinScreen(); }
+      else panicToggle();
+    } else if (fobCount) armAskOpen();        // YES/NO confirmation screen
   } else if (page == PG_TELE && py >= 30) {
     telePane = (telePane + 1) % 3;          // tap content: RIDE -> ELEC -> MOTOR
     lastCycleMs = millis();
@@ -884,7 +964,7 @@ void pinTouch() {
   uint8_t i = row * 3 + col;             // 0..8 digits, 9=C, 10=0, 11=OK
   if (i <= 8 && pinLen < 12) pinEntry[pinLen++] = '1' + i;
   else if (i == 10 && pinLen < 12) pinEntry[pinLen++] = '0';
-  else if (i == 9) pinLen = 0;
+  else if (i == 9) { if (pinLen) pinLen--; }      // backspace
   else if (i == 11) { pinOk(); return; }
   pinDrawEntry();
 }
@@ -896,7 +976,7 @@ void drawTabBar() {
     uint16_t x = i * 80;
     bool act = (i == page);
     tft.fillRect(x + 1, 278, 78, 40, act ? uiAcc : cBg2);
-    tft.drawRect(x + 1, 278, 78, 40, cDim);
+    tft.drawRect(x + 1, 278, 78, 40, act ? uiAcc : cBrd);
     uint8_t ts = strlen(PAGE_NAMES[i]) * 12 > 76 ? 1 : 2;   // never clip
     tft.setTextSize(ts);
     tft.setTextColor(act ? cBg : cTxt);
@@ -911,34 +991,59 @@ void drawSubTabs() {                // SYS page: STATUS / CONFIG / SET
   for (uint8_t i = 0; i < 3; i++) {
     uint16_t x = 8 + i * 76;
     bool act = (setupTab == i);
-    tft.fillRect(x, 28, 72, 40, act ? uiAcc : cBg2);
-    tft.drawRect(x, 28, 72, 40, cDim);
+    tft.fillRect(x, 32, 72, 36, act ? uiAcc : cBg2);
+    tft.drawRect(x, 32, 72, 36, act ? uiAcc : cBrd);
     tft.setTextSize(2);
     tft.setTextColor(act ? cBg : cTxt);
     uint16_t tw = strlen(names[i]) * 12;
-    tft.setCursor(x + (72 - tw) / 2, 40);
+    tft.setCursor(x + (72 - tw) / 2, 42);
     tft.print(names[i]);
   }
 }
 
 void drawChrome() {
-  tft.fillRect(0, 27, W, 250, cBg);
+  tft.fillRect(0, 0, W, 278, cBg);
+  tft.fillRect(0, 29, W, 1, cBrd);             // header divider
+  barBattCache = barCurrCache = pctBattCache = pctCurrCache = -1;
+  dotCache = 0xFFFF; btOffIconShown = -1; battCache = 0xFF;   // header repaints
   drawTabBar();
+  tft.setTextSize(2); tft.setTextColor(cDim);
   if (page == PG_SETUP) drawSubTabs();
-  if (page == PG_TELE) {
-    tft.setTextSize(2); tft.setTextColor(cDim);
+  else if (page == PG_TELE) {
+    char sb[24];
+    snprintf(sb, sizeof(sb), "TELEMETRY (%s)", PANE_NAMES[telePane]);
+    tft.setTextSize(1);
+    tft.setCursor(8, 36); tft.print(sb);
     if (telePane == 0) {                    // RIDE
-      tft.setCursor(8, 34);   tft.print("SPEED");
+      tft.setTextSize(2);
+      tft.setCursor(8, 46); tft.print("SPEED");
+      tft.setCursor(236 - (wheelCircM > 0 ? 4 : 3) * 12, 46);
+      tft.print(wheelCircM > 0 ? "KM/H" : "RPM");
+      tft.setTextSize(1);
+      tft.setCursor(8, 158);   tft.print("BATTERY");
+      tft.setCursor(128, 158); tft.print("CURRENT");
+      tft.setCursor(8, 224);   tft.print("RIDE MODE");
+      tft.setCursor(128, 224); tft.print("TRIP");
+      tft.fillRect(8, 152, 224, 1, cBrd);
+      tft.fillRect(8, 218, 224, 1, cBrd);
     } else if (telePane == 1) {             // ELEC
-      tft.setCursor(8, 32);   tft.print("BATTERY");
-      tft.setCursor(128, 32); tft.print("CURRENT");
-      tft.setCursor(8, 96);   tft.print("POWER");
-      tft.setCursor(128, 96); tft.print("GEAR");
+      tft.setCursor(8, 48);   tft.print("BATTERY");
+      tft.setCursor(128, 48); tft.print("CURRENT");
+      tft.setTextSize(1);
+      tft.setCursor(8, 126);   tft.print("POWER");
+      tft.setCursor(128, 126); tft.print("GEAR");
+      tft.fillRect(8, 120, 224, 1, cBrd);
     } else {                                 // MOTOR
-      tft.setCursor(8, 32);   tft.print("RPM");
-      tft.setCursor(128, 32); tft.print("GEAR");
-      tft.setCursor(8, 100);  tft.print("CTRL/MOT C");
+      tft.setCursor(8, 48);   tft.print("RPM");
+      tft.setCursor(128, 48); tft.print("GEAR");
+      tft.setTextSize(1);
+      tft.setCursor(8, 126);   tft.print("TEMPS");
+      tft.setCursor(128, 126); tft.print("STATE");
+      tft.fillRect(8, 120, 224, 1, cBrd);
     }
+  } else {                                   // LOCK
+    tft.setTextSize(1); tft.setTextColor(cDim);
+    tft.setCursor(8, 36); tft.print("SECURITY");
   }
   btnCache = -1;
   qrStamp = 0;                       // SET page QR must repaint after chrome
@@ -948,15 +1053,14 @@ void drawHeader() {
   char h[30];
   uint16_t col = cTxt;
   uint32_t age = tele.has ? (millis() - tele.atMs) / 1000 : 999;
-  if (wifiPhase)             { snprintf(h, sizeof(h), "VOTOL setup window"); col = uiAcc; }
-  else if (btPaused())        { snprintf(h, sizeof(h), "VOTOL  bt paused");  col = cAcc; }
+  if (wifiPhase)             { snprintf(h, sizeof(h), "VOTOL setup");   col = uiAcc; }
+  else if (btPaused())        { snprintf(h, sizeof(h), "VOTOL bt pause"); col = cAcc; }
   else if (!btLinkOn)         snprintf(h, sizeof(h), "VOTOL %s",   // plain — badge shows the state
                 page == PG_TELE ? PANE_NAMES[telePane] : PAGE_NAMES[page]);
-  else if (!SerialBT.connected()) { snprintf(h, sizeof(h), "VOTOL  bt search"); col = cWarn; }
-  else if (!tele.has || age > 10)  { snprintf(h, sizeof(h), "VOTOL  no data");   col = cWarn; }
-  else snprintf(h, sizeof(h), "VOTOL %s",
-                page == PG_TELE ? PANE_NAMES[telePane] : PAGE_NAMES[page]);
-  slotPrint(sHeader, 0, 0, 190, 26, 2, h, col, cBg2);
+  else if (!SerialBT.connected()) { snprintf(h, sizeof(h), "VOTOL bt search"); col = cWarn; }
+  else if (!tele.has || age > 10)  { snprintf(h, sizeof(h), "VOTOL no data");  col = cWarn; }
+  else snprintf(h, sizeof(h), "VOTOL POD");
+  slotPrint(sHeader, 0, 0, 190, 28, 2, h, col, cBg);
 
   uint16_t dot = cBad;
   if (!btLinkOn) dot = 0;                   // link intentionally off: no alarm dot
@@ -964,137 +1068,200 @@ void drawHeader() {
     if (age < 5) dot = cGood; else if (age < 30) dot = cWarn;
   } else if (!wifiPhase && SerialBT.connected()) dot = cWarn;
   if (dot != dotCache) {
-    tft.fillRect(216, 7, 18, 12, cBg2);
-    if (dot) tft.fillCircle(225, 13, 6, dot);
+    tft.fillRect(196, 6, 16, 15, cBg);
+    if (dot) tft.fillCircle(204, 13, 5, dot);
     dotCache = dot;
   }
 
-  // BT-off badge: crossed "BT" left of the dot
+  // BT-off badge: crossed "BT" left of the gauge
   bool off = !btLinkOn;
   if (off != (bool)btOffIconShown) {
     btOffIconShown = off;
-    tft.fillRect(190, 4, 24, 20, cBg2);
+    tft.fillRect(190, 4, 26, 20, cBg);
     if (off) {
       tft.setTextSize(1); tft.setTextColor(cDim);
       tft.setCursor(196, 10); tft.print("BT");
-      tft.drawLine(193, 4, 213, 22, cBad);
-      tft.drawLine(194, 4, 214, 22, cBad);
+      tft.drawLine(192, 4, 214, 22, cBad);
+      tft.drawLine(193, 4, 215, 22, cBad);
     }
+  }
+
+  // battery gauge (crude voltage SOC), far right
+  int bp = battPct();
+  uint8_t bk = bp < 0 ? 0xFF : (uint8_t)(bp / 10);
+  if (bk != battCache) {
+    battCache = bk;
+    tft.fillRect(210, 6, 30, 16, cBg);
+    tft.drawRect(212, 8, 26, 12, cDim);
+    tft.fillRect(238, 11, 2, 6, cDim);
+    uint16_t seg = bp < 15 ? cBad : bp < 35 ? cWarn : cGood;
+    for (uint8_t i = 0; i < 4; i++)
+      tft.fillRect(214 + i * 6, 10, 5, 8, bp > (int)i * 25 + 10 ? seg : cBrd);
   }
 }
 
 void drawTelemetry() {
   char b[32];
+  int bp = battPct();
+  uint16_t battCol = bp < 25 ? (bp < 10 ? cBad : cWarn) : cGood;
   if (telePane == 0) {                       // RIDE — one huge number
     if (!tele.has) {
-      slotPrint(sTeleBig, 8, 58, 224, 76, uiScale == 0 ? 4 : 5, "--", cDim, cBg);
-      slotPrint(sTelePow, 8, 170, 110, 24, szMid(), "--", cDim, cBg);
-      slotPrint(sTeleGear, 122, 170, 110, 24, szMid(), "--", cDim, cBg);
+      slotPrintC(sTeleBig, 0, 64, 240, 84, 8, "--", cDim, cBg);
+      slotPrint(sTelePow, 8, 170, 110, 26, 3, "--.-V", cDim, cBg);
+      slotPrint(sTeleGear, 128, 170, 110, 26, 3, "--.-A", cDim, cBg);
+      slotPrint(sTeleCur, 8, 236, 110, 16, 2, "--", cDim, cBg);
+      slotPrint(sTeleRpm, 128, 236, 110, 16, 2, "--", cDim, cBg);
+      bp = -1;
     } else {
       if (wheelCircM > 0) dtostrf(tele.rpm * wheelCircM * 0.06f, 1, 0, b);
       else                snprintf(b, sizeof(b), "%ld", (long)tele.rpm);
-      uint8_t sr = uiScale == 0 ? 4 : 5;
-      if (strlen(b) > 4 && sr > 4) sr = 4;   // auto-fit
-      slotPrint(sTeleBig, 8, 58, 224, 76, sr, b, uiVal, cBg);
+      uint8_t sr = uiScale == 0 ? 6 : 8;
+      if (strlen(b) > 3 && sr > 6) sr = 6;   // auto-fit
+      if (strlen(b) > 4 && sr > 5) sr = 5;
+      slotPrintC(sTeleBig, 0, 64, 240, 84, sr, b, uiVal, cBg);
       dtostrf(tele.v, 4, 1, b); strcat(b, "V");
-      slotPrint(sTelePow, 8, 170, 110, 24, szMid(), b, cTxt, cBg);
+      slotPrint(sTelePow, 8, 170, 110, 26, 3, b, uiVal, cBg);
       dtostrf(tele.a, 4, 1, b); strcat(b, " A");
-      slotPrint(sTeleGear, 122, 170, 110, 24, szMid(), b, cTxt, cBg);
+      slotPrint(sTeleGear, 128, 170, 110, 26, 3, b, uiVal, cBg);
+      const char *gn = "?";
+      if (tele.gear) {
+        const char *gp = strchr(GEARS, tele.gear);
+        if (gp) gn = GEAR_NAMES[gp - GEARS];
+      }
+      slotPrint(sTeleCur, 8, 236, 110, 16, 2, gn, uiVal, cBg);
+      if (wheelCircM > 0) snprintf(b, sizeof(b), "%.2f km", tripKm);
+      else                snprintf(b, sizeof(b), "SET WHEEL");
+      slotPrint(sTeleRpm, 128, 236, 110, 16, 2, b,
+                wheelCircM > 0 ? cTxt : cDim, cBg);
     }
-    slotPrint(sTeleCur, 8, 140, 224, 20, 2,
-              wheelCircM > 0 ? "km/h" : "motor rpm", cDim, cBg);
+    drawBar(8, 200, 88, 8, bp < 0 ? 0 : bp, battCol);
+    drawPct(100, 198, bp, pctBattCache);
+    int ap = tele.has ? (int)(constrain((tele.a < 0 ? -tele.a : tele.a) / 40.0f,
+                                        0.0f, 1.0f) * 100) : 0;
+    drawBar(128, 200, 100, 8, ap, cAcc);
   } else if (telePane == 1) {                // ELEC
     if (tele.has) {
       dtostrf(tele.v, 4, 1, b); strcat(b, "V");
       uint8_t sb = szBig();
       if (strlen(b) > 5 && sb > 4) sb = 4;   // auto-fit: 6+ chars never overflows
-      slotPrint(sTeleBig, 8, 48, 150, 42, sb, b, uiVal, cBg);
+      slotPrint(sTeleBig, 2, 66, 124, 34, sb, b, uiVal, cBg);
       dtostrf(tele.a, 4, 1, b); strcat(b, " A");
-      slotPrint(sTeleCur, 128, 48, 108, 26, szMid(), b, cTxt, cBg);
+      slotPrint(sTeleCur, 128, 66, 108, 34, 3, b, uiVal, cBg);
       snprintf(b, sizeof(b), "%ldW", (long)(tele.v * tele.a));
-      slotPrint(sTelePow, 8, 112, 108, 26, szMid(), b, cTxt, cBg);
+      slotPrint(sTelePow, 8, 138, 110, 28, 3, b, cTxt, cBg);
       snprintf(b, sizeof(b), "%c", tele.gear);
-      slotPrint(sTeleGear, 128, 112, 108, 26, szMid(), b, cTxt, cBg);
+      slotPrint(sTeleGear, 128, 138, 110, 28, 3, b, uiVal, cBg);
     } else {
-      slotPrint(sTeleBig, 8, 48, 150, 42, szBig(), "--.-V", cDim, cBg);
-      slotPrint(sTeleCur, 128, 48, 108, 26, szMid(), "--", cDim, cBg);
-      slotPrint(sTelePow, 8, 112, 108, 26, szMid(), "--", cDim, cBg);
-      slotPrint(sTeleGear, 128, 112, 108, 26, szMid(), "-", cDim, cBg);
+      slotPrint(sTeleBig, 2, 66, 124, 34, szBig(), "--.-V", cDim, cBg);
+      slotPrint(sTeleCur, 128, 66, 108, 34, 3, "--", cDim, cBg);
+      slotPrint(sTelePow, 8, 138, 110, 28, 3, "--", cDim, cBg);
+      slotPrint(sTeleGear, 128, 138, 110, 28, 3, "-", cDim, cBg);
+      bp = -1;
     }
+    drawBar(8, 104, 88, 8, bp < 0 ? 0 : bp, battCol);
+    drawPct(100, 102, bp, pctBattCache);
+    int ap = tele.has ? (int)(constrain((tele.a < 0 ? -tele.a : tele.a) / 40.0f,
+                                        0.0f, 1.0f) * 100) : 0;
+    drawBar(128, 104, 100, 8, ap, cAcc);
   } else {                                   // MOTOR
     if (tele.has) {
       snprintf(b, sizeof(b), "%ld", (long)tele.rpm);
       uint8_t sb = szBig();
-      if (strlen(b) > 4 && sb > 4) sb = 4;
-      slotPrint(sTeleRpm, 8, 48, 150, 42, sb, b, uiVal, cBg);
+      if (strlen(b) > 5 && sb > 4) sb = 4;
+      slotPrint(sTeleRpm, 2, 66, 124, 34, sb, b, uiVal, cBg);
       snprintf(b, sizeof(b), "%c", tele.gear);
-      slotPrint(sTeleGear, 128, 48, 108, 26, szMid(), b, cTxt, cBg);
+      slotPrint(sTeleGear, 128, 66, 108, 34, 3, b, uiVal, cBg);
       snprintf(b, sizeof(b), "%ld/%ldC", (long)tele.tc, (long)tele.tm);
-      slotPrint(sTeleTc, 8, 116, 150, 26, szMid(), b, cTxt, cBg);
+      slotPrint(sTeleTc, 8, 138, 110, 28, 3, b, cTxt, cBg);
+      slotPrint(sTelePow, 128, 138, 110, 28, 3, CTL_STATUS[tele.status],
+                tele.status == 7 ? cBad : cTxt, cBg);
     } else {
-      slotPrint(sTeleRpm, 8, 48, 150, 42, szBig(), "--", cDim, cBg);
-      slotPrint(sTeleGear, 128, 48, 108, 26, szMid(), "-", cDim, cBg);
-      slotPrint(sTeleTc, 8, 116, 150, 26, szMid(), "--", cDim, cBg);
+      slotPrint(sTeleRpm, 2, 66, 124, 34, szBig(), "--", cDim, cBg);
+      slotPrint(sTeleGear, 128, 66, 108, 34, 3, "-", cDim, cBg);
+      slotPrint(sTeleTc, 8, 138, 110, 28, 3, "--", cDim, cBg);
+      slotPrint(sTelePow, 128, 138, 110, 28, 3, "--", cDim, cBg);
     }
   }
   if (tele.has) {
     if (tele.fault) snprintf(b, sizeof(b), "F:%04lX %.12s", (unsigned long)tele.fault,
                              CTL_STATUS[tele.status]);
     else            snprintf(b, sizeof(b), "%.16s", CTL_STATUS[tele.status]);
-    slotPrint(sTeleStat, 8, 214, 224, 18, 2, b, tele.fault ? cWarn : cDim, cBg);
+    slotPrint(sTeleStat, 8, 256, 224, 10, 1, b, tele.fault ? cWarn : cDim, cBg);
   } else {
     const char *m = !btLinkOn ? "telemetry off"
                   : !SerialBT.connected() ? "bluetooth: searching bridge"
                                           : "linked — waiting for frames";
-    slotPrint(sTeleStat, 8, 214, 224, 18, 2, m, cWarn, cBg);
+    slotPrint(sTeleStat, 8, 256, 224, 10, 1, m, cWarn, cBg);
   }
-  uint32_t age = tele.has ? (millis() - tele.atMs) / 1000 : 0;
-  snprintf(b, sizeof(b), "bt rx %lu  tx %lu  age %lus",
-           (unsigned long)rxCount, (unsigned long)txCount, (unsigned long)age);
-  slotPrint(sTeleLink, 8, 236, 224, 16, 1, b, cDim, cBg);
-  slotPrint(sToast, 8, 256, 224, 16, 1,
+  slotPrint(sToast, 8, 266, 224, 9, 1,
             millis() - toastAtMs < 4000 ? toastTxt : "", toastCol, cBg);
 }
 
 void drawKeyless() {
   char b[48];
   if (fobCount == 0) {
-    slotPrint(sKlState, 8, 44, 224, 32, szHero(), "NO FOB", cDim, cBg);
-    slotPrint(sKlFob, 8, 90, 224, 16, 1, "add fobs over USB serial:", cWarn, cBg);
-    slotPrint(sKlInfo, 8, 108, 224, 16, 1, "'m' iTag / 'f <mac>' / 'f N:<name>' phone", cWarn, cBg);
-    tft.fillRect(8, 190, 224, 60, cBg);
+    drawLockIcon(120, 50, cDim, true);
+    slotPrintC(sKlState, 0, 138, 240, 32, 4, "NO FOB", cDim, cBg);
+    slotPrint(sKlFob, 8, 182, 224, 14, 1, "register a fob over USB serial:", cWarn, cBg);
+    slotPrint(sKlInfo, 8, 196, 224, 14, 1, "'m' iTag  'f <mac>'  'f N:<name>' phone", cWarn, cBg);
+    tft.fillRect(8, 228, 224, 40, cBg);      // button area stays clear
     return;
   }
   bool grace = (millis() - bootMs) < BOOT_GRACE_S * 1000UL;
-  snprintf(b, sizeof(b), "%s", klArmed ? "ARMED" : (grace ? "grace" : "DISARMED"));
-  slotPrint(sKlState, 8, 44, 224, 32, szHero(), b, klArmed ? cBad : cGood, cBg);
-  if (fobPresent()) snprintf(b, sizeof(b), "fob: near  %d dBm", fobRssi);
-  else if (fobLastSeenMs) snprintf(b, sizeof(b), "fob: away  %lds",
+  bool armed = klArmed;
+  drawLockIcon(120, 50, armed ? cBad : cGood, armed);
+  slotPrintC(sKlState, 0, 138, 240, 32, 4, armed ? "ARMED" : "DISARMED",
+             armed ? cBad : cGood, cBg);
+  tft.fillRect(8, 176, 224, 1, cBrd);
+  if (fobPresent()) snprintf(b, sizeof(b), "FOB: NEAR");
+  else if (fobLastSeenMs) snprintf(b, sizeof(b), "FOB: AWAY %lds",
                                    (long)((millis() - fobLastSeenMs) / 1000));
-  else              snprintf(b, sizeof(b), "fob: no signal");
-  slotPrint(sKlFob, 8, 90, 224, 18, 2, b, fobPresent() ? cGood : cDim, cBg);
-  snprintf(b, sizeof(b), "heard: %.19s", fobLastLabel);
-  slotPrint(sKlInfo, 8, 112, 224, 14, 1, b, cDim, cBg);
-  for (uint8_t i = 0; i < 4; i++) {           // registered fob list
-    char lb[22] = "";
-    if (i < fobCount) {
-      lb[0] = '1' + i; lb[1] = ' ';
-      fobLabel(lb + 2, sizeof(lb) - 2, i);
-    }
-    slotPrint(sKlEnt[i], 8, 130 + i * 14, 224, 14, 1, lb, cDim, cBg);
+  else snprintf(b, sizeof(b), "FOB: NO SIGNAL");
+  slotPrint(sKlFob, 8, 182, 160, 16, 2, b, fobPresent() ? cGood : cWarn, cBg);
+  static int sigCache = 999;
+  int sig = fobPresent() ? fobRssi : -128;
+  if (sig != sigCache) {
+    sigCache = sig;
+    tft.fillRect(186, 182, 46, 16, cBg);
+    drawSig(188, 184, sig);
   }
+  if (grace) snprintf(b, sizeof(b), "boot grace %lus",
+                      (unsigned)((BOOT_GRACE_S * 1000UL - (millis() - bootMs)) / 1000));
+  else if (fobPresent()) snprintf(b, sizeof(b), "rssi %d dBm", fobRssi);
+  else snprintf(b, sizeof(b), "heard %.19s", fobLastLabel);
+  slotPrint(sKlInfo, 8, 202, 224, 12, 1, b, cDim, cBg);
+  char l1[44] = "FOBS";
+  for (uint8_t i = 0; i < fobCount; i++) {
+    char lb[20];
+    fobLabel(lb, sizeof(lb), i);
+    char e[24];
+    snprintf(e, sizeof(e), " %d:%.16s", i + 1, lb);
+    if (strlen(l1) + strlen(e) < 41) strcat(l1, e);
+    else { strcat(l1, " +"); break; }
+  }
+  slotPrint(sKlEnt[0], 8, 214, 224, 12, 1, l1, cDim, cBg);
 
   bool panic = millis() < panicUntilMs;
-  int8_t st = (klArmed ? 1 : 0) | (panic ? 2 : 0);
+  int8_t st = (armed ? 1 : 0) | (panic ? 2 : 0) | (fobPresent() ? 4 : 0);
   if (st != btnCache) {
     btnCache = st;
-    tft.fillRect(8, 190, 224, 60, cBg2);
-    tft.drawRect(8, 190, 224, 60, panic ? cGood : klArmed ? cBad : cDim);
-    tft.setTextSize(3);
-    tft.setTextColor(panic ? cGood : klArmed ? cBad : cTxt);
-    const char *t = panic ? "STOP" : klArmed ? "PANIC" : "ARM";
-    tft.setCursor(8 + (224 - strlen(t) * 18) / 2, 208);
-    tft.print(t);
+    if (armed) {                             // DISARM asks the PIN; PANIC siren
+      tft.fillRect(8, 228, 140, 38, cBad);
+      tft.setTextSize(2); tft.setTextColor(cBg);
+      tft.setCursor(8 + (140 - 6 * 12 - 16) / 2, 240); tft.print("DISARM");
+      tft.setCursor(126, 240); tft.print(">");
+      tft.fillRect(152, 228, 80, 38, panic ? cGood : cBg2);
+      tft.drawRect(152, 228, 80, 38, panic ? cGood : cBrd);
+      tft.setTextSize(2);
+      tft.setTextColor(panic ? cBg : cBad);
+      tft.setCursor(152 + (80 - (panic ? 4 : 5) * 12) / 2, 240);
+      tft.print(panic ? "STOP" : "PANIC");
+    } else {
+      tft.fillRect(8, 228, 224, 38, cGood);
+      tft.setTextSize(3); tft.setTextColor(cBg);
+      tft.setCursor(8 + (224 - 3 * 18 - 22) / 2, 236); tft.print("ARM");
+      tft.setCursor(208, 236); tft.print(">");
+    }
   }
 }
 
@@ -1111,7 +1278,7 @@ void drawSystem() {
            tFlipX ? "FX" : "", tFlipY ? "FY" : "");
   slotPrint(sSys[2], 8, 118, 224, 18, 2, b, cTxt, cBg);
   snprintf(b, sizeof(b), "raw %4d %4d %4d", lastRawX, lastRawY, lastRawZ);
-  slotPrint(sSys[3], 8, 140, 224, 18, 2, b, cDim, cBg);
+  slotPrint(sSys[3], 8, 140, 224, 18, 1, b, cDim, cBg);
   snprintf(b, sizeof(b), "up %lus  heap %ukB", (unsigned long)((millis() - bootMs) / 1000),
            (unsigned)(ESP.getFreeHeap() / 1024));
   slotPrint(sSys[4], 8, 162, 224, 18, 2, b, cTxt, cBg);
@@ -1123,11 +1290,9 @@ void drawSystem() {
   int8_t st = btPaused() ? 1 : 0;
   if (st != btnCache) {
     btnCache = st;
-    tft.fillRect(8, 212, 224, 44, cBg2);
-    tft.drawRect(8, 212, 224, 44, btPaused() ? cGood : uiAcc);
-    tft.setTextSize(2); tft.setTextColor(btPaused() ? cGood : uiAcc);
-    const char *t = btPaused() ? "BT paused - tap to resume"
-                               : "release BT for phone";
+    tft.fillRect(8, 212, 224, 44, btPaused() ? cGood : uiAcc);
+    tft.setTextSize(2); tft.setTextColor(cBg);
+    const char *t = btPaused() ? "TAP TO RESUME BT" : "RELEASE BT TO APP";
     tft.setCursor(8 + (224 - strlen(t) * 12) / 2, 226);
     tft.print(t);
   }
@@ -1142,7 +1307,7 @@ void drawCfg() {
     uint16_t x = 8 + i * 78;
     bool act = (uiScale == i);
     tft.fillRect(x, 84, 68, 40, act ? uiAcc : cBg2);
-    tft.drawRect(x, 84, 68, 40, act ? uiAcc : cDim);
+    tft.drawRect(x, 84, 68, 40, act ? uiAcc : cBrd);
     tft.setTextSize(3); tft.setTextColor(act ? cBg : cTxt);
     tft.setCursor(x + (68 - 18) / 2, 95);
     tft.print(sz[i]);
@@ -1162,7 +1327,7 @@ void drawCfg() {
   tft.setTextSize(1); tft.setTextColor(cDim);
   tft.setCursor(8, 222); tft.print("SECURITY");
   tft.fillRect(8, 232, 224, 34, cBg2);
-  tft.drawRect(8, 232, 224, 34, cDim);
+  tft.drawRect(8, 232, 224, 34, cBrd);
   tft.setTextSize(2); tft.setTextColor(cTxt);
   tft.setCursor(8 + (224 - 10 * 12) / 2, 241);
   tft.print("CHANGE PIN");
@@ -1291,12 +1456,7 @@ void animLock(uint16_t col, int shY, int rLeg) {
   // rLeg = right-leg length: short (ends in the AIR, gap to the body) = open,
   // reaches down into the body = closed — the gap is the unlock cue.
   tft.fillRect(0, 27, W, 250, cBg);
-  tft.fillRect(80, shY, 12, 144 - shY, col);    // left leg (always anchored)
-  tft.fillRect(80, shY, 80, 12, col);           // bridge
-  tft.fillRect(148, shY, 12, rLeg, col);        // right leg (the "mouth")
-  tft.fillRoundRect(70, 138, 100, 74, 10, col); // body
-  tft.fillCircle(120, 176, 10, cBg);            // keyhole
-  tft.fillRect(115, 162, 10, 18, cBg);
+  drawLockShape(col, shY, rLeg);
 }
 void playAnim(uint8_t kind) {            // 1 = ARM (close), 2 = DISARM (open)
   Serial.printf("[anim] %s\n", kind == 1 ? "arm" : "disarm");
@@ -1330,34 +1490,24 @@ void playAnim(uint8_t kind) {            // 1 = ARM (close), 2 = DISARM (open)
 
 /* ---- armed standby screen: STILL image, FULL screen ----
  * The backlight can't be turned off on this shield, so armed idle shows
- * a bold PROHIBITED symbol (thick ring + thick X, "not allowed", readable
- * from a distance). Double-tap wakes the PIN gate. */
+ * the mockup lock screen: big red closed padlock + ARMED + battery —
+ * readable from a distance. Double-tap wakes the PIN gate. */
 void drawStandby() {
   pinScreen = false;
   tft.fillRect(0, 0, W, H, cBg);
-  const int cx = 120, cy = 134, R = 98;
-  for (int r = R; r > R - 14; r--)            // ~14px bold ring
-    tft.drawCircle(cx, cy, r, cBad);
-  // bold X: overlapping filled squares along each diagonal — offsetting
-  // drawLine by (d,d) slides ALONG a 45° line (hairline bug), so union
-  // squares instead: guaranteed solid ~34px strokes
-  const int a = 66, sq = 24;
-  for (int i = -a; i <= a; i += 2) {
-    tft.fillRect(cx + i - sq / 2, cy + i - sq / 2, sq, sq, cBad);   // "\" arm
-    tft.fillRect(cx + i - sq / 2, cy - i - sq / 2, sq, sq, cBad);   // "/" arm
-  }
+  drawLockShape(cBad, 92, 52);                // closed padlock, big
   tft.setTextColor(cBad); tft.setTextSize(4);
-  tft.setCursor(120 - 5 * 24, 244);           // "ARMED"
+  tft.setCursor(120 - (int)strlen("ARMED") * 12, 232);
   tft.print("ARMED");
   tft.setTextSize(2); tft.setTextColor(cTxt);
   char b[24];
   if (tele.has && millis() - tele.atMs < 30000) snprintf(b, sizeof(b), "BAT %.1fV", tele.v);
   else snprintf(b, sizeof(b), "BAT --.-V");
-  tft.setCursor(120 - strlen(b) * 12, 284);
+  tft.setCursor(120 - strlen(b) * 12, 272);
   tft.print(b);
   tft.setTextSize(1); tft.setTextColor(cDim);
   const char *h = "double-tap: enter PIN";
-  tft.setCursor(120 - (int)strlen(h) * 3, 306);
+  tft.setCursor(120 - (int)strlen(h) * 3, 300);
   tft.print(h);
 }
 
@@ -1365,52 +1515,74 @@ void drawStandby() {
  * pinEntryMode: 0 = disarm gate, 1 = new PIN first entry, 2 = repeat. */
 uint8_t pinEntryMode = 0;
 char pinNew[13];
-Slot sPinDisp, sPinMsg;
+Slot sPinMsg;
 void pinTitle() {
-  const char *t = pinEntryMode == 0 ? "PIN TO DISARM"
-                : pinEntryMode == 1 ? "NEW PIN - EMPTY OK = CANCEL"
+  const char *t = pinEntryMode == 0 ? "ENTER PIN TO ARM"
+                : pinEntryMode == 1 ? "SET NEW PIN"
                                     : "REPEAT NEW PIN";
-  tft.fillRect(0, 18, W, 12, cBg);
-  tft.setTextSize(1); tft.setTextColor(cDim);
-  tft.setCursor((W - (int)strlen(t) * 6) / 2, 22);
-  tft.print(t);
+  tft.fillRect(0, 2, W, 36, cBg);
+  // mini padlock icon + title, centered as a group
+  uint16_t tw = strlen(t) * 12;
+  uint16_t tx = (W - (tw + 26)) / 2;
+  tft.fillRect(tx, 10, 16, 12, uiAcc);           // body
+  tft.drawRect(tx + 3, 4, 10, 8, uiAcc);         // shackle
+  tft.fillRect(tx + 4, 8, 8, 4, uiAcc);
+  tft.fillCircle(tx + 8, 15, 2, cBg);
+  tft.setTextSize(2); tft.setTextColor(cTxt);
+  tft.setCursor(tx + 26, 8); tft.print(t);
   const char *m = pinEntryMode == 0
                     ? (pairPin[0] ? "wrong PIN locks 15 s after 3 tries" : "no PIN set — set one in CONFIG")
                     : pinEntryMode == 1 ? "4-12 digits"
                                         : "repeat the same PIN";
-  slotPrint(sPinMsg, 8, 64, 224, 12, 1, m,
-            pinEntryMode == 0 && !pairPin[0] ? cWarn : cDim, cBg);
+  slotPrintC(sPinMsg, 0, 26, 240, 12, 1, m,
+             pinEntryMode == 0 && !pairPin[0] ? cWarn : cDim, cBg);
 }
 void drawPinScreen() {
   pinScreen = true; pinAtMs = millis(); pinLen = 0;
   tft.fillRect(0, 0, W, H, cBg);
-  // entry display
-  tft.fillRect(30, 34, 180, 26, cBg2); tft.drawRect(30, 34, 180, 26, cDim);
   // keypad edge-to-edge: 4 rows to the bottom, big keys (76x54)
-  const char *lab[12] = {"1","2","3","4","5","6","7","8","9","C","0","OK"};
   for (uint8_t r = 0; r < 4; r++)
     for (uint8_t c = 0; c < 3; c++) {
       uint8_t i = r * 3 + c;
       uint16_t x = 2 + c * 79, y = 78 + r * 60;
-      bool ok = (i == 11), clr = (i == 9);
+      bool ok = (i == 11), del = (i == 9);
       tft.fillRect(x, y, 76, 54, ok ? cGood : cBg2);
-      tft.drawRect(x, y, 76, 54, ok ? cGood : clr ? cWarn : cDim);
-      tft.setTextSize(3);
-      tft.setTextColor(ok ? cBg : clr ? cWarn : cTxt);
-      tft.setCursor(x + (76 - 18 * strlen(lab[i])) / 2, y + 15);
-      tft.print(lab[i]);
+      tft.drawRect(x, y, 76, 54, ok ? cGood : cBrd);
+      if (ok) {
+        tft.setTextSize(3); tft.setTextColor(cBg);
+        tft.setCursor(x + (76 - 2 * 18) / 2, y + 15);
+        tft.print("OK");
+      } else if (del) {
+        drawBackspace(x + 38, y + 27);
+      } else {
+        tft.setTextSize(3); tft.setTextColor(cTxt);
+        char lab[2] = {(char)(i == 10 ? '0' : '1' + i), 0};
+        tft.setCursor(x + (76 - 18) / 2, y + 15);
+        tft.print(lab);
+      }
     }
   pinTitle();
-  sPinDisp.last[0] = 1;                  // force entry redraw
+  pinDrawEntry();
 }
 void pinDrawEntry() {
-  // asterisks centered in the entry box (spaces do the centering)
-  char line[17] = "";
-  uint8_t pad = (15 - pinLen) / 2;
-  for (uint8_t i = 0; i < pad; i++) line[i] = ' ';
-  for (uint8_t i = 0; i < pinLen; i++) line[pad + i] = '*';
-  line[pad + pinLen] = 0;
-  slotPrint(sPinDisp, 34, 38, 172, 18, 2, line, cTxt, cBg2);
+  // PIN boxes: dot per entered digit, cyan ring on the active box
+  tft.fillRect(10, 40, 220, 34, cBg);
+  const uint8_t NB = 6, bw = 28, bh = 30, gap = 7;
+  uint16_t x0 = (W - (NB * bw + (NB - 1) * gap)) / 2;
+  for (uint8_t i = 0; i < NB; i++) {
+    uint16_t x = x0 + i * (bw + gap);
+    bool act = (i == pinLen) && pinLen < NB;
+    tft.drawRect(x, 42, bw, bh, act ? uiAcc : cBrd);
+    if (act) tft.drawRect(x + 1, 43, bw - 2, bh - 2, uiAcc);
+    if (i < pinLen) tft.fillCircle(x + bw / 2, 57, 4, cTxt);
+  }
+  if (pinLen > NB) {                     // 7th..12th digit: overflow marker
+    char m[5];
+    snprintf(m, sizeof(m), "+%d", pinLen - NB);
+    tft.setTextSize(1); tft.setTextColor(cDim);
+    tft.setCursor(x0 + NB * (bw + gap) + 1, 52);
+    tft.print(m);
+  }
 }
 void pinExitToStandby() {
   pinScreen = false; pinEntryMode = 0;
@@ -1428,7 +1600,7 @@ void pinOk() {
   if (pinEntryMode == 1) {               // new PIN, first entry
     if (pinLen == 0) { pinExitSetup("PIN change cancelled", cDim); return; }
     if (pinLen < 4 || pinLen > 12) {
-      slotPrint(sPinMsg, 8, 64, 224, 12, 1, "need 4-12 digits", cWarn, cBg);
+      slotPrintC(sPinMsg, 0, 26, 240, 12, 1, "need 4-12 digits", cWarn, cBg);
       pinLen = 0; pinDrawEntry(); pinAtMs = millis();
       return;
     }
@@ -1444,9 +1616,9 @@ void pinOk() {
     }
     pinEntryMode = 1; pinLen = 0;
     pinTitle(); pinDrawEntry();
-    slotPrint(sPinMsg, 8, 64, 224, 12, 1, "mismatch - start over", cWarn, cBg);
+    slotPrintC(sPinMsg, 0, 26, 240, 12, 1, "mismatch - start over", cWarn, cBg);
   } else if (!pairPin[0]) {
-    slotPrint(sPinMsg, 8, 64, 224, 12, 1, "no PIN set - CONFIG > CHANGE PIN", cWarn, cBg);
+    slotPrintC(sPinMsg, 0, 26, 240, 12, 1, "no PIN set - CONFIG > CHANGE PIN", cWarn, cBg);
     pinLen = 0; pinDrawEntry();
   } else if (authOk(pinEntry)) {
     klArmed = false; manualDisarmed = true;
@@ -1460,8 +1632,8 @@ void pinOk() {
   } else {
     Serial.println("[pin] wrong");
     pinLen = 0; pinDrawEntry();
-    slotPrint(sPinMsg, 8, 64, 224, 12, 1,
-              millis() < authLockUntilMs ? "LOCKED — wait" : "wrong PIN", cBad, cBg);
+    slotPrintC(sPinMsg, 0, 26, 240, 12, 1,
+               millis() < authLockUntilMs ? "LOCKED — wait" : "wrong PIN", cBad, cBg);
   }
   pinAtMs = millis();
 }
@@ -1478,7 +1650,7 @@ void drawQr(const char *text) {
     return;
   }
   int n = qrcodegen_getSize(qr);
-  int sc = 175 / n; if (sc > 7) sc = 7;      // 25*7=175 fits below the sub-tabs
+  int sc = 150 / n; if (sc > 6) sc = 6;      // 25*6=150, leaves room for the key box
   int px = n * sc;
   int ox = (W - (px + 16)) / 2, oy = 72;     // +16 = white quiet border
   tft.fillRect(ox, oy, px + 16, px + 16, 0xFFFF);
@@ -1493,8 +1665,11 @@ void drawSet() {
   uint32_t h = 0x9E3779B9;                 // redraw only when key/screen changed
   for (int i = 0; i < 16; i++) h = (h << 5) ^ (h >> 27) ^ pairKey[i];
   if (h != qrStamp) { qrStamp = h; drawQr(kh); }
-  // the key itself, centered — both QR and text carry the same secret
-  slotPrint(sSys[6], 22, 268, 196, 12, 1, kh, cTxt, cBg);
+  // the key itself in a cyan-outlined box — both QR and text carry the secret
+  slotPrintC(sSys[6], 0, 244, 240, 12, 1, "PAIRING KEY", cDim, cBg);
+  tft.fillRect(10, 258, 220, 19, cBg2);
+  tft.drawRect(10, 258, 220, 19, uiAcc);
+  slotPrintC(sSys[7], 10, 258, 220, 19, 1, kh, uiAcc, cBg2);
 }
 
 /* =========================================================== wifi window */
@@ -1535,7 +1710,7 @@ void wifiWindowRun() {          // returns when the window is over
   char b[30];
   snprintf(b, sizeof(b), "setup window %lus",
            (unsigned long)(WIFI_WINDOW_S + 1 - (millis() - bootMs) / 1000));
-  slotPrint(sHeader, 0, 0, 190, 26, 2, b, cAcc, cBg2);
+  slotPrint(sHeader, 0, 0, 190, 28, 2, b, cAcc, cBg);
   tft.setTextSize(1); tft.setTextColor(cDim);
   tft.setCursor(8, 60);  tft.print("WiFi + OTA open for a short window");
   tft.setCursor(8, 74);  tft.print("after boot; then it turns off and");
@@ -1597,6 +1772,7 @@ void cliProcess(const char *line) {
     wheelCircM = v; prefs.putFloat("wcirc", v);
     Serial.printf("[cli] wheel %.2f m (km/h = rpm x %.3f)\n", v, v * 0.06f);
     toast("wheel saved", cGood);
+    if (dispOn) { uiInvalidate(); drawChrome(); }   // KM/H <-> RPM label swap
     return;
   }
   if (line[0] == 'P' && (line[1] == ' ' || line[1] == '=')) {
@@ -1710,14 +1886,16 @@ void setup() {
   bootMs = millis();
   delay(120);
 
-  cBg  = tft.color565(10, 16, 26);
-  cBg2 = tft.color565(18, 26, 40);
-  cTxt = tft.color565(222, 230, 240);
-  cDim = tft.color565(110, 124, 140);
-  cAcc = tft.color565(0, 200, 255);
-  cGood= tft.color565(0, 255, 120);
-  cWarn= tft.color565(255, 200, 0);
-  cBad = tft.color565(255, 60, 50);
+  /* UI kit (Oct 2026 TFT mockups): navy bg, slate text, cyan/green/red */
+  cBg  = tft.color565(8, 17, 29);      // #08111D screen navy
+  cBg2 = tft.color565(18, 28, 44);     // card fill
+  cBrd = tft.color565(56, 72, 92);     // #38485C card borders / dividers
+  cTxt = tft.color565(230, 238, 247);  // #E6EEF7
+  cDim = tft.color565(134, 161, 191);  // #86A1BF muted labels
+  cAcc = tft.color565(0, 208, 255);    // #00D0FF tabs / active
+  cGood= tft.color565(0, 255, 128);    // #00FF80 disarmed / OK
+  cWarn= tft.color565(255, 193, 7);    // #FFC107
+  cBad = tft.color565(255, 59, 59);    // #FF3B3B armed / panic
 
   uint16_t id = tft.readID();
   if (id == 0x0000 || id == 0xD3D3) id = 0x9341;
@@ -1814,6 +1992,7 @@ void loop() {
   klTick();
   buzzTick();
   ridingTick();
+  tripTick();
   displayTick();
 
   if (dispOn) {

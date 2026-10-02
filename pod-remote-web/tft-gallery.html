@@ -55,11 +55,11 @@
 
   <div class="card"><div class="card-header"><div class="card-title">1. TELE — RIDE pane</div><div class="tag t-tele">RIDING</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_ride.png" alt="TELE RIDE"></div>
-    <div class="card-footer">Auto-shown while riding: one huge speed number (km/h, calibrated by wheel circumference), battery volts + amps, controller status line, BT rx/tx link stats.</div></div>
+    <div class="card-footer">Auto-shown while riding: one huge speed number (km/h, calibrated by wheel circumference), BATTERY/CURRENT rows with segment bars, RIDE MODE + TRIP meter, controller status line.</div></div>
 
   <div class="card"><div class="card-header"><div class="card-title">2. TELE — ELEC pane</div><div class="tag t-tele">PARKED</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_elec.png" alt="TELE ELEC"></div>
-    <div class="card-footer">Rotates while parked. Battery volts (hero), current, computed power (W) and gear letter.</div></div>
+    <div class="card-footer">Rotates while parked. Battery volts + SOC bar, current + load bar, computed power (W) and gear.</div></div>
 
   <div class="card"><div class="card-header"><div class="card-title">3. TELE — MOTOR pane</div><div class="tag t-tele">PARKED</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_motor.png" alt="TELE MOTOR"></div>
@@ -71,11 +71,11 @@
 
   <div class="card"><div class="card-header"><div class="card-title">5. LOCK — disarmed</div><div class="tag t-lock">KEYLESS</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_lock.png" alt="LOCK disarmed"></div>
-    <div class="card-footer">Big green DISARMED state, live fob RSSI, last-heard label, up to 4 registered fobs, ARM action button.</div></div>
+    <div class="card-footer">Open green padlock + big DISARMED state, FOB: NEAR + signal bars, RSSI, registered fobs, filled-green ARM button.</div></div>
 
   <div class="card"><div class="card-header"><div class="card-title">6. LOCK — armed</div><div class="tag t-sec">ARMED</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_lockarmed.png" alt="LOCK armed"></div>
-    <div class="card-footer">Red ARMED state, fob away countdown, red PANIC button (30 s siren).</div></div>
+    <div class="card-footer">Closed red padlock + big ARMED state, fob away countdown, filled-red DISARM (opens the PIN gate) + outlined PANIC (30 s siren).</div></div>
 
   <div class="card"><div class="card-header"><div class="card-title">7. LOCK — no fob registered</div><div class="tag t-lock">SETUP</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_nofob.png" alt="LOCK no fob"></div>
@@ -83,7 +83,7 @@
 
   <div class="card"><div class="card-header"><div class="card-title">8. SYS — STAT</div><div class="tag t-sys">SYS</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_stat.png" alt="SYS STAT"></div>
-    <div class="card-footer">Bridge link state, rx/tx counters, touch variant/diagnostics, uptime + free heap, wheel calibration, "release BT for phone" button.</div></div>
+    <div class="card-footer">Bridge link state, rx/tx counters, touch variant/diagnostics, uptime + free heap, wheel calibration, filled-cyan "release BT to app" button.</div></div>
 
   <div class="card"><div class="card-header"><div class="card-title">9. SYS — CFG (theme)</div><div class="tag t-sys">SYS</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_cfg.png" alt="SYS CFG"></div>
@@ -91,19 +91,19 @@
 
   <div class="card"><div class="card-header"><div class="card-title">10. SYS — SET (pairing QR)</div><div class="tag t-sys">SYS</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_set.png" alt="SYS SET"></div>
-    <div class="card-footer">Version-2 QR (bare 32-hex secret, big 7-px modules for a 2.4&quot; glass) the phone app scans to pair; the key is also printed below.</div></div>
+    <div class="card-footer">Version-2 QR (bare 32-hex secret, 6-px modules) the phone app scans to pair; below it, the key in a cyan-outlined box — mockup pairing-screen style.</div></div>
 
-  <div class="card"><div class="card-header"><div class="card-title">11. ARMED standby 🚫</div><div class="tag t-sec">SECURITY</div></div>
+  <div class="card"><div class="card-header"><div class="card-title">11. ARMED standby 🔒</div><div class="tag t-sec">SECURITY</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_standby.png" alt="Armed standby"></div>
-    <div class="card-footer">Armed idle: full-screen bold prohibited symbol (14-px ring + 34-px X), readable from a distance, battery voltage, double-tap hint. Static — no animation.</div></div>
+    <div class="card-footer">Armed idle: full-screen red closed padlock + ARMED + battery voltage (mockup lock screen), readable from a distance, double-tap hint. Static — no animation.</div></div>
 
   <div class="card"><div class="card-header"><div class="card-title">12. PIN gate</div><div class="tag t-sec">SECURITY</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_pin.png" alt="PIN gate"></div>
-    <div class="card-footer">Double-tap wake → edge-to-edge 4×3 keypad, 76×54 px keys. Green OK, yellow C. Wrong PIN locks 15 s after 3 tries.</div></div>
+    <div class="card-footer">Double-tap wake → padlock title + PIN entry boxes (dot per digit, cyan ring on the active box) + edge-to-edge 4×3 keypad, 76×54 px keys: digits, backspace, green OK. Wrong PIN locks 15 s after 3 tries.</div></div>
 
   <div class="card"><div class="card-header"><div class="card-title">13. ARM confirmation</div><div class="tag t-sec">SECURITY</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_armask.png" alt="ARM confirmation"></div>
-    <div class="card-footer">Full-screen YES/NO gate so a stray tap can never arm. NO (green) first, YES, ARM (red) below — timed out after 10 s.</div></div>
+    <div class="card-footer">Full-screen YES/NO gate so a stray tap can never arm. NO outlined (slate) first, YES, ARM filled green below — timed out after 10 s.</div></div>
 
   <div class="card"><div class="card-header"><div class="card-title">14. ARM animation 🔒</div><div class="tag t-sec">ANIM</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_animarm.png" alt="ARM animation"></div>
@@ -126,10 +126,10 @@
 <div class="specs">
   <h2>📐 TFT Design Constraints for the Designer Agent</h2>
   <ul>
-    <li>Panel: 240×320 portrait ILI9341 over 8-bit parallel; <strong>no anti-aliasing, no custom fonts</strong> — classic 5×7 bitmap font, sizes 1–5 (char cell 6×8 px × size).</li>
-    <li>Fixed palette: bg <code>#0A101A</code>, widget <code>#121A28</code>, text <code>#DEE6F0</code>, dim <code>#6E7C8C</code>, red <code>#FF3C32</code>, green <code>#00FF78</code>, yellow <code>#FFC800</code>; the user can pick value/accent from 6 swatches (cyan default <code>#00C8FF</code>).</li>
-    <li>Layout grid: header 0–26, sub-tabs 28–68 (SYS only), content 27–277, tab bar 278–318 (3 × 80 px tabs: TELE / LOCK / SYS).</li>
-    <li>Backlight hardwired to 3.3 V — "screen off" is either pure black (disarmed) or the static armed emblem; standby must be a single still frame.</li>
+    <li>Panel: 240×320 portrait ILI9341 over 8-bit parallel; <strong>no anti-aliasing, no custom fonts</strong> — classic 5×7 bitmap font, sizes 1–8 (char cell 6×8 px × size).</li>
+    <li>Kit v3 palette (Oct 2026 mockups): bg <code>#08111D</code>, card <code>#121C2C</code>, border <code>#38485C</code>, text <code>#E6EEF7</code>, muted <code>#86A1BF</code>, cyan <code>#00D0FF</code>, green <code>#00FF80</code>, red <code>#FF3B3B</code>, amber <code>#FFC107</code>; value/accent user-pickable from 6 swatches (cyan default).</li>
+    <li>Layout grid: header 0–28 (title left · status dot + battery gauge right) over a 1-px divider at y29, sub-tabs 32–68 (SYS only), content 30–277, tab bar 278–318 (3 × 80 px tabs: TELE / LOCK / SYS, active = accent fill).</li>
+    <li>Backlight hardwired to 3.3 V — "screen off" is either pure black (disarmed) or the static red-padlock armed standby; standby must be a single still frame.</li>
     <li>Touch: resistive film shared with the LCD bus — targets must be ≥ ~60 px for gloved fingers; PIN keypad keys are 76×54 px.</li>
     <li>State machine: fob near → disarmed; fob away 30 s → armed (+chirp); riding (rpm ≥ 50 for 2 s) locks TELE to RIDE pane; phone/PIN disarm is sticky until explicit ARM.</li>
   </ul>

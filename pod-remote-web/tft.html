@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VOTOL TFT Pod 2.4&quot; — UI/UX Preview</title>
+<title>VOTOL TFT Pod 2.4&quot; — UI/UX Preview (kit v3)</title>
 <style>
-  :root { --amber:#F59E0B; --mut:#9AA3B2; --bord:#2A3242; --panel:#11151F; }
+  :root { --amber:#F7A915; --mut:#9AA3B2; --bord:#2A3242; --panel:#11151F; }
   * { box-sizing:border-box; margin:0; padding:0; }
   body { background:#030407; color:#F5F7FB; font-family:'Inter',system-ui,sans-serif;
          min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:20px 10px; }
@@ -33,13 +33,13 @@
            border-radius:14px; padding:16px; font-size:13px; color:var(--mut); line-height:1.55; }
   .notes h4 { color:var(--amber); margin-bottom:6px; }
   .notes ul { margin-left:18px; }
-  .notes code { color:#00C8FF; }
+  .notes code { color:#00D0FF; }
 </style>
 </head>
 <body>
 
 <div class="toolbar">
-  <div class="tb-title"><span>🖥 VOTOL TFT POD 2.4&quot; (240×320) — UI/UX INSPECTOR</span><span class="live">PIXEL-ACCURATE REPLICA</span></div>
+  <div class="tb-title"><span>🖥 VOTOL TFT POD 2.4&quot; (240×320) — UI/UX INSPECTOR · KIT v3</span><span class="live">PIXEL-ACCURATE REPLICA</span></div>
   <div class="grp"><span class="lbl">Screen:</span><span id="screenBtns"></span></div>
   <div class="grp"><span class="lbl">Text size:</span>
     <button class="opt" data-scale="0" onclick="setScale(0)">S</button>
@@ -63,28 +63,33 @@
 </div>
 
 <div class="notes">
-  <h4>📋 Specs for the UI/UX designer</h4>
+  <h4>📋 Specs for the UI/UX designer (kit v3 — Oct 2026 mockup language)</h4>
   <ul>
-    <li>Panel: 240×320 portrait, ILI9341, classic 5×7 bitmap font (6×8 px per char at size 1; sizes 1–5 used).</li>
-    <li>Palette (fixed): bg <code>#0A101A</code>, widgets <code>#121A28</code>, text <code>#DEE6F0</code>, dim <code>#6E7C8C</code>,
-        red <code>#FF3C32</code>, green <code>#00FF78</code>, yellow <code>#FFC800</code>. Value/accent color is user-selectable (6 swatches) and text size S/M/L is live-applied.</li>
-    <li>3 pages via bottom tab bar: <b>TELE</b> (RIDE / ELEC / MOTOR panes; auto-maximizes speed while riding),
-        <b>LOCK</b> (keyless state + ARM/PANIC), <b>SYS</b> (STAT / CFG / SET sub-tabs).</li>
-    <li>Armed idle = full-screen prohibited symbol (14-px ring + 34-px X strokes) + battery; double-tap opens the edge-to-edge PIN keypad.</li>
-    <li>Backlight is hardwired — "screen off" is either pure black (unarmed) or the standby emblem (armed).</li>
+    <li>Panel: 240×320 portrait, ILI9341, classic 5×7 bitmap font (6×8 px per char at size 1; sizes 1–8 used).</li>
+    <li>Palette: bg <code>#08111D</code>, cards <code>#121C2C</code>, borders <code>#38485C</code>, text <code>#E6EEF7</code>,
+        muted <code>#86A1BF</code>, cyan <code>#00D0FF</code>, green <code>#00FF80</code>, red <code>#FF3B3B</code>,
+        amber <code>#FFC107</code>. Value/accent color user-selectable (6 swatches), text size S/M/L live-applied.</li>
+    <li>Fixed chrome: header bar (title left · status dot + battery gauge right) over a 1-px divider at y29;
+        bottom tab bar TELE/LOCK/SYS always visible (active tab = accent fill, dark text).</li>
+    <li>3 pages: <b>TELE</b> (RIDE hero number + BATTERY/CURRENT segment bars + RIDE MODE/TRIP; ELEC; MOTOR panes;
+        auto-maximizes speed while riding), <b>LOCK</b> (padlock icon + ARMED/DISARMED + fob rows + DISARM/PANIC or ARM),
+        <b>SYS</b> (STAT / CFG / SET sub-tabs; SET = QR + pairing-key box).</li>
+    <li>Armed idle = full-screen closed red padlock + ARMED + battery (mockup lock screen); double-tap opens the
+        edge-to-edge PIN keypad (PIN boxes, backspace, green OK).</li>
+    <li>Backlight is hardwired — "screen off" is either pure black (unarmed) or the standby lock (armed).</li>
   </ul>
 </div>
 
 <script type="module">
 import { FONT } from './glcdfont.js';
 
-/* ---------- firmware palette ---------- */
+/* ---------- firmware palette (kit v3) ---------- */
 const C = {
-  bg:  '#0A101A', bg2: '#121A28', txt: '#DEE6F0', dim: '#6E7C8C',
-  acc: '#00C8FF', good:'#00FF78', warn:'#FFC800', bad: '#FF3C32',
+  bg:  '#08111D', bg2: '#121C2C', brd: '#38485C', txt: '#E6EEF7', dim: '#86A1BF',
+  acc: '#00D0FF', good:'#00FF80', warn:'#FFC107', bad: '#FF3B3B',
   black:'#000000', white:'#FFFFFF'
 };
-const PALETTE = ['#00C8FF','#00FF78','#FFC800','#FF9628','#EBF0F5','#F05ADC'];
+const PALETTE = ['#00D0FF','#00FF80','#FFC800','#FF9628','#EBF0F5','#F05ADC'];
 
 /* ---------- state ---------- */
 const W = 240, H = 320;
@@ -92,17 +97,17 @@ let screen = 'ride';
 let uiScale = 1, uiVal = PALETTE[0], uiAcc = PALETTE[0];
 let btLinkOn = true, zoom = 3;
 
-const szBig  = () => uiScale === 0 ? 3 : uiScale === 1 ? 4 : 5;
-const szMid  = () => uiScale === 2 ? 3 : 2;
-const szHero = () => uiScale === 0 ? 3 : 4;
+const szBig = () => uiScale === 0 ? 3 : uiScale === 1 ? 4 : 5;
 
 const PAGE_NAMES = ['TELE','LOCK','SYS'];
 const PANE_NAMES = ['RIDE','ELEC','MOTOR'];
+const GEAR_NAMES = ['LOW','MID','HIGH','SPORT'];
 
 /* fake live data */
-const T = { v:'72.4', a:'12.5', rpm:540, gear:'L', tc:42, tm:55, status:'RUN',
-            rx:128, tx:64, age:2, wheel:2.05 };
+const T = { v:'72.4', a:'12.5', rpm:540, gear:'S', tc:42, tm:55, status:'RUN',
+            rssi:-58, wheel:2.05 };
 const rideKmh = Math.round(T.rpm * T.wheel * 0.06);           // 66
+const battPct = Math.round((parseFloat(T.v) - 63) / 21 * 100); // 45 (crude 20S SOC)
 const FOBS = ['AA:BB:CC:DD:EE:FF', 'N:galaxy'];
 const KEY  = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
 
@@ -115,13 +120,11 @@ const disp = cv.getContext('2d');
 function fillRect(x,y,w,h,c){ g.fillStyle=c; g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h)); }
 function drawRect(x,y,w,h,c){ g.strokeStyle=c; g.lineWidth=1; g.strokeRect(Math.round(x)+.5,Math.round(y)+.5,Math.round(w)-1,Math.round(h)-1); }
 function px(x,y,c){ g.fillStyle=c; g.fillRect(x,y,1,1); }
+function line(x0,y0,x1,y1,c){ g.strokeStyle=c; g.lineWidth=1;
+  g.beginPath(); g.moveTo(x0+.5,y0+.5); g.lineTo(x1+.5,y1+.5); g.stroke(); }
 function fillCircle(cx,cy,r,c){ for(let y=-r;y<=r;y++){ const w=Math.floor(Math.sqrt(r*r-y*y)); g.fillStyle=c; g.fillRect(cx-w,cy+y,2*w+1,1);} }
-function drawCircle(cx,cy,r,c){                 // GFX Bresenham octants
-  let f = 1-r, ddF_x = 1, ddF_y = -2*r, x=0, y=r;
-  px(cx,cy+y,c); px(cx,cy-y,c); px(cx+x,cy,c); px(cx-x,cy,c);
-  while(x<y){ if(f>=0){ y--; ddF_y+=2; f+=ddF_y; } x++; ddF_x+=2; f+=ddF_x;
-    px(cx+x,cy+y,c); px(cx-x,cy+y,c); px(cx+x,cy-y,c); px(cx-x,cy-y,c);
-    px(cx+y,cy+x,c); px(cx-y,cy+x,c); px(cx+y,cy-x,c); px(cx-y,cy-x,c); }
+function fillTriangle(x0,y0,x1,y1,x2,y2,c){
+  g.fillStyle=c; g.beginPath(); g.moveTo(x0,y0); g.lineTo(x1,y1); g.lineTo(x2,y2); g.closePath(); g.fill();
 }
 function fillRoundRect(x,y,w,h,r,c){
   g.fillStyle=c;
@@ -150,13 +153,56 @@ function slot(x,y,w,h,size,str,c,bg){           // firmware slotPrint (vert-cent
   fillRect(x,y,w,h,bg);
   text(x+2, y + (h > 8*size ? (h-8*size)/2 : 1), size, str, c);
 }
+function slotC(x,y,w,h,size,str,c,bg){          // firmware slotPrintC (centered)
+  fillRect(x,y,w,h,bg);
+  const wpx = tw(str,size);
+  text(x + (w > wpx ? (w-wpx)/2 : 0), y + (h > 8*size ? (h-8*size)/2 : 1), size, str, c);
+}
+
+/* ---------- kit widgets ---------- */
+function drawBar(x,y,w,h,pct,col){
+  for(let i=0;i<10;i++) fillRect(x+i*(w/10), y, w/10-1, h, pct > i*10 ? col : C.brd);
+}
+function drawPct(x,y,pct){
+  fillRect(x,y,26,11,C.bg);
+  text(x,y,1, pct>=0 ? pct+'%' : '--', C.dim);
+}
+function drawSig(x,y,rssi){                     // 4 ascending signal bars
+  for(let i=0;i<4;i++){
+    const th = 4+i*3;
+    fillRect(x+i*6, y+14-th, 4, th, rssi > (-90+i*10) ? C.good : C.brd);
+  }
+}
+function drawLockIcon(cx,top,col,closed){       // small padlock ~70x82
+  const by = top+30;
+  fillRect(cx-23, top, 10, by+12-top, col);                          // left (hinged)
+  fillRect(cx+13, top, 10, closed ? by+12-top : by-8-top, col);      // right
+  fillRect(cx-23, top, 46, 10, col);                                 // bridge
+  fillRoundRect(cx-35, by, 70, 52, 8, col);
+  fillCircle(cx, by+20, 7, C.bg);
+  fillRect(cx-3, by+10, 6, 13, C.bg);
+}
+function drawLockShape(col, shY, rLeg){         // big anim padlock
+  fillRect(80,shY,12,144-shY,col);
+  fillRect(80,shY,80,12,col);
+  fillRect(148,shY,12,rLeg,col);
+  fillRoundRect(70,138,100,74,10,col);
+  fillCircle(120,176,10,C.bg);
+  fillRect(115,162,10,18,C.bg);
+}
+function drawBackspace(cx,cy){
+  fillTriangle(cx-16,cy, cx-5,cy-11, cx-5,cy+11, C.dim);
+  fillRect(cx-5,cy-9,22,18,C.dim);
+  line(cx+1,cy-4, cx+10,cy+4, C.bg);
+  line(cx+10,cy-4, cx+1,cy+4, C.bg);
+}
 
 /* ---------- chrome ---------- */
 function tabBar(page){
   for(let i=0;i<3;i++){
     const x = i*80, act = i===page;
     fillRect(x+1,278,78,40, act?uiAcc:C.bg2);
-    drawRect(x+1,278,78,40, C.dim);
+    drawRect(x+1,278,78,40, act?uiAcc:C.brd);
     text(x+(80-tw(PAGE_NAMES[i],2))/2, 293, 2, PAGE_NAMES[i], act?C.bg:C.txt);
   }
 }
@@ -164,160 +210,202 @@ function subTabs(setupTab){
   const names = ['STAT','CFG','SET'];
   for(let i=0;i<3;i++){
     const x = 8+i*76, act = setupTab===i;
-    fillRect(x,28,72,40, act?uiAcc:C.bg2);
-    drawRect(x,28,72,40, C.dim);
-    text(x+(72-tw(names[i],2))/2, 40, 2, names[i], act?C.bg:C.txt);
+    fillRect(x,32,72,36, act?uiAcc:C.bg2);
+    drawRect(x,32,72,36, act?uiAcc:C.brd);
+    text(x+(72-tw(names[i],2))/2, 42, 2, names[i], act?C.bg:C.txt);
   }
 }
 function header(str, col, dot){
-  slot(0,0,190,26,2,str,col,C.bg2);
-  fillRect(216,7,18,12,C.bg2);
-  if(dot) fillCircle(225,13,6,dot);
+  slot(0,0,190,28,2,str,col,C.bg);
+  fillRect(196,6,16,15,C.bg);
+  if(dot) fillCircle(204,13,5,dot);
+  fillRect(210,6,30,16,C.bg);                    // battery gauge
+  drawRect(212,8,26,12,C.dim);
+  fillRect(238,11,2,6,C.dim);
+  const seg = battPct<15 ? C.bad : battPct<35 ? C.warn : C.good;
+  for(let i=0;i<4;i++) fillRect(214+i*6,10,5,8, battPct > i*25+10 ? seg : C.brd);
   if(!btLinkOn){                                 // crossed BT badge
-    fillRect(190,4,24,20,C.bg2);
+    fillRect(190,4,26,20,C.bg);
     text(196,10,1,'BT',C.dim);
-    g.strokeStyle=C.bad; g.lineWidth=1.5;
-    g.beginPath(); g.moveTo(193,4); g.lineTo(213,22); g.stroke();
-    g.beginPath(); g.moveTo(194,4); g.lineTo(214,22); g.stroke();
+    line(192,4, 214,22, C.bad);
+    line(193,4, 215,22, C.bad);
   }
 }
 function chrome(page, pane, setupTab){
-  fillRect(0,27,W,250,C.bg);
+  fillRect(0,0,W,278,C.bg);
+  fillRect(0,29,W,1,C.brd);
   tabBar(page);
-  if(page===2) subTabs(setupTab);
+  if(page===2){ subTabs(setupTab); return; }
+  text(8,36,1, page===0 ? `TELEMETRY (${PANE_NAMES[pane]})` : 'SECURITY', C.dim);
   if(page===0){
-    g.fillStyle=C.dim;
-    if(pane===0){ text(8,34,2,'SPEED',C.dim); }
-    else if(pane===1){ text(8,32,2,'BATTERY',C.dim); text(128,32,2,'CURRENT',C.dim);
-                       text(8,96,2,'POWER',C.dim);   text(128,96,2,'GEAR',C.dim); }
-    else { text(8,32,2,'RPM',C.dim); text(128,32,2,'GEAR',C.dim); text(8,100,2,'CTRL/MOT C',C.dim); }
+    if(pane===0){                                // RIDE
+      text(8,46,2,'SPEED',C.dim);
+      text(236-(T.wheel?48:36),46,2, T.wheel?'KM/H':'RPM',C.dim);
+      text(8,158,1,'BATTERY',C.dim);  text(128,158,1,'CURRENT',C.dim);
+      text(8,224,1,'RIDE MODE',C.dim); text(128,224,1,'TRIP',C.dim);
+      fillRect(8,152,224,1,C.brd); fillRect(8,218,224,1,C.brd);
+    } else if(pane===1){                         // ELEC
+      text(8,48,2,'BATTERY',C.dim); text(128,48,2,'CURRENT',C.dim);
+      text(8,126,1,'POWER',C.dim);  text(128,126,1,'GEAR',C.dim);
+      fillRect(8,120,224,1,C.brd);
+    } else {                                     // MOTOR
+      text(8,48,2,'RPM',C.dim);     text(128,48,2,'GEAR',C.dim);
+      text(8,126,1,'TEMPS',C.dim);  text(128,126,1,'STATE',C.dim);
+      fillRect(8,120,224,1,C.brd);
+    }
   }
 }
-function teleTail(statusStr, statusCol, hasData){
-  slot(8,214,224,18,2, statusStr, statusCol, C.bg);
-  slot(8,236,224,16,1, `bt rx ${T.rx}  tx ${T.tx}  age ${hasData?T.age+'s':'-'}`, C.dim, C.bg);
-  slot(8,256,224,16,1, '', C.dim, C.bg);
+function teleTail(statusStr, statusCol){
+  slot(8,256,224,10,1, statusStr, statusCol, C.bg);
+  slot(8,266,224,9,1, '', C.dim, C.bg);
 }
+const battBarCol = battPct<25 ? (battPct<10 ? C.bad : C.warn) : C.good;
+const currPct = Math.round(Math.min(parseFloat(T.a)/40,1)*100);
 
 /* ---------- screens ---------- */
 const SCREENS = {
-  ride(){ chrome(0,0); header('VOTOL RIDE', C.txt, C.good);
-    let s = uiScale===0?4:5; const v = String(rideKmh); if(v.length>4 && s>4) s=4;
-    slot(8,58,224,76,s, v, uiVal, C.bg);
-    slot(8,140,224,20,2,'km/h',C.dim,C.bg);
-    slot(8,170,110,24,szMid(), T.v+'V', C.txt, C.bg);
-    slot(122,170,110,24,szMid(), T.a+' A', C.txt, C.bg);
-    teleTail(T.status, C.dim, true);
+  ride(){ chrome(0,0); header('VOTOL POD', C.txt, C.good);
+    let s = uiScale===0?6:8; const v = String(rideKmh);
+    if(v.length>3 && s>6) s=6; if(v.length>4 && s>5) s=5;
+    slotC(0,64,240,84,s, v, uiVal, C.bg);
+    slot(8,170,110,26,3, T.v+'V', uiVal, C.bg);
+    slot(128,170,110,26,3, T.a+' A', uiVal, C.bg);
+    drawBar(8,200,88,8, battPct, battBarCol); drawPct(100,198,battPct);
+    drawBar(128,200,100,8, currPct, C.acc);
+    slot(8,236,110,16,2, GEAR_NAMES['LMHS'.indexOf(T.gear)], uiVal, C.bg);
+    slot(128,236,110,16,2, '1.87 km', C.txt, C.bg);
+    teleTail(T.status, C.dim);
   },
-  elec(){ chrome(0,1); header('VOTOL ELEC', C.txt, C.good);
-    slot(8,48,150,42,szBig(), T.v+'V', uiVal, C.bg);
-    slot(128,48,108,26,szMid(), T.a+' A', C.txt, C.bg);
-    slot(8,112,108,26,szMid(), Math.round(72.4*12.5)+'W', C.txt, C.bg);
-    slot(128,112,108,26,szMid(), T.gear, C.txt, C.bg);
-    teleTail(T.status, C.dim, true);
+  elec(){ chrome(0,1); header('VOTOL POD', C.txt, C.good);
+    slot(2,66,124,34,szBig(), T.v+'V', uiVal, C.bg);
+    slot(128,66,108,34,3, T.a+' A', uiVal, C.bg);
+    drawBar(8,104,88,8, battPct, battBarCol); drawPct(100,102,battPct);
+    drawBar(128,104,100,8, currPct, C.acc);
+    slot(8,138,110,28,3, Math.round(72.4*12.5)+'W', C.txt, C.bg);
+    slot(128,138,110,28,3, T.gear, uiVal, C.bg);
+    teleTail(T.status, C.dim);
   },
-  motor(){ chrome(0,2); header('VOTOL MOTOR', C.txt, C.good);
-    slot(8,48,150,42,szBig(), String(T.rpm), uiVal, C.bg);
-    slot(128,48,108,26,szMid(), T.gear, C.txt, C.bg);
-    slot(8,116,150,26,szMid(), `${T.tc}/${T.tm}C`, C.txt, C.bg);
-    teleTail(T.status, C.dim, true);
+  motor(){ chrome(0,2); header('VOTOL POD', C.txt, C.good);
+    slot(2,66,124,34,szBig(), String(T.rpm), uiVal, C.bg);
+    slot(128,66,108,34,3, T.gear, uiVal, C.bg);
+    slot(8,138,110,28,3, `${T.tc}/${T.tm}C`, C.txt, C.bg);
+    slot(128,138,110,28,3, T.status, C.txt, C.bg);
+    teleTail(T.status, C.dim);
   },
-  nodata(){ chrome(0,0); header('VOTOL  bt search', C.warn, C.bad);
-    slot(8,58,224,76, uiScale===0?4:5, '--', C.dim, C.bg);
-    slot(8,170,110,24,szMid(),'--',C.dim,C.bg);
-    slot(122,170,110,24,szMid(),'--',C.dim,C.bg);
-    slot(8,140,224,20,2,'motor rpm',C.dim,C.bg);
-    teleTail('bluetooth: searching bridge', C.warn, false);
+  nodata(){ chrome(0,0); header('VOTOL bt search', C.warn, C.bad);
+    slotC(0,64,240,84,8, '--', C.dim, C.bg);
+    slot(8,170,110,26,3,'--.-V',C.dim,C.bg);
+    slot(128,170,110,26,3,'--.-A',C.dim,C.bg);
+    drawBar(8,200,88,8, 0, C.brd); drawPct(100,198,-1);
+    drawBar(128,200,100,8, 0, C.acc);
+    slot(8,236,110,16,2,'--',C.dim,C.bg);
+    slot(128,236,110,16,2,'--',C.dim,C.bg);
+    teleTail('bluetooth: searching bridge', C.warn);
   },
-  lock(){ chrome(1); header('VOTOL LOCK', C.txt, C.good);
-    slot(8,44,224,32,szHero(),'DISARMED',C.good,C.bg);
-    slot(8,90,224,18,2,'fob: near -58 dBm',C.good,C.bg);
-    slot(8,112,224,14,1,'heard: N:galaxy',C.dim,C.bg);
-    fobRows();
-    panicBtn('ARM', C.dim, C.txt);
+  lock(){ chrome(1); header('VOTOL POD', C.txt, C.good);
+    drawLockIcon(120,50,C.good,false);
+    textC(138,4,'DISARMED',C.good);
+    fillRect(8,176,224,1,C.brd);
+    slot(8,182,160,16,2,'FOB: NEAR',C.good,C.bg);
+    drawSig(188,184,T.rssi);
+    slot(8,202,224,12,1,'rssi -58 dBm',C.dim,C.bg);
+    slot(8,214,224,12,1,'FOBS 1:AA:BB:CC:DD:EE:FF 2:N:galaxy',C.dim,C.bg);
+    fillRect(8,228,224,38,C.good);
+    text(8+(224-3*18-22)/2, 236, 3, 'ARM', C.bg);
+    text(208,236,3,'>',C.bg);
   },
-  lockarmed(){ chrome(1); header('VOTOL LOCK', C.txt, C.good);
-    slot(8,44,224,32,szHero(),'ARMED',C.bad,C.bg);
-    slot(8,90,224,18,2,'fob: away 12s',C.dim,C.bg);
-    slot(8,112,224,14,1,'heard: AA:BB:CC:DD:EE:FF',C.dim,C.bg);
-    fobRows();
-    panicBtn('PANIC', C.bad, C.bad);
+  lockarmed(){ chrome(1); header('VOTOL POD', C.txt, C.good);
+    drawLockIcon(120,50,C.bad,true);
+    textC(138,4,'ARMED',C.bad);
+    fillRect(8,176,224,1,C.brd);
+    slot(8,182,160,16,2,'FOB: AWAY 12s',C.warn,C.bg);
+    drawSig(188,184,-128);
+    slot(8,202,224,12,1,'heard AA:BB:CC:DD:EE:FF',C.dim,C.bg);
+    slot(8,214,224,12,1,'FOBS 1:AA:BB:CC:DD:EE:FF 2:N:galaxy',C.dim,C.bg);
+    fillRect(8,228,140,38,C.bad);
+    text(8+(140-6*12-16)/2, 240, 2, 'DISARM', C.bg);
+    text(126,240,2,'>',C.bg);
+    fillRect(152,228,80,38,C.bg2); drawRect(152,228,80,38,C.brd);
+    text(152+(80-5*12)/2, 240, 2, 'PANIC', C.bad);
   },
-  nofob(){ chrome(1); header('VOTOL LOCK', C.txt, C.warn);
-    slot(8,44,224,32,szHero(),'NO FOB',C.dim,C.bg);
-    slot(8,90,224,16,1,'add fobs over USB serial:',C.warn,C.bg);
-    slot(8,108,224,16,1,"'m' iTag / 'f <mac>' / 'f N:<name>' phone",C.warn,C.bg);
-    fillRect(8,190,224,60,C.bg);
+  nofob(){ chrome(1); header('VOTOL POD', C.warn, C.good);
+    drawLockIcon(120,50,C.dim,true);
+    textC(138,4,'NO FOB',C.dim);
+    slot(8,182,224,14,1,'register a fob over USB serial:',C.warn,C.bg);
+    slot(8,196,224,14,1,"'m' iTag  'f <mac>'  'f N:<name>' phone",C.warn,C.bg);
+    fillRect(8,228,224,40,C.bg);
   },
-  stat(){ chrome(2,0,0); header('VOTOL SYS', C.txt, C.good);
+  stat(){ chrome(2,0,0); header('VOTOL POD', C.txt, C.good);
     const bt = !btLinkOn ? 'bt OFF VOTOL-BT' : 'bt LINKED VOTOL-BT';
     slot(8,80,224,18,2, bt, (!btLinkOn)?C.dim:C.good, C.bg);
-    slot(8,96,224,18,2, `rx ${T.rx} tx ${T.tx}`, C.txt, C.bg);
+    slot(8,96,224,18,2, `rx 128 tx 64`, C.txt, C.bg);
     slot(8,118,224,18,2,'touch v0', C.txt, C.bg);
-    slot(8,140,224,18,2,'raw 1234  5678  9012', C.dim, C.bg);
+    slot(8,140,224,18,1,'raw 1234  5678  9012', C.dim, C.bg);
     slot(8,162,224,18,2,'up 123s  heap 168kB', C.txt, C.bg);
     slot(8,184,224,18,2, `wheel ${T.wheel.toFixed(2)}m  km/h`, C.dim, C.bg);
-    fillRect(8,212,224,44,C.bg2);
-    drawRect(8,212,224,44, uiAcc);
-    const t = 'release BT for phone';
-    text(8+(224-tw(t,2))/2, 226, 2, t, uiAcc);
+    fillRect(8,212,224,44, uiAcc);
+    text(8+(224-tw('RELEASE BT TO APP',2))/2, 226, 2, 'RELEASE BT TO APP', C.bg);
   },
-  cfg(){ chrome(2,0,1); header('VOTOL SYS', C.txt, C.good);
+  cfg(){ chrome(2,0,1); header('VOTOL POD', C.txt, C.good);
     text(8,72,1,'TEXT SIZE',C.dim);
     ['S','M','L'].forEach((s,i)=>{
       const x = 8+i*78, act = uiScale===i;
       fillRect(x,84,68,40, act?uiAcc:C.bg2);
-      drawRect(x,84,68,40, act?uiAcc:C.dim);
+      drawRect(x,84,68,40, act?uiAcc:C.brd);
       text(x+(68-18)/2, 95, 3, s, act?C.bg:C.txt);
     });
     swatchRow('VALUE COLOR', 134, uiVal, i=>uiVal=PALETTE[i]);
     swatchRow('ACCENT COLOR', 180, uiAcc, i=>uiAcc=PALETTE[i]);
     text(8,222,1,'SECURITY',C.dim);
-    fillRect(8,232,224,34,C.bg2); drawRect(8,232,224,34,C.dim);
+    fillRect(8,232,224,34,C.bg2); drawRect(8,232,224,34,C.brd);
     text(8+(224-tw('CHANGE PIN',2))/2, 241, 2, 'CHANGE PIN', C.txt);
     slot(8,270,224,14,1,'', C.dim, C.bg);
   },
-  set(){ chrome(2,0,2); header('VOTOL SYS', C.txt, C.good);
+  set(){ chrome(2,0,2); header('VOTOL POD', C.txt, C.good);
     drawQr(KEY);
-    slot(22,268,196,12,1, KEY, C.txt, C.bg);
+    slotC(0,244,240,12,1,'PAIRING KEY',C.dim,C.bg);
+    fillRect(10,258,220,19,C.bg2); drawRect(10,258,220,19,uiAcc);
+    slotC(10,258,220,19,1, KEY, uiAcc, C.bg2);
   },
-  standby(){                                     // armed idle: full-screen 🚫
+  standby(){                                     // armed idle: mockup lock screen
     fillRect(0,0,W,H,C.bg);
-    const cx=120, cy=134, R=98;
-    for(let r=R; r>R-14; r--) drawCircle(cx,cy,r,C.bad);
-    const a=66, sq=24;
-    for(let i=-a;i<=a;i+=2){
-      fillRect(cx+i-sq/2, cy+i-sq/2, sq, sq, C.bad);
-      fillRect(cx+i-sq/2, cy-i-sq/2, sq, sq, C.bad);
-    }
-    textC(244,4,'ARMED',C.bad);
-    const b = `BAT ${T.v}V`;
-    text(120-tw(b,2)/2, 284, 2, b, C.txt);
-    textC(306,1,'double-tap: enter PIN',C.dim);
+    drawLockShape(C.bad, 92, 52);
+    textC(232,4,'ARMED',C.bad);
+    text(120-tw(`BAT ${T.v}V`,2)/2, 272, 2, `BAT ${T.v}V`, C.txt);
+    textC(300,1,'double-tap: enter PIN',C.dim);
   },
   pin(){                                         // PIN gate over standby
     fillRect(0,0,W,H,C.bg);
-    fillRect(30,34,180,26,C.bg2); drawRect(30,34,180,26,C.dim);
-    textC(22,1,'PIN TO DISARM',C.dim);
-    const line='     ****';                      // 5 spaces + 4 asterisks (centered in 15)
-    slot(34,38,172,18,2,line,C.txt,C.bg2);
-    slot(8,64,224,12,1,'wrong PIN locks 15 s after 3 tries',C.dim,C.bg);
-    const lab=['1','2','3','4','5','6','7','8','9','C','0','OK'];
+    const t='ENTER PIN TO ARM', tx=(W-(tw(t,2)+26))/2;
+    fillRect(tx,10,16,12,uiAcc);
+    drawRect(tx+3,4,10,8,uiAcc); fillRect(tx+4,8,8,4,uiAcc);
+    fillCircle(tx+8,15,2,C.bg);
+    text(tx+26,8,2,t,C.txt);
+    slotC(0,26,240,12,1,'wrong PIN locks 15 s after 3 tries',C.dim,C.bg);
+    fillRect(10,40,220,34,C.bg);
+    for(let i=0;i<6;i++){
+      const x=18+i*35, act=i===4;
+      drawRect(x,42,28,30, act?uiAcc:C.brd);
+      if(act) drawRect(x+1,43,26,28,uiAcc);
+      if(i<4) fillCircle(x+14,57,4,C.txt);
+    }
     for(let r=0;r<4;r++) for(let c=0;c<3;c++){
-      const i=r*3+c, x=2+c*79, y=78+r*60, ok=i===11, clr=i===9;
+      const i=r*3+c, x=2+c*79, y=78+r*60, ok=i===11, del=i===9;
       fillRect(x,y,76,54, ok?C.good:C.bg2);
-      drawRect(x,y,76,54, ok?C.good: clr?C.warn:C.dim);
-      text(x+(76-18*lab[i].length)/2, y+15, 3, lab[i], ok?C.bg: clr?C.warn:C.txt);
+      drawRect(x,y,76,54, ok?C.good:C.brd);
+      if(ok) text(x+(76-2*18)/2, y+15, 3, 'OK', C.bg);
+      else if(del) drawBackspace(x+38, y+27);
+      else text(x+(76-18)/2, y+15, 3, i===10?'0':String(1+i), C.txt);
     }
   },
   armask(){                                      // device ARM confirmation
     fillRect(0,0,W,H,C.bg);
-    textC(92,2,'ARM THE ALARM?',C.txt);
-    textC(120,1,'screen will rest at the lock screen',C.dim);
-    fillRect(8,168,224,58,C.bg2); drawRect(8,168,224,58,C.good);
-    textC(186,3,'NO',C.good);
-    fillRect(8,242,224,58,C.bg2); drawRect(8,242,224,58,C.bad);
-    textC(260,3,'YES, ARM',C.bad);
+    textC(78,2,'ARM THE ALARM?',C.txt);
+    textC(106,1,'screen will rest at the lock screen',C.dim);
+    fillRect(8,148,224,56,C.bg2); drawRect(8,148,224,56,C.brd);
+    textC(165,3,'NO',C.txt);
+    fillRect(8,218,224,58,C.good);
+    textC(236,3,'YES, ARM',C.bg);
   },
   animarm(){                                     // ARM animation final frame
     animLock(C.bad, 92, 52);
@@ -330,33 +418,18 @@ const SCREENS = {
   },
   bootdark(){ fillRect(0,0,W,H,C.black); },
   wifi(){                                        // 30s WiFi/OTA boot window
-    chrome(0,0);
-    slot(0,0,190,26,2,'setup window 28s',C.acc,C.bg2);
+    fillRect(0,0,W,278,C.bg);
+    fillRect(0,29,W,1,C.brd);
+    slot(0,0,190,28,2,'setup window 28s',C.acc,C.bg);
     text(8,60,1,'WiFi + OTA open for a short window',C.dim);
     text(8,74,1,'after boot; then it turns off and',C.dim);
     text(8,88,1,'Bluetooth + touch take over.',C.dim);
     text(8,112,1,'ip 192.168.1.191',C.dim);
   }
 };
-function fobRows(){
-  for(let i=0;i<4;i++){
-    const lb = i<FOBS.length ? `${i+1} ${FOBS[i]}` : '';
-    slot(8,130+i*14,224,14,1, lb, C.dim, C.bg);
-  }
-}
-function panicBtn(label, bord, colr){
-  fillRect(8,190,224,60,C.bg2);
-  drawRect(8,190,224,60,bord);
-  text(8+(224-tw(label,3))/2, 208, 3, label, colr);
-}
 function animLock(col, shY, rLeg){               // firmware animLock()
   fillRect(0,27,W,250,C.bg);
-  fillRect(80,shY,12,144-shY,col);
-  fillRect(80,shY,80,12,col);
-  fillRect(148,shY,12,rLeg,col);
-  fillRoundRect(70,138,100,74,10,col);
-  fillCircle(120,176,10,C.bg);
-  fillRect(115,162,10,18,C.bg);
+  drawLockShape(col, shY, rLeg);
 }
 function swatchRow(label, y, cur, pick){
   text(8,y-12,1,label,C.dim);
@@ -368,7 +441,7 @@ function swatchRow(label, y, cur, pick){
 }
 /* deterministic QR v2 mock (finder/timing/alignment real, data seeded) */
 function drawQr(str){
-  const n=25, sc=7, px=n*sc, ox=(W-(px+16))/2, oy=72;
+  const n=25, sc=6, px=n*sc, ox=(W-(px+16))/2, oy=72;
   fillRect(ox,oy,px+16,px+16,C.white);
   let seed=0x9E37; for(const ch of str) seed=(seed*33+ch.charCodeAt(0))>>>0;
   const rnd=()=>{ seed^=seed<<13; seed^=seed>>>17; seed^=seed<<5; seed>>>=0; return seed/4294967296; };
@@ -405,7 +478,7 @@ const ORDER = [
   ['ride','TELE · RIDE'], ['elec','TELE · ELEC'], ['motor','TELE · MOTOR'], ['nodata','TELE · no data'],
   ['lock','LOCK · disarmed'], ['lockarmed','LOCK · armed'], ['nofob','LOCK · no fob'],
   ['stat','SYS · STAT'], ['cfg','SYS · CFG'], ['set','SYS · SET (QR)'],
-  ['standby','ARMED STANDBY 🚫'], ['pin','PIN GATE'], ['armask','ARM CONFIRM'],
+  ['standby','ARMED STANDBY 🔒'], ['pin','PIN GATE'], ['armask','ARM CONFIRM'],
   ['animarm','ANIM · ARM 🔒'], ['animdisarm','ANIM · DISARM 🔓+pings'],
   ['bootdark','BOOT DARK'], ['wifi','WIFI SETUP WINDOW']
 ];
