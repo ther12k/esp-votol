@@ -3,78 +3,130 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#07090D">
+    android:background="@color/bg">
 
     <!-- Main Content Area -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:layout_marginBottom="72dp">
+        android:layout_marginBottom="92dp">
 
-        <!-- Top Header -->
+        <!-- ============ App Header: logo + wordmark + theme toggle + link pill ============ -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="12dp">
+            android:paddingTop="14dp"
+            android:paddingBottom="6dp">
+
+            <FrameLayout
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@drawable/bg_logo">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_bolt"
+                    app:tint="#1A1205"
+                    android:contentDescription="@string/app_name" />
+            </FrameLayout>
 
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:orientation="vertical">
 
                 <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="VOTOL POD"
-                    android:textColor="#F59E0B"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.15" />
-
-                <TextView
-                    android:id="@+id/linkBadge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:paddingTop="3dp"
-                    android:paddingBottom="3dp"
-                    android:background="@drawable/badge_bg"
-                    android:text="offline"
-                    android:textColor="#9AA3B2"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:text="VOTOL POD"
+                    android:textColor="@color/brandText"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.18" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="EV SECURITY CONTROLLER"
+                    android:textColor="@color/textMuted"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.18" />
             </LinearLayout>
 
+            <ImageButton
+                android:id="@+id/themeToggle"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_marginEnd="10dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_moon"
+                app:tint="@color/textSecondary"
+                android:contentDescription="Toggle light / dark theme" />
+
             <TextView
-                android:id="@+id/pageTitle"
+                android:id="@+id/linkBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Remote Control"
-                android:textColor="#F5F7FB"
-                android:textSize="22sp"
-                android:textStyle="bold" />
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp"
+                android:background="@drawable/bg_pill_gray"
+                android:text="OFFLINE"
+                android:textColor="@color/statGray"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.1" />
         </LinearLayout>
 
-        <!-- View Flipper for Tabs -->
+        <!-- Page title + subtitle (per tab) -->
+        <TextView
+            android:id="@+id/pageTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="2dp"
+            android:text="Remote Control"
+            android:textColor="@color/textPrimary"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/pageSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="2dp"
+            android:text="Arm, disarm and monitor your bike"
+            android:textColor="@color/textSecondary"
+            android:textSize="13sp" />
+
+        <!-- Scrollable body -->
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fillViewport="true">
+            android:fillViewport="true"
+            android:layout_marginTop="14dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- TAB 1: CONTROL -->
+                <!-- ================= TAB 1: CONTROL ================= -->
                 <LinearLayout
                     android:id="@+id/viewControl"
                     android:layout_width="match_parent"
@@ -84,15 +136,15 @@
                     android:paddingEnd="20dp"
                     android:paddingBottom="16dp">
 
-                    <!-- Status Hero Card -->
+                    <!-- Hero status card -->
                     <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/statusCard"
+                        android:id="@+id/heroCard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:cardBackgroundColor="#161B27"
+                        app:cardBackgroundColor="@color/heroOfflineBg"
                         app:cardCornerRadius="24dp"
                         app:cardElevation="0dp"
-                        app:strokeColor="#2A3242"
+                        app:strokeColor="@color/border"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -107,26 +159,45 @@
                                 android:orientation="horizontal"
                                 android:gravity="center_vertical">
 
-                                <TextView
-                                    android:id="@+id/stateIcon"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="🚫"
-                                    android:textSize="38sp" />
+                                <FrameLayout
+                                    android:id="@+id/heroRings"
+                                    android:layout_width="64dp"
+                                    android:layout_height="64dp"
+                                    android:background="@drawable/rings_offline">
+
+                                    <ImageView
+                                        android:id="@+id/heroIcon"
+                                        android:layout_width="30dp"
+                                        android:layout_height="30dp"
+                                        android:layout_gravity="center"
+                                        android:src="@drawable/ic_link_off"
+                                        app:tint="@color/statGray"
+                                        android:contentDescription="alarm state" />
+                                </FrameLayout>
 
                                 <LinearLayout
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:layout_marginStart="14dp"
+                                    android:layout_marginStart="16dp"
                                     android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="SYSTEM STATUS"
+                                        android:textColor="@color/textSecondary"
+                                        android:textSize="9sp"
+                                        android:textStyle="bold"
+                                        android:letterSpacing="0.2" />
 
                                     <TextView
                                         android:id="@+id/stateText"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
                                         android:text="OFFLINE"
-                                        android:textColor="#9AA3B2"
+                                        android:textColor="@color/statGray"
                                         android:textSize="28sp"
                                         android:textStyle="bold" />
 
@@ -134,9 +205,10 @@
                                         android:id="@+id/subText"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
                                         android:text="not connected"
-                                        android:textColor="#9AA3B2"
-                                        android:textSize="14sp" />
+                                        android:textColor="@color/textSecondary"
+                                        android:textSize="13sp" />
                                 </LinearLayout>
                             </LinearLayout>
 
@@ -144,74 +216,176 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="1dp"
                                 android:layout_marginTop="16dp"
-                                android:layout_marginBottom="12dp"
-                                android:background="#2A3242" />
+                                android:layout_marginBottom="14dp"
+                                android:background="@color/border" />
 
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:orientation="horizontal">
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
 
                                 <LinearLayout
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:orientation="vertical">
-                                    <TextView
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical">
+
+                                    <ImageView
+                                        android:layout_width="18dp"
+                                        android:layout_height="18dp"
+                                        android:src="@drawable/ic_bolt"
+                                        app:tint="@color/statVolt"
+                                        android:contentDescription="battery" />
+
+                                    <LinearLayout
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="BATTERY"
-                                        android:textColor="#9AA3B2"
-                                        android:textSize="10sp"
-                                        android:letterSpacing="0.1" />
-                                    <TextView
-                                        android:id="@+id/voltText"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="--.- V"
-                                        android:textColor="#00C8FF"
-                                        android:textSize="16sp"
-                                        android:textStyle="bold" />
+                                        android:layout_marginStart="10dp"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="BATTERY"
+                                            android:textColor="@color/textSecondary"
+                                            android:textSize="9sp"
+                                            android:textStyle="bold"
+                                            android:letterSpacing="0.15" />
+
+                                        <TextView
+                                            android:id="@+id/voltText"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="--.- V"
+                                            android:textColor="@color/statVolt"
+                                            android:textSize="16sp"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
                                 </LinearLayout>
 
+                                <View
+                                    android:layout_width="1dp"
+                                    android:layout_height="32dp"
+                                    android:layout_marginEnd="16dp"
+                                    android:background="@color/border" />
+
                                 <LinearLayout
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:orientation="vertical">
-                                    <TextView
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical">
+
+                                    <ImageView
+                                        android:layout_width="18dp"
+                                        android:layout_height="18dp"
+                                        android:src="@drawable/ic_radar"
+                                        app:tint="@color/accentGreen"
+                                        android:contentDescription="fob" />
+
+                                    <LinearLayout
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:text="FOB"
-                                        android:textColor="#9AA3B2"
-                                        android:textSize="10sp"
-                                        android:letterSpacing="0.1" />
-                                    <TextView
-                                        android:id="@+id/fobText"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="--"
-                                        android:textColor="#F5F7FB"
-                                        android:textSize="16sp"
-                                        android:textStyle="bold" />
+                                        android:layout_marginStart="10dp"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="FOB"
+                                            android:textColor="@color/textSecondary"
+                                            android:textSize="9sp"
+                                            android:textStyle="bold"
+                                            android:letterSpacing="0.15" />
+
+                                        <TextView
+                                            android:id="@+id/fobText"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="--"
+                                            android:textColor="@color/textSecondary"
+                                            android:textSize="16sp"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
                                 </LinearLayout>
                             </LinearLayout>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Single Primary Toggle Action Button (ARM / DISARM) -->
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/securityToggleBtn"
+                    <!-- Primary contextual action (ARM / DISARM / Connect) -->
+                    <FrameLayout
+                        android:id="@+id/ctaBtn"
                         android:layout_width="match_parent"
-                        android:layout_height="76dp"
+                        android:layout_height="84dp"
                         android:layout_marginTop="18dp"
-                        android:backgroundTint="#10B981"
-                        android:text="🔓 DISARM"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        app:cornerRadius="20dp" />
+                        android:background="@drawable/bg_cta_connect"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?android:attr/selectableItemBackground">
 
-                    <!-- Quick Actions Row: Connect + Panic -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingStart="20dp"
+                            android:paddingEnd="20dp">
+
+                            <ImageView
+                                android:id="@+id/ctaIcon"
+                                android:layout_width="26dp"
+                                android:layout_height="26dp"
+                                android:src="@drawable/ic_lock"
+                                app:tint="@color/textSecondary"
+                                android:contentDescription="action" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="14dp"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/ctaLabel"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Connect to Control"
+                                    android:textColor="@color/textPrimary"
+                                    android:textSize="19sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/ctaSub"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="1dp"
+                                    android:text="link with the display pod"
+                                    android:textColor="@color/textSecondary"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                            <FrameLayout
+                                android:id="@+id/ctaChip"
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:background="@drawable/bg_chip">
+
+                                <ImageView
+                                    android:id="@+id/ctaArrow"
+                                    android:layout_width="18dp"
+                                    android:layout_height="18dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_arrow"
+                                    app:tint="@color/textSecondary"
+                                    android:contentDescription="go" />
+                            </FrameLayout>
+                        </LinearLayout>
+                    </FrameLayout>
+
+                    <!-- Secondary actions: Disconnect + Panic -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -219,41 +393,73 @@
                         android:orientation="horizontal">
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/connectBtn"
-                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:id="@+id/btnDisconnect"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
                             android:layout_width="0dp"
-                            android:layout_height="60dp"
+                            android:layout_height="56dp"
                             android:layout_weight="1"
                             android:layout_marginEnd="6dp"
-                            android:text="Connect"
-                            android:textSize="15sp"
-                            app:cornerRadius="16dp" />
+                            android:text="Disconnect"
+                            android:textColor="@color/textSecondary"
+                            android:textSize="14sp"
+                            app:icon="@drawable/ic_link_off"
+                            app:iconTint="@color/textSecondary"
+                            app:iconGravity="textStart"
+                            app:strokeColor="@color/border"
+                            app:cornerRadius="18dp" />
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/panicBtn"
+                            android:id="@+id/btnPanic"
                             android:layout_width="0dp"
-                            android:layout_height="60dp"
+                            android:layout_height="56dp"
                             android:layout_weight="1"
                             android:layout_marginStart="6dp"
-                            android:backgroundTint="#EF4444"
-                            android:text="🚨 PANIC"
-                            android:textSize="15sp"
+                            android:backgroundTint="@color/red"
+                            android:text="PANIC"
+                            android:textColor="@color/onRed"
+                            android:textSize="14sp"
                             android:textStyle="bold"
-                            app:cornerRadius="16dp" />
+                            app:icon="@drawable/ic_siren"
+                            app:iconTint="@color/onRed"
+                            app:iconGravity="textStart"
+                            app:cornerRadius="18dp" />
                     </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/replyText"
+                    <!-- Pod reply ticker -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:fontFamily="monospace"
-                        android:gravity="center"
-                        android:textColor="#9AA3B2"
-                        android:textSize="13sp" />
+                        android:layout_marginTop="18dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <View
+                            android:layout_width="24dp"
+                            android:layout_height="1dp"
+                            android:background="@color/border" />
+
+                        <TextView
+                            android:id="@+id/replyText"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="10dp"
+                            android:layout_marginEnd="10dp"
+                            android:fontFamily="monospace"
+                            android:gravity="center"
+                            android:maxLines="2"
+                            android:ellipsize="end"
+                            android:textColor="@color/textSecondary"
+                            android:textSize="12sp" />
+
+                        <View
+                            android:layout_width="24dp"
+                            android:layout_height="1dp"
+                            android:background="@color/border" />
+                    </LinearLayout>
                 </LinearLayout>
 
-                <!-- TAB 2: CONFIG -->
+                <!-- ================= TAB 2: CONFIG ================= -->
                 <LinearLayout
                     android:id="@+id/viewConfig"
                     android:layout_width="match_parent"
@@ -264,190 +470,76 @@
                     android:paddingBottom="16dp"
                     android:visibility="gone">
 
-                    <!-- Fetch Config Button -->
-                    <com.google.android.material.button.MaterialButton
+                    <!-- Read config card-button -->
+                    <com.google.android.material.card.MaterialCardView
                         android:id="@+id/refreshCfgBtn"
-                        style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="⟳ Read Config from Pod"
-                        android:layout_marginBottom="14dp" />
-
-                    <!-- Security / PIN Card -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:cardBackgroundColor="#11151F"
+                        android:layout_marginBottom="14dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="@color/card"
                         app:cardCornerRadius="18dp"
-                        app:strokeColor="#2A3242"
-                        app:strokeWidth="1dp"
-                        android:layout_marginBottom="14dp">
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
                             android:padding="16dp">
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="SECURITY PIN"
-                                android:textColor="#F59E0B"
-                                android:textSize="11sp"
-                                android:textStyle="bold"
-                                android:letterSpacing="0.1" />
-
-                            <TextView
-                                android:id="@+id/cfgPinStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="Current PIN: --"
-                                android:textColor="#F5F7FB"
-                                android:textSize="14sp" />
+                            <ImageView
+                                android:layout_width="22dp"
+                                android:layout_height="22dp"
+                                android:src="@drawable/ic_refresh"
+                                app:tint="@color/accentAmber"
+                                android:contentDescription="refresh" />
 
                             <LinearLayout
-                                android:layout_width="match_parent"
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:orientation="horizontal">
+                                android:layout_weight="1"
+                                android:layout_marginStart="14dp"
+                                android:orientation="vertical">
 
-                                <EditText
-                                    android:id="@+id/newPinInput"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:hint="New PIN (4-12 digits)"
-                                    android:inputType="numberPassword"
-                                    android:textColor="#F5F7FB"
-                                    android:textColorHint="#5A6474"
-                                    android:textSize="14sp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/setPinBtn"
+                                <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginStart="8dp"
-                                    android:text="Set" />
-                            </LinearLayout>
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
+                                    android:text="Read Config from Pod"
+                                    android:textColor="@color/textPrimary"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold" />
 
-                    <!-- Wheel Circumference Card -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:cardBackgroundColor="#11151F"
-                        app:cardCornerRadius="18dp"
-                        app:strokeColor="#2A3242"
-                        app:strokeWidth="1dp"
-                        android:layout_marginBottom="14dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="16dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="SPEED CALIBRATION"
-                                android:textColor="#F59E0B"
-                                android:textSize="11sp"
-                                android:textStyle="bold"
-                                android:letterSpacing="0.1" />
-
-                            <TextView
-                                android:id="@+id/cfgWheelStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="Wheel: -- m"
-                                android:textColor="#F5F7FB"
-                                android:textSize="14sp" />
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:orientation="horizontal">
-
-                                <EditText
-                                    android:id="@+id/wheelInput"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:hint="e.g. 2.05 (metres)"
-                                    android:inputType="numberDecimal"
-                                    android:textColor="#F5F7FB"
-                                    android:textColorHint="#5A6474"
-                                    android:textSize="14sp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/setWheelBtn"
+                                <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginStart="8dp"
-                                    android:text="Save" />
+                                    android:layout_marginTop="1dp"
+                                    android:text="sync current settings over BLE"
+                                    android:textColor="@color/textSecondary"
+                                    android:textSize="12sp" />
                             </LinearLayout>
+
+                            <ImageView
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:src="@drawable/ic_arrow"
+                                app:tint="@color/textMuted"
+                                android:contentDescription="go" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Fobs Management Card -->
+                    <!-- Security PIN -->
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:cardBackgroundColor="#11151F"
+                        android:layout_marginBottom="14dp"
+                        app:cardBackgroundColor="@color/card"
                         app:cardCornerRadius="18dp"
-                        app:strokeColor="#2A3242"
-                        app:strokeWidth="1dp"
-                        android:layout_marginBottom="14dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="16dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="PHYSICAL FOBS (iTAG)"
-                                android:textColor="#F59E0B"
-                                android:textSize="11sp"
-                                android:textStyle="bold"
-                                android:letterSpacing="0.1" />
-
-                            <TextView
-                                android:id="@+id/cfgFobStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="Registered fobs: --"
-                                android:textColor="#F5F7FB"
-                                android:textSize="14sp" />
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/clrFobsBtn"
-                                style="@style/Widget.Material3.Button.OutlinedButton"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:text="Clear all registered fobs"
-                                android:textColor="#EF4444"
-                                app:strokeColor="#EF4444" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <!-- Bluetooth Link Toggle Card -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        app:cardBackgroundColor="#11151F"
-                        app:cardCornerRadius="18dp"
-                        app:strokeColor="#2A3242"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/border"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -456,53 +548,408 @@
                             android:orientation="vertical"
                             android:padding="16dp">
 
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <FrameLayout
+                                    android:layout_width="34dp"
+                                    android:layout_height="34dp"
+                                    android:background="@drawable/bg_badge_amber">
+
+                                    <ImageView
+                                        android:layout_width="17dp"
+                                        android:layout_height="17dp"
+                                        android:layout_gravity="center"
+                                        android:src="@drawable/ic_lock"
+                                        app:tint="@color/accentAmber"
+                                        android:contentDescription="pin" />
+                                </FrameLayout>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="12dp"
+                                    android:text="SECURITY PIN"
+                                    android:textColor="@color/accentAmber"
+                                    android:textSize="11sp"
+                                    android:textStyle="bold"
+                                    android:letterSpacing="0.12" />
+                            </LinearLayout>
+
                             <TextView
+                                android:id="@+id/cfgPinStatus"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="VOTOL BRIDGE BT LINK"
-                                android:textColor="#F59E0B"
-                                android:textSize="11sp"
-                                android:textStyle="bold"
-                                android:letterSpacing="0.1" />
+                                android:layout_marginTop="10dp"
+                                android:text="Current PIN: --"
+                                android:textColor="@color/textSecondary"
+                                android:textSize="13sp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <EditText
+                                    android:id="@+id/newPinInput"
+                                    android:layout_width="0dp"
+                                    android:layout_height="46dp"
+                                    android:layout_weight="1"
+                                    android:background="@drawable/bg_input"
+                                    android:paddingStart="12dp"
+                                    android:paddingEnd="12dp"
+                                    android:hint="New PIN (4-12 digits)"
+                                    android:inputType="numberPassword"
+                                    android:maxLines="1"
+                                    android:textColor="@color/textPrimary"
+                                    android:textColorHint="@color/textMuted"
+                                    android:textSize="13sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/setPinBtn"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="46dp"
+                                    android:layout_marginStart="8dp"
+                                    android:minWidth="72dp"
+                                    android:text="Set"
+                                    android:textColor="@color/textPrimary"
+                                    app:strokeColor="@color/border"
+                                    app:cornerRadius="12dp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Speed calibration -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
+                        app:cardBackgroundColor="@color/card"
+                        app:cardCornerRadius="18dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <FrameLayout
+                                    android:layout_width="34dp"
+                                    android:layout_height="34dp"
+                                    android:background="@drawable/bg_badge_teal">
+
+                                    <ImageView
+                                        android:layout_width="17dp"
+                                        android:layout_height="17dp"
+                                        android:layout_gravity="center"
+                                        android:src="@drawable/ic_speed"
+                                        app:tint="@color/accentTeal"
+                                        android:contentDescription="speed" />
+                                </FrameLayout>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="12dp"
+                                    android:text="SPEED CALIBRATION"
+                                    android:textColor="@color/accentTeal"
+                                    android:textSize="11sp"
+                                    android:textStyle="bold"
+                                    android:letterSpacing="0.12" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/cfgWheelStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:text="Wheel circumference: -- m"
+                                android:textColor="@color/textSecondary"
+                                android:textSize="13sp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <EditText
+                                    android:id="@+id/wheelInput"
+                                    android:layout_width="0dp"
+                                    android:layout_height="46dp"
+                                    android:layout_weight="1"
+                                    android:background="@drawable/bg_input"
+                                    android:paddingStart="12dp"
+                                    android:paddingEnd="12dp"
+                                    android:hint="e.g. 2.05 (metres)"
+                                    android:inputType="numberDecimal"
+                                    android:maxLines="1"
+                                    android:textColor="@color/textPrimary"
+                                    android:textColorHint="@color/textMuted"
+                                    android:textSize="13sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/setWheelBtn"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="46dp"
+                                    android:layout_marginStart="8dp"
+                                    android:minWidth="72dp"
+                                    android:text="Save"
+                                    android:textColor="@color/textPrimary"
+                                    app:strokeColor="@color/border"
+                                    app:cornerRadius="12dp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Physical fobs -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
+                        app:cardBackgroundColor="@color/card"
+                        app:cardCornerRadius="18dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <FrameLayout
+                                    android:layout_width="34dp"
+                                    android:layout_height="34dp"
+                                    android:background="@drawable/bg_badge_green">
+
+                                    <ImageView
+                                        android:layout_width="17dp"
+                                        android:layout_height="17dp"
+                                        android:layout_gravity="center"
+                                        android:src="@drawable/ic_radar"
+                                        app:tint="@color/accentGreen"
+                                        android:contentDescription="fobs" />
+                                </FrameLayout>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="12dp"
+                                    android:text="PHYSICAL FOBS (ITAG)"
+                                    android:textColor="@color/accentGreen"
+                                    android:textSize="11sp"
+                                    android:textStyle="bold"
+                                    android:letterSpacing="0.12" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/cfgFobStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:text="Registered fobs: --"
+                                android:textColor="@color/textSecondary"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/clrFobsBtn"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="10dp"
+                                android:text="Clear all registered fobs"
+                                android:textColor="@color/stateRed"
+                                android:textSize="13sp"
+                                app:icon="@drawable/ic_trash"
+                                app:iconTint="@color/stateRed"
+                                app:iconGravity="textStart"
+                                app:strokeColor="@color/ctaArmStroke"
+                                app:cornerRadius="12dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Bridge BT link -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp"
+                        app:cardBackgroundColor="@color/card"
+                        app:cardCornerRadius="18dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <FrameLayout
+                                    android:layout_width="34dp"
+                                    android:layout_height="34dp"
+                                    android:background="@drawable/bg_badge_blue">
+
+                                    <ImageView
+                                        android:layout_width="17dp"
+                                        android:layout_height="17dp"
+                                        android:layout_gravity="center"
+                                        android:src="@drawable/ic_bt"
+                                        app:tint="@color/accentBlue"
+                                        android:contentDescription="bluetooth" />
+                                </FrameLayout>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="12dp"
+                                    android:text="VOTOL BRIDGE BT LINK"
+                                    android:textColor="@color/accentBlue"
+                                    android:textSize="11sp"
+                                    android:textStyle="bold"
+                                    android:letterSpacing="0.12" />
+                            </LinearLayout>
 
                             <TextView
                                 android:id="@+id/cfgBtStatus"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="10dp"
                                 android:text="Bridge BT dial: --"
-                                android:textColor="#F5F7FB"
-                                android:textSize="14sp" />
+                                android:textColor="@color/textSecondary"
+                                android:textSize="13sp" />
 
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
+                                android:layout_marginTop="10dp"
                                 android:orientation="horizontal">
 
                                 <com.google.android.material.button.MaterialButton
                                     android:id="@+id/btOffBtn"
-                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
                                     android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
+                                    android:layout_height="48dp"
                                     android:layout_weight="1"
                                     android:layout_marginEnd="6dp"
-                                    android:text="Turn OFF (CAN)" />
+                                    android:text="Turn OFF (CAN)"
+                                    android:textColor="@color/textPrimary"
+                                    android:textSize="13sp"
+                                    app:strokeColor="@color/border"
+                                    app:cornerRadius="12dp" />
 
                                 <com.google.android.material.button.MaterialButton
                                     android:id="@+id/btOnBtn"
-                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
                                     android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
+                                    android:layout_height="48dp"
                                     android:layout_weight="1"
                                     android:layout_marginStart="6dp"
-                                    android:text="Turn ON (BT)" />
+                                    android:text="Turn ON (BT)"
+                                    android:textColor="@color/textPrimary"
+                                    android:textSize="13sp"
+                                    app:strokeColor="@color/border"
+                                    app:cornerRadius="12dp" />
                             </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Appearance (theme switcher) -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:cardBackgroundColor="@color/card"
+                        app:cardCornerRadius="18dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="16dp">
+
+                            <FrameLayout
+                                android:layout_width="34dp"
+                                android:layout_height="34dp"
+                                android:background="@drawable/bg_badge_amber">
+
+                                <ImageView
+                                    android:layout_width="17dp"
+                                    android:layout_height="17dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_moon"
+                                    app:tint="@color/accentAmber"
+                                    android:contentDescription="appearance" />
+                            </FrameLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="12dp"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="APPEARANCE"
+                                    android:textColor="@color/accentAmber"
+                                    android:textSize="11sp"
+                                    android:textStyle="bold"
+                                    android:letterSpacing="0.12" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="Dark theme"
+                                    android:textColor="@color/textSecondary"
+                                    android:textSize="13sp" />
+                            </LinearLayout>
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/darkThemeSwitch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
                 </LinearLayout>
 
-                <!-- TAB 3: PAIRING -->
+                <!-- ================= TAB 3: PAIRING ================= -->
                 <LinearLayout
                     android:id="@+id/viewPairing"
                     android:layout_width="match_parent"
@@ -516,9 +963,10 @@
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:cardBackgroundColor="#11151F"
-                        app:cardCornerRadius="20dp"
-                        app:strokeColor="#2A3242"
+                        app:cardBackgroundColor="@color/card"
+                        app:cardCornerRadius="24dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/border"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
@@ -531,55 +979,83 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="PAIR WITH DISPLAY POD"
-                                android:textColor="#F59E0B"
+                                android:textColor="@color/accentAmber"
                                 android:textSize="11sp"
                                 android:textStyle="bold"
-                                android:letterSpacing="0.1" />
+                                android:letterSpacing="0.12" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="Wake the screen, open SYS → SET, and tap Scan QR below."
-                                android:textColor="#9AA3B2"
+                                android:layout_marginTop="6dp"
+                                android:text="Wake the pod screen, open SYS → SET, then scan its QR code."
+                                android:textColor="@color/textSecondary"
                                 android:textSize="13sp" />
 
-                            <com.google.android.material.button.MaterialButton
+                            <!-- Big amber Scan QR pill -->
+                            <FrameLayout
                                 android:id="@+id/scanBtn"
                                 android:layout_width="match_parent"
-                                android:layout_height="64dp"
+                                android:layout_height="62dp"
                                 android:layout_marginTop="16dp"
-                                android:backgroundTint="#F59E0B"
-                                android:text="📷 Scan QR Code"
-                                android:textColor="#07090D"
-                                android:textSize="16sp"
-                                android:textStyle="bold"
-                                app:cornerRadius="16dp" />
+                                android:background="@drawable/bg_scan_amber"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:foreground="?android:attr/selectableItemBackground">
+
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="center"
+                                    android:orientation="horizontal"
+                                    android:gravity="center_vertical">
+
+                                    <ImageView
+                                        android:layout_width="22dp"
+                                        android:layout_height="22dp"
+                                        android:src="@drawable/ic_camera"
+                                        app:tint="@color/onBrand"
+                                        android:contentDescription="camera" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="10dp"
+                                        android:text="Scan QR Code"
+                                        android:textColor="@color/onBrand"
+                                        android:textSize="16sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+                            </FrameLayout>
 
                             <View
                                 android:layout_width="match_parent"
                                 android:layout_height="1dp"
                                 android:layout_marginTop="18dp"
                                 android:layout_marginBottom="14dp"
-                                android:background="#2A3242" />
+                                android:background="@color/border" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="OR ENTER KEY MANUALLY"
-                                android:textColor="#9AA3B2"
+                                android:textColor="@color/textMuted"
                                 android:textSize="11sp"
                                 android:textStyle="bold"
-                                android:letterSpacing="0.1" />
+                                android:letterSpacing="0.12" />
 
                             <EditText
                                 android:id="@+id/keyInput"
                                 android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="10dp"
+                                android:background="@drawable/bg_input"
+                                android:paddingStart="12dp"
+                                android:paddingEnd="12dp"
                                 android:hint="32-hex key or PIN"
-                                android:textColor="#F5F7FB"
-                                android:textColorHint="#5A6474"
+                                android:maxLines="1"
+                                android:textColor="@color/textPrimary"
+                                android:textColorHint="@color/textMuted"
                                 android:fontFamily="monospace"
                                 android:textSize="13sp" />
 
@@ -591,22 +1067,27 @@
 
                                 <com.google.android.material.button.MaterialButton
                                     android:id="@+id/saveKeyBtn"
-                                    style="@style/Widget.Material3.Button.TonalButton"
                                     android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
+                                    android:layout_height="48dp"
                                     android:layout_weight="1"
                                     android:layout_marginEnd="6dp"
-                                    android:text="Save Key" />
+                                    android:backgroundTint="@color/green"
+                                    android:text="Save Key"
+                                    android:textColor="@color/onGreen"
+                                    android:textStyle="bold"
+                                    app:cornerRadius="12dp" />
 
                                 <com.google.android.material.button.MaterialButton
                                     android:id="@+id/forgetKeyBtn"
                                     style="@style/Widget.Material3.Button.OutlinedButton"
                                     android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
+                                    android:layout_height="48dp"
+                                    android:layout_weight="1"
                                     android:layout_marginStart="6dp"
                                     android:text="Forget"
-                                    android:textColor="#EF4444"
-                                    app:strokeColor="#EF4444" />
+                                    android:textColor="@color/stateRed"
+                                    app:strokeColor="@color/ctaArmStroke"
+                                    app:cornerRadius="12dp" />
                             </LinearLayout>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
@@ -615,16 +1096,21 @@
         </ScrollView>
     </LinearLayout>
 
-    <!-- Bottom Navigation Bar -->
+    <!-- ============ Floating bottom navigation ============ -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNav"
         android:layout_width="match_parent"
-        android:layout_height="72dp"
+        android:layout_height="64dp"
         android:layout_gravity="bottom"
-        android:background="#0B0E14"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="10dp"
+        android:background="@drawable/bg_nav"
+        android:elevation="0dp"
         app:itemIconTint="@drawable/nav_item_color"
         app:itemTextColor="@drawable/nav_item_color"
-        app:itemActiveIndicatorStyle="@style/Widget.Material3.BottomNavigationView.ActiveIndicator"
+        app:itemActiveIndicatorStyle="@style/NavIndicator"
+        app:labelVisibilityMode="labeled"
         app:menu="@menu/bottom_nav_menu" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

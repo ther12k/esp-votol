@@ -4,7 +4,7 @@
         <item name="android:statusBarColor">@color/bg</item>
         <item name="android:navigationBarColor">@color/bg</item>
         <item name="android:windowBackground">@color/bg</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
         <item name="colorPrimary">@color/brandText</item>
         <item name="colorOnPrimary">@color/onBrand</item>
     </style>

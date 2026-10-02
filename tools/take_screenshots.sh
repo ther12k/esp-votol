@@ -3,60 +3,51 @@ set -e
 
 REPO_DIR="/home/ther12k/Workspace/Learning/esp-votol"
 SHOT_DIR="$REPO_DIR/output/screenshots"
-mkdir -p "$SHOT_DIR"
+V3_DIR="$SHOT_DIR/app3"
+mkdir -p "$SHOT_DIR" "$V3_DIR"
 
 BASE_URL="http://127.0.0.1:8096"
 CHROME="google-chrome"
 FLAGS="--headless --disable-gpu --hide-scrollbars --virtual-time-budget=2500"
 
-echo "Capturing raw mobile viewport screenshots (412x915)..."
+echo "Capturing v3.0 redesign screenshots — both themes (412x915)..."
 
-# 1. Control tab - ARMED state
+# Control tab: 3 states x 2 themes
+for theme in dark light; do
+  for state in armed disarmed offline; do
+    $CHROME $FLAGS --window-size=412,915 \
+      --screenshot="$V3_DIR/${theme}_${state}.png" \
+      "$BASE_URL/index.html?frame=raw&tab=control&state=${state}&theme=${theme}"
+  done
+
+  # Config + Pairing tabs (theme shows in all chrome + appearance card)
+  $CHROME $FLAGS --window-size=412,915 \
+    --screenshot="$V3_DIR/${theme}_config.png" \
+    "$BASE_URL/index.html?frame=raw&tab=config&state=armed&theme=${theme}"
+
+  $CHROME $FLAGS --window-size=412,915 \
+    --screenshot="$V3_DIR/${theme}_pairing.png" \
+    "$BASE_URL/index.html?frame=raw&tab=pairing&state=armed&theme=${theme}"
+done
+
+# ARM confirmation modal (dark)
 $CHROME $FLAGS --window-size=412,915 \
-  --screenshot="$SHOT_DIR/01_control_armed_mobile.png" \
-  "$BASE_URL/?frame=raw&tab=control&state=armed"
+  --screenshot="$V3_DIR/dark_arm_modal.png" \
+  "$BASE_URL/index.html?frame=raw&tab=control&state=disarmed&modal=arm&theme=dark"
 
-# 2. Control tab - DISARMED state
-$CHROME $FLAGS --window-size=412,915 \
-  --screenshot="$SHOT_DIR/02_control_disarmed_mobile.png" \
-  "$BASE_URL/?frame=raw&tab=control&state=disarmed"
-
-# 3. Control tab - OFFLINE state
-$CHROME $FLAGS --window-size=412,915 \
-  --screenshot="$SHOT_DIR/03_control_offline_mobile.png" \
-  "$BASE_URL/?frame=raw&tab=control&state=offline"
-
-# 4. ARM Confirmation Modal Dialog
-$CHROME $FLAGS --window-size=412,915 \
-  --screenshot="$SHOT_DIR/04_arm_confirm_modal_mobile.png" \
-  "$BASE_URL/?frame=raw&tab=control&state=disarmed&modal=arm"
-
-# 5. Config tab
-$CHROME $FLAGS --window-size=412,915 \
-  --screenshot="$SHOT_DIR/05_config_tab_mobile.png" \
-  "$BASE_URL/?frame=raw&tab=config&state=armed"
-
-# 6. Pairing tab
-$CHROME $FLAGS --window-size=412,915 \
-  --screenshot="$SHOT_DIR/06_pairing_tab_mobile.png" \
-  "$BASE_URL/?frame=raw&tab=pairing&state=armed"
-
-echo "Capturing presentation phone mockup screenshots (500x980)..."
-
-# Framed mockup - Control ARMED
+# Framed presentation mockups (dark + light)
 $CHROME $FLAGS --window-size=500,980 \
-  --screenshot="$SHOT_DIR/07_mockup_armed.png" \
-  "$BASE_URL/?hideToolbar=1&tab=control&state=armed"
+  --screenshot="$V3_DIR/mockup_dark_disarmed.png" \
+  "$BASE_URL/index.html?hideToolbar=1&tab=control&state=disarmed&theme=dark"
 
-# Framed mockup - Control DISARMED
 $CHROME $FLAGS --window-size=500,980 \
-  --screenshot="$SHOT_DIR/08_mockup_disarmed.png" \
-  "$BASE_URL/?hideToolbar=1&tab=control&state=disarmed"
+  --screenshot="$V3_DIR/mockup_light_disarmed.png" \
+  "$BASE_URL/index.html?hideToolbar=1&tab=control&state=disarmed&theme=light"
 
-# Framed mockup - Full interactive inspector overview
-$CHROME $FLAGS --window-size=840,1100 \
-  --screenshot="$SHOT_DIR/09_interactive_inspector_overview.png" \
-  "$BASE_URL/?tab=control&state=armed"
+# Full interactive inspector overview
+$CHROME $FLAGS --window-size=880,1150 \
+  --screenshot="$V3_DIR/inspector_overview.png" \
+  "$BASE_URL/index.html?tab=control&state=armed&theme=dark"
 
-echo "Screenshots successfully captured into $SHOT_DIR:"
-ls -lh "$SHOT_DIR"
+echo "Screenshots successfully captured into $V3_DIR:"
+ls -lh "$V3_DIR"

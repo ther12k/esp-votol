@@ -3,26 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>VOTOL Pod Remote — UI/UX Preview</title>
+  <title>VOTOL Pod Remote 3.0 — UI/UX Preview</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-dark: #07090D;
-      --card-bg-control: #161B27;
-      --card-bg-config: #11151F;
-      --card-border: #2A3242;
-      --text-main: #F5F7FB;
-      --text-muted: #9AA3B2;
-      --text-hint: #5A6474;
-      --accent-amber: #F59E0B;
-      --accent-green: #10B981;
-      --accent-red: #EF4444;
-      --accent-cyan: #00C8FF;
-      --btn-tonal: #1F2633;
-      --nav-bg: #0B0E14;
-      --nav-active-pill: rgba(245, 158, 11, 0.16);
+      /* dark palette (default) — mirrors values-night/colors.xml of the APK */
+      --bg: #0A0F14;
+      --surface: #0D141C;
+      --card: #131A24;
+      --cardAlt: #161C24;
+      --border: #2A3440;
+      --text: #F2F5F8;
+      --text2: #8A97A5;
+      --muted: #5E6B79;
+      --brand: #F5B301;
+      --onBrand: #1A1205;
+      --brandText: #FFC93C;
+      --green: #22E06A;
+      --onGreen: #06230F;
+      --red: #E5484D;
+      --stateGreen: #22E06A;
+      --stateRed: #E5484D;
+      --statGray: #9AA3B2;
+      --statVolt: #3EC9F0;
+      --heroArmed: #2A1115;
+      --heroDisarmed: #10241C;
+      --heroOffline: #161B27;
+      --ctaArmBg: #2A1115;
+      --ctaArmStroke: #7A2E33;
+      --accentTeal: #2DD4E8;
+      --accentGreen: #22E06A;
+      --accentBlue: #5B9DFF;
+      --accentAmber: #FFC93C;
+      --chipBg: rgba(255,255,255,0.10);
+      --navIndicator: rgba(245,179,1,0.18);
+      --scrim: rgba(0,0,0,0.75);
+    }
+
+    .phone-wrapper[data-theme="light"] {
+      /* light palette — mirrors values/colors.xml of the APK */
+      --bg: #F2F5F8;
+      --surface: #FFFFFF;
+      --card: #FFFFFF;
+      --cardAlt: #F5F8FA;
+      --border: #DFE5EC;
+      --text: #10161D;
+      --text2: #5A6672;
+      --muted: #98A4B1;
+      --brandText: #B45309;
+      --stateGreen: #0E9F5B;
+      --stateRed: #D93A3F;
+      --statGray: #5A6672;
+      --statVolt: #0E8FB8;
+      --heroArmed: #FBEBEC;
+      --heroDisarmed: #E7F8EF;
+      --heroOffline: #EDF1F6;
+      --ctaArmBg: #FBEBEC;
+      --ctaArmStroke: #F0B9BD;
+      --accentTeal: #0E8FA8;
+      --accentGreen: #0E9F5B;
+      --accentBlue: #2563EB;
+      --accentAmber: #B45309;
+      --chipBg: rgba(170,170,170,0.14);
+      --navIndicator: rgba(245,179,1,0.15);
+      --scrim: rgba(16,22,29,0.45);
     }
 
     * {
@@ -34,7 +80,7 @@
 
     body {
       background: #030407;
-      color: var(--text-main);
+      color: #F2F5F8;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       min-height: 100vh;
       display: flex;
@@ -44,7 +90,7 @@
       padding: 20px 10px;
     }
 
-    /* Top interactive controls toolbar for testing & UI/UX design inspection */
+    /* Preview toolbar (inspector chrome — always dark) */
     .preview-toolbar {
       background: #11151F;
       border: 1px solid #2A3242;
@@ -55,7 +101,7 @@
       flex-wrap: wrap;
       align-items: center;
       gap: 12px;
-      max-width: 600px;
+      max-width: 620px;
       width: 100%;
       box-shadow: 0 8px 30px rgba(0,0,0,0.5);
       z-index: 100;
@@ -66,29 +112,20 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: var(--accent-amber);
+      color: #F5B301;
       width: 100%;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
-    .toolbar-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .tool-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      font-weight: 600;
-    }
+    .toolbar-group { display: flex; align-items: center; gap: 6px; }
+    .tool-label { font-size: 11px; color: #9AA3B2; font-weight: 600; }
 
     .tool-btn {
       background: #1F2633;
       border: 1px solid #2A3242;
-      color: var(--text-main);
+      color: #F5F7FB;
       padding: 6px 12px;
       border-radius: 8px;
       font-size: 12px;
@@ -97,22 +134,19 @@
       transition: all 0.15s ease;
     }
 
-    .tool-btn:hover {
-      background: #2D3748;
-      border-color: #4A5568;
-    }
+    .tool-btn:hover { background: #2D3748; border-color: #4A5568; }
 
     .tool-btn.active {
-      background: var(--accent-amber);
+      background: #F5B301;
       color: #07090D;
-      border-color: var(--accent-amber);
+      border-color: #F5B301;
     }
 
-    /* Mobile Phone Shell / Frame */
+    /* Phone shell */
     .phone-wrapper {
       width: 390px;
       height: 844px;
-      background: var(--bg-dark);
+      background: var(--bg);
       border-radius: 44px;
       box-shadow: 0 0 0 10px #1E2430, 0 0 0 12px #0A0D14, 0 25px 60px rgba(0,0,0,0.9);
       position: relative;
@@ -122,14 +156,13 @@
       border: 1px solid #2A3242;
     }
 
-    /* Pure Viewport Mode (no phone bezel) */
     .phone-wrapper.raw-viewport {
-      box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+      box-shadow: none;
       border-radius: 0;
-      border: 1px solid #2A3242;
+      border: none;
     }
 
-    /* Android Status Bar Mock */
+    /* Android status bar mock */
     .status-bar {
       height: 38px;
       padding: 8px 24px 0 24px;
@@ -138,9 +171,10 @@
       align-items: center;
       font-size: 12px;
       font-weight: 600;
-      color: var(--text-muted);
+      color: var(--text2);
       z-index: 10;
       user-select: none;
+      flex-shrink: 0;
     }
 
     .status-bar .notch {
@@ -151,435 +185,578 @@
       margin: 0 auto;
     }
 
-    /* Header */
+    /* ============ App header: logo + wordmark + theme toggle + pill ============ */
     .app-header {
-      padding: 12px 20px 10px 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      padding: 10px 20px 0 20px;
+      flex-shrink: 0;
     }
 
     .header-top {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 10px;
     }
+
+    .logo-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--brand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .logo-badge svg { width: 20px; height: 20px; fill: #1A1205; }
+
+    .brand-block { flex: 1; min-width: 0; }
 
     .brand-title {
-      color: var(--accent-amber);
-      font-size: 12px;
+      color: var(--brandText);
+      font-size: 13px;
       font-weight: 800;
-      letter-spacing: 0.15em;
+      letter-spacing: 0.18em;
     }
 
-    .link-badge {
-      padding: 3px 10px;
-      border-radius: 12px;
-      font-size: 11px;
+    .brand-sub {
+      color: var(--muted);
+      font-size: 9px;
       font-weight: 700;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.18em;
+      margin-top: 1px;
+    }
+
+    .theme-toggle {
+      width: 38px;
+      height: 38px;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .theme-toggle svg { width: 22px; height: 22px; fill: currentColor; }
+    .theme-toggle:active { transform: scale(0.92); }
+
+    .link-badge {
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      border: 1px solid #2A3242;
-      background: #11151F;
+      border: 1px solid var(--border);
+      background: var(--card);
+      flex-shrink: 0;
     }
 
     .badge-linked {
-      color: var(--accent-green);
-      border-color: rgba(16, 185, 129, 0.3);
-      background: rgba(16, 185, 129, 0.1);
+      color: var(--stateGreen);
+      border-color: var(--stateGreen);
+      background: color-mix(in srgb, var(--stateGreen) 9%, transparent);
     }
 
     .badge-offline {
-      color: var(--text-muted);
-      border-color: #2A3242;
-      background: #161B27;
+      color: var(--statGray);
+      border-color: var(--statGray);
+      background: color-mix(in srgb, var(--statGray) 8%, transparent);
     }
 
     .badge-searching {
-      color: var(--accent-amber);
-      border-color: rgba(245, 158, 11, 0.3);
-      background: rgba(245, 158, 11, 0.1);
+      color: var(--brandText);
+      border-color: var(--brandText);
+      background: color-mix(in srgb, var(--brandText) 10%, transparent);
     }
 
     .page-title {
-      color: var(--text-main);
+      color: var(--text);
       font-size: 22px;
       font-weight: 700;
+      margin-top: 12px;
     }
 
-    /* Scrollable Tab Content Container */
+    .page-subtitle {
+      color: var(--text2);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    /* Scrollable content */
     .tab-content-container {
       flex: 1;
       overflow-y: auto;
-      padding: 0 20px 16px 20px;
+      padding: 14px 20px 16px 20px;
       scrollbar-width: none;
     }
 
-    .tab-content-container::-webkit-scrollbar {
-      display: none;
-    }
+    .tab-content-container::-webkit-scrollbar { display: none; }
 
-    .view-tab {
-      display: none;
-      flex-direction: column;
-      animation: fadeIn 0.18s ease-out;
-    }
-
-    .view-tab.active {
-      display: flex;
-    }
+    .view-tab { display: none; flex-direction: column; animation: fadeIn 0.18s ease-out; }
+    .view-tab.active { display: flex; }
 
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Hero Status Card */
+    /* ============ Hero status card ============ */
     .status-card {
       border-radius: 24px;
-      border: 1px solid var(--card-border);
+      border: 1px solid var(--border);
       padding: 20px;
-      margin-top: 4px;
       transition: all 0.25s ease;
     }
 
-    .status-card.armed {
-      background: #2A1115;
-      border-color: rgba(239, 68, 68, 0.35);
-    }
+    .status-card.armed { background: var(--heroArmed); }
+    .status-card.disarmed { background: var(--heroDisarmed); }
+    .status-card.offline { background: var(--heroOffline); }
 
-    .status-card.disarmed {
-      background: #10241C;
-      border-color: rgba(16, 185, 129, 0.35);
-    }
+    .hero-top { display: flex; align-items: center; gap: 16px; }
 
-    .status-card.offline {
-      background: #161B27;
-      border-color: var(--card-border);
-    }
-
-    .hero-top {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .hero-icon {
-      font-size: 38px;
-      line-height: 1;
-      width: 48px;
-      height: 48px;
+    .hero-rings {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
+      position: relative;
     }
 
-    .hero-info {
-      display: flex;
-      flex-direction: column;
+    .hero-rings::before,
+    .hero-rings::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1.5px solid var(--ring, rgba(255,255,255,0.2));
+    }
+
+    .hero-rings::after {
+      inset: 7px;
+      border-color: var(--ring2, rgba(255,255,255,0.12));
+      box-shadow: 0 0 0 7px var(--bg2, rgba(255,255,255,0.06));
+    }
+
+    .hero-rings.armed   { --ring: rgba(229,72,77,0.36);  --ring2: rgba(229,72,77,0.22);  --bg2: rgba(229,72,77,0.12); }
+    .hero-rings.disarmed{ --ring: rgba(34,224,106,0.36); --ring2: rgba(34,224,106,0.22); --bg2: rgba(34,224,106,0.12); }
+    .hero-rings.offline { --ring: rgba(100,116,139,0.36);--ring2: rgba(100,116,139,0.22);--bg2: rgba(100,116,139,0.12); }
+
+    .hero-rings svg { width: 30px; height: 30px; fill: currentColor; position: relative; z-index: 1; }
+    .hero-rings.armed    { color: var(--stateRed); }
+    .hero-rings.disarmed { color: var(--stateGreen); }
+    .hero-rings.offline  { color: var(--statGray); }
+
+    .hero-info { display: flex; flex-direction: column; min-width: 0; }
+
+    .hero-micro {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      color: var(--text2);
+      text-transform: uppercase;
     }
 
     .state-text {
       font-size: 28px;
       font-weight: 800;
       letter-spacing: -0.01em;
-      line-height: 1.1;
-    }
-
-    .state-armed {
-      color: var(--accent-red);
-    }
-
-    .state-disarmed {
-      color: var(--accent-green);
-    }
-
-    .state-offline {
-      color: var(--text-muted);
-    }
-
-    .sub-text {
-      font-size: 13px;
-      color: var(--text-muted);
+      line-height: 1.15;
       margin-top: 2px;
     }
 
-    .hero-divider {
-      height: 1px;
-      background: #2A3242;
-      margin: 16px 0 12px 0;
-    }
+    .state-armed { color: var(--stateRed); }
+    .state-disarmed { color: var(--stateGreen); }
+    .state-offline { color: var(--statGray); }
 
-    .hero-tele-row {
-      display: flex;
-      justify-content: space-between;
-    }
+    .sub-text { font-size: 13px; color: var(--text2); margin-top: 2px; }
 
-    .tele-col {
-      display: flex;
-      flex-direction: column;
+    .hero-divider { height: 1px; background: var(--border); margin: 16px 0 14px 0; }
+
+    .hero-stats { display: flex; align-items: center; }
+
+    .stat-item {
       flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
     }
 
-    .tele-label {
-      font-size: 10px;
+    .stat-item svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
+
+    .stat-volt svg { color: var(--statVolt); }
+    .stat-fob svg { color: var(--accentGreen); }
+
+    .stat-label {
+      font-size: 9px;
       font-weight: 700;
-      letter-spacing: 0.1em;
-      color: var(--text-muted);
+      letter-spacing: 0.15em;
+      color: var(--text2);
       text-transform: uppercase;
     }
 
-    .tele-val {
-      font-size: 17px;
-      font-weight: 700;
-      margin-top: 2px;
+    .stat-val { font-size: 16px; font-weight: 700; margin-top: 1px; }
+    .val-volt { color: var(--statVolt); }
+    .val-fob-near { color: var(--stateGreen); }
+    .val-fob-away-armed { color: var(--stateRed); }
+    .val-fob-away { color: var(--statGray); }
+    .val-fob-none { color: var(--text2); }
+
+    .stat-vdiv {
+      width: 1px;
+      height: 32px;
+      background: var(--border);
+      margin-right: 16px;
+      flex-shrink: 0;
     }
 
-    .val-volt {
-      color: var(--accent-cyan);
-    }
-
-    .val-fob-near {
-      color: var(--accent-green);
-    }
-
-    .val-fob-away {
-      color: var(--accent-red);
-    }
-
-    .val-fob-none {
-      color: var(--text-muted);
-    }
-
-    /* Single Primary Security Toggle Button */
-    .toggle-security-btn {
+    /* ============ Primary CTA (ARM / DISARM / Connect) ============ */
+    .cta-btn {
       width: 100%;
-      height: 76px;
-      border-radius: 20px;
-      font-size: 20px;
-      font-weight: 800;
-      cursor: pointer;
+      height: 84px;
+      border-radius: 24px;
       margin-top: 18px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.12s ease, filter 0.12s ease;
+      font-family: inherit;
+      text-align: left;
+    }
+
+    .cta-btn:active { transform: scale(0.985); }
+
+    .cta-btn .cta-icon { width: 26px; height: 26px; fill: currentColor; flex-shrink: 0; }
+    .cta-btn .cta-texts { flex: 1; min-width: 0; }
+    .cta-btn .cta-label { font-size: 19px; font-weight: 800; letter-spacing: 0.01em; }
+    .cta-btn .cta-sub { font-size: 12px; opacity: 0.85; margin-top: 1px; }
+
+    .cta-chip {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      border: none;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-      transition: all 0.15s ease;
-      letter-spacing: 0.02em;
+      flex-shrink: 0;
     }
 
-    .toggle-security-btn:active {
-      transform: scale(0.98);
+    .cta-chip svg { width: 18px; height: 18px; fill: currentColor; }
+
+    .cta-disarm {
+      background: var(--green);
+      color: var(--onGreen);
+      box-shadow: 0 10px 26px rgba(34,224,106,0.22);
     }
 
-    .btn-disarm-action {
-      background: var(--accent-green);
-      color: #07090D;
+    .cta-disarm .cta-chip { background: rgba(255,255,255,0.18); color: var(--onGreen); }
+
+    .cta-arm {
+      background: var(--ctaArmBg);
+      color: var(--stateRed);
+      border: 1.5px solid var(--ctaArmStroke);
     }
 
-    .btn-arm-action {
-      background: #2A1115;
-      color: var(--accent-red);
-      border: 2px solid var(--accent-red);
+    .cta-arm .cta-chip { background: var(--chipBg); color: var(--stateRed); }
+
+    .cta-connect {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
     }
 
-    .btn-offline-action {
-      background: #1F2633;
-      color: var(--text-muted);
-      border: 1px solid #2A3242;
-      cursor: not-allowed;
-    }
+    .cta-connect .cta-chip { background: var(--chipBg); color: var(--text2); }
+    .cta-connect .cta-sub { color: var(--text2); }
 
-    /* Quick Actions Row */
-    .quick-actions-row {
-      display: flex;
-      gap: 12px;
-      margin-top: 12px;
-    }
+    /* ============ Secondary tiles ============ */
+    .quick-actions-row { display: flex; gap: 12px; margin-top: 12px; }
 
     .quick-btn {
       flex: 1;
-      height: 60px;
-      border-radius: 16px;
-      font-size: 15px;
+      height: 56px;
+      border-radius: 18px;
+      font-size: 14px;
       font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 8px;
       transition: all 0.15s ease;
-      border: 1px solid transparent;
+      font-family: inherit;
     }
 
-    .quick-btn:active {
-      transform: scale(0.97);
-    }
+    .quick-btn svg { width: 18px; height: 18px; fill: currentColor; }
+    .quick-btn:active { transform: scale(0.97); }
 
-    .btn-connect {
-      background: var(--btn-tonal);
-      color: var(--text-main);
-      border-color: #2A3242;
+    .btn-disconnect {
+      background: transparent;
+      color: var(--text2);
+      border: 1px solid var(--border);
     }
 
     .btn-panic {
-      background: var(--accent-red);
+      background: var(--red);
       color: #FFFFFF;
+      border: none;
+    }
+
+    /* Ticker */
+    .ticker {
+      margin-top: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ticker::before, .ticker::after {
+      content: "";
+      width: 24px;
+      height: 1px;
+      background: var(--border);
+      flex-shrink: 0;
     }
 
     .reply-log {
-      margin-top: 16px;
       font-family: 'JetBrains Mono', monospace;
       font-size: 12px;
-      color: var(--text-muted);
+      color: var(--text2);
       text-align: center;
       min-height: 18px;
+      flex: 1;
     }
 
-    /* Config Tab Cards */
+    /* ============ Config cards ============ */
     .config-card {
-      background: var(--card-bg-config);
-      border: 1px solid var(--card-border);
+      background: var(--card);
+      border: 1px solid var(--border);
       border-radius: 18px;
       padding: 16px;
       margin-bottom: 14px;
     }
 
+    .read-cfg-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px;
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+    }
+
+    .read-cfg-card:hover { border-color: var(--accentAmber); }
+    .read-cfg-card:active { transform: scale(0.99); }
+
+    .read-cfg-card > svg { width: 22px; height: 22px; fill: var(--accentAmber); flex-shrink: 0; }
+
+    .read-cfg-texts { flex: 1; min-width: 0; }
+    .read-cfg-title { font-size: 15px; font-weight: 700; color: var(--text); }
+    .read-cfg-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
+
+    .read-cfg-arrow { width: 18px; height: 18px; fill: var(--muted); flex-shrink: 0; }
+
+    .card-head { display: flex; align-items: center; gap: 12px; }
+
+    .card-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 1px solid currentColor;
+    }
+
+    .card-badge svg { width: 17px; height: 17px; fill: currentColor; }
+
+    .badge-amber { color: var(--accentAmber); background: color-mix(in srgb, var(--brand) 10%, transparent); }
+    .badge-teal  { color: var(--accentTeal);  background: color-mix(in srgb, var(--accentTeal) 10%, transparent); }
+    .badge-green { color: var(--accentGreen); background: color-mix(in srgb, var(--accentGreen) 10%, transparent); }
+    .badge-blue  { color: var(--accentBlue);  background: color-mix(in srgb, var(--accentBlue) 10%, transparent); }
+
     .card-title {
       font-size: 11px;
       font-weight: 700;
-      color: var(--accent-amber);
-      letter-spacing: 0.1em;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
     }
 
-    .card-status {
-      font-size: 14px;
-      color: var(--text-main);
-      margin-top: 4px;
-    }
+    .card-title.amber { color: var(--accentAmber); }
+    .card-title.teal { color: var(--accentTeal); }
+    .card-title.green { color: var(--accentGreen); }
+    .card-title.blue { color: var(--accentBlue); }
 
-    .input-row {
-      display: flex;
-      gap: 8px;
-      margin-top: 10px;
-    }
+    .card-status { font-size: 13px; color: var(--text2); margin-top: 10px; }
+
+    .input-row { display: flex; gap: 8px; margin-top: 10px; align-items: stretch; }
 
     .text-input {
       flex: 1;
-      background: #0B0E14;
-      border: 1px solid #2A3242;
+      min-width: 0;
+      background: var(--cardAlt);
+      border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 10px 14px;
-      color: var(--text-main);
-      font-size: 14px;
+      padding: 12px;
+      color: var(--text);
+      font-size: 13px;
       outline: none;
+      font-family: inherit;
     }
 
-    .text-input:focus {
-      border-color: var(--accent-amber);
-    }
+    .text-input:focus { border-color: var(--accentAmber); }
+    .text-input::placeholder { color: var(--muted); }
 
     .btn-small {
-      background: var(--btn-tonal);
-      border: 1px solid #2A3242;
-      color: var(--text-main);
-      padding: 10px 18px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0 18px;
       border-radius: 12px;
-      font-weight: 600;
-      font-size: 14px;
+      font-weight: 700;
+      font-size: 13px;
       cursor: pointer;
+      font-family: inherit;
+      min-width: 72px;
     }
 
-    .btn-small:hover {
-      background: #2D3748;
-    }
+    .btn-small:hover { border-color: var(--text2); }
 
     .btn-outline-red {
       width: 100%;
       background: transparent;
-      border: 1px solid var(--accent-red);
-      color: var(--accent-red);
+      border: 1px solid var(--ctaArmStroke);
+      color: var(--stateRed);
       padding: 12px;
       border-radius: 12px;
       font-weight: 700;
-      font-size: 14px;
+      font-size: 13px;
       cursor: pointer;
       margin-top: 10px;
-    }
-
-    .btn-outline-red:hover {
-      background: rgba(239, 68, 68, 0.1);
-    }
-
-    .btn-group-row {
       display: flex;
-      gap: 10px;
-      margin-top: 10px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: inherit;
     }
 
-    .btn-group-row .btn-small {
-      flex: 1;
+    .btn-outline-red svg { width: 16px; height: 16px; fill: currentColor; }
+    .btn-outline-red:hover { background: color-mix(in srgb, var(--red) 8%, transparent); }
+
+    .btn-group-row { display: flex; gap: 10px; margin-top: 10px; }
+    .btn-group-row .btn-small { flex: 1; padding: 12px; min-width: 0; }
+
+    /* Appearance row */
+    .appearance-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
-    /* Pairing Tab */
+    .appearance-texts { flex: 1; min-width: 0; }
+    .appearance-val { font-size: 13px; color: var(--text2); margin-top: 2px; }
+
+    .theme-switch {
+      position: relative;
+      width: 52px;
+      height: 32px;
+      border-radius: 999px;
+      border: 2px solid var(--brand);
+      background: var(--cardAlt);
+      cursor: pointer;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .theme-switch.on { background: var(--brand); }
+
+    .theme-switch::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--brand);
+      transition: all 0.2s ease;
+    }
+
+    .theme-switch.on::after {
+      left: 23px;
+      background: var(--onBrand);
+    }
+
+    /* ============ Pairing ============ */
     .scan-qr-btn {
       width: 100%;
-      height: 64px;
-      background: var(--accent-amber);
-      color: #07090D;
+      height: 62px;
+      background: var(--brand);
+      color: var(--onBrand);
       border: none;
-      border-radius: 16px;
+      border-radius: 20px;
       font-size: 16px;
       font-weight: 800;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 10px;
       cursor: pointer;
       margin-top: 16px;
-      box-shadow: 0 4px 16px rgba(245, 158, 11, 0.25);
+      box-shadow: 0 10px 24px color-mix(in srgb, var(--brand) 25%, transparent);
+      font-family: inherit;
+      transition: transform 0.12s ease;
     }
+
+    .scan-qr-btn:active { transform: scale(0.985); }
+    .scan-qr-btn svg { width: 22px; height: 22px; fill: currentColor; }
+
+    .pair-divider { height: 1px; background: var(--border); margin: 18px 0 14px 0; }
 
     .divider-text {
-      text-align: center;
-      position: relative;
-      margin: 18px 0 14px 0;
-    }
-
-    .divider-text::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 50%;
-      width: 100%;
-      height: 1px;
-      background: #2A3242;
-      z-index: 1;
-    }
-
-    .divider-text span {
-      background: var(--card-bg-config);
-      padding: 0 12px;
-      position: relative;
-      z-index: 2;
       font-size: 11px;
       font-weight: 700;
-      letter-spacing: 0.1em;
-      color: var(--text-muted);
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      text-transform: uppercase;
     }
 
-    /* Material 3 Bottom Navigation Bar */
+    .btn-save-key {
+      background: var(--green);
+      color: var(--onGreen);
+      border: none;
+      font-weight: 800;
+    }
+
+    .btn-forget-key {
+      background: transparent;
+      border: 1px solid var(--ctaArmStroke);
+      color: var(--stateRed);
+      font-weight: 700;
+    }
+
+    /* ============ Floating bottom nav ============ */
     .bottom-nav {
-      height: 72px;
-      background: var(--nav-bg);
-      border-top: 1px solid #161B27;
+      flex-shrink: 0;
+      margin: 0 12px 10px 12px;
+      height: 64px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 28px;
       display: flex;
       justify-content: space-around;
       align-items: center;
-      padding: 0 10px;
       z-index: 20;
       user-select: none;
     }
@@ -590,15 +767,15 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 4px;
+      gap: 3px;
       cursor: pointer;
-      padding: 6px 0;
-      color: var(--text-muted);
+      color: var(--muted);
       transition: color 0.15s ease;
+      height: 100%;
     }
 
     .nav-icon-container {
-      width: 52px;
+      width: 56px;
       height: 30px;
       border-radius: 16px;
       display: flex;
@@ -607,40 +784,22 @@
       transition: all 0.2s ease;
     }
 
-    .nav-icon {
-      width: 22px;
-      height: 22px;
-      fill: currentColor;
-    }
+    .nav-icon { width: 22px; height: 22px; fill: currentColor; }
+    .nav-label { font-size: 12px; font-weight: 600; letter-spacing: 0.02em; }
 
-    .nav-label {
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-    }
-
-    .nav-item.active {
-      color: var(--text-main);
-    }
+    .nav-item.active { color: var(--brandText); }
 
     .nav-item.active .nav-icon-container {
-      background: var(--nav-active-pill);
-      color: var(--accent-amber);
+      background: var(--navIndicator);
     }
 
-    .nav-item.active .nav-label {
-      color: var(--accent-amber);
-      font-weight: 700;
-    }
+    .nav-item.active .nav-label { font-weight: 700; }
 
-    /* ARM Confirmation Modal Mock */
+    /* ============ ARM modal ============ */
     .modal-overlay {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.75);
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--scrim);
       backdrop-filter: blur(4px);
       display: none;
       align-items: center;
@@ -649,10 +808,7 @@
       z-index: 100;
     }
 
-    .modal-overlay.show {
-      display: flex;
-      animation: modalFade 0.15s ease-out;
-    }
+    .modal-overlay.show { display: flex; animation: modalFade 0.15s ease-out; }
 
     @keyframes modalFade {
       from { opacity: 0; transform: scale(0.95); }
@@ -660,46 +816,38 @@
     }
 
     .modal-card {
-      background: #161B27;
-      border: 1px solid #2A3242;
+      background: var(--card);
+      border: 1px solid var(--border);
       border-radius: 24px;
       padding: 24px;
       width: 100%;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
     }
 
-    .modal-title {
-      font-size: 19px;
-      font-weight: 700;
-      color: var(--text-main);
-    }
+    .modal-title { font-size: 19px; font-weight: 700; color: var(--text); }
 
     .modal-desc {
       font-size: 14px;
-      color: var(--text-muted);
+      color: var(--text2);
       margin-top: 8px;
       line-height: 1.4;
     }
 
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-      margin-top: 24px;
-    }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
 
     .btn-modal-cancel {
       background: transparent;
       border: none;
-      color: var(--text-muted);
-      font-weight: 600;
+      color: var(--text2);
+      font-weight: 700;
       font-size: 15px;
       padding: 10px 16px;
       cursor: pointer;
+      font-family: inherit;
     }
 
     .btn-modal-confirm {
-      background: var(--accent-red);
+      background: var(--red);
       border: none;
       color: #FFFFFF;
       font-weight: 700;
@@ -707,47 +855,41 @@
       padding: 10px 20px;
       border-radius: 12px;
       cursor: pointer;
+      font-family: inherit;
     }
 
-    /* Screen Footer Notes for Designers */
+    /* Designer notes */
     .designer-notes {
       margin-top: 24px;
-      max-width: 600px;
+      max-width: 620px;
       width: 100%;
       background: #11151F;
       border: 1px solid #2A3242;
       border-radius: 14px;
       padding: 16px;
       font-size: 13px;
-      color: var(--text-muted);
+      color: #9AA3B2;
       line-height: 1.5;
     }
 
-    .designer-notes h4 {
-      color: var(--accent-amber);
-      margin-bottom: 6px;
-      font-size: 13px;
-    }
-
-    .designer-notes ul {
-      margin-left: 20px;
-    }
+    .designer-notes h4 { color: #F5B301; margin-bottom: 6px; font-size: 13px; }
+    .designer-notes ul { margin-left: 20px; }
   </style>
 </head>
 <body>
 
-  <!-- Floating State Switcher Toolbar -->
+  <!-- Inspector toolbar -->
   <div class="preview-toolbar" id="previewToolbar">
     <div class="preview-toolbar-title">
-      <span>🎨 VOTOL POD REMOTE — UI/UX INTERACTIVE INSPECTOR</span>
-      <span style="color:#10B981; font-weight:600;">LIVE PREVIEW</span>
+      <span>⚡ VOTOL POD REMOTE 3.0 — UI/UX INSPECTOR</span>
+      <span style="color:#22E06A; font-weight:600;">LIVE PREVIEW</span>
     </div>
 
     <div class="toolbar-group">
       <span class="tool-label">State:</span>
-      <button class="tool-btn active" id="btnStateArmed" onclick="setState('ARMED')">🚫 ARMED</button>
-      <button class="tool-btn" id="btnStateDisarmed" onclick="setState('DISARMED')">🔓 DISARMED</button>
-      <button class="tool-btn" id="btnStateOffline" onclick="setState('OFFLINE')">📡 OFFLINE</button>
+      <button class="tool-btn active" id="btnStateArmed" onclick="setState('ARMED')">ARMED</button>
+      <button class="tool-btn" id="btnStateDisarmed" onclick="setState('DISARMED')">DISARMED</button>
+      <button class="tool-btn" id="btnStateOffline" onclick="setState('OFFLINE')">OFFLINE</button>
     </div>
 
     <div class="toolbar-group">
@@ -764,15 +906,21 @@
     </div>
 
     <div class="toolbar-group">
+      <span class="tool-label">Theme:</span>
+      <button class="tool-btn active" id="btnThemeDark" onclick="setTheme('dark')">🌙 Dark</button>
+      <button class="tool-btn" id="btnThemeLight" onclick="setTheme('light')">☀️ Light</button>
+    </div>
+
+    <div class="toolbar-group">
       <span class="tool-label">Frame:</span>
       <button class="tool-btn" onclick="toggleFrame()">Toggle Phone Frame</button>
     </div>
   </div>
 
-  <!-- Mobile Phone Mockup -->
-  <div class="phone-wrapper" id="phoneWrapper">
+  <!-- Phone mockup -->
+  <div class="phone-wrapper" id="phoneWrapper" data-theme="dark">
 
-    <!-- Android Status Bar -->
+    <!-- Android status bar -->
     <div class="status-bar">
       <span>09:41</span>
       <div class="notch"></div>
@@ -782,76 +930,131 @@
       </div>
     </div>
 
-    <!-- Header -->
+    <!-- App header -->
     <div class="app-header">
       <div class="header-top">
-        <span class="brand-title">VOTOL POD</span>
+        <div class="logo-badge">
+          <svg viewBox="0 0 24 24"><path d="M7,2v11h3v9l7,-12h-4l4,-8H7z"/></svg>
+        </div>
+        <div class="brand-block">
+          <div class="brand-title">VOTOL POD</div>
+          <div class="brand-sub">EV SECURITY CONTROLLER</div>
+        </div>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark theme">
+          <svg id="themeToggleIcon" viewBox="0 0 24 24">
+            <path d="M12,12m-3.6,0a3.6,3.6 0 1,0 7.2,0a3.6,3.6 0 1,0 -7.2,0"/>
+            <path d="M12,2.6V5.4 M12,18.6V21.4 M2.6,12H5.4 M18.6,12H21.4 M5.28,5.28L7.25,7.25 M16.75,16.75L18.72,18.72 M18.72,5.28L16.75,7.25 M7.25,16.75L5.28,18.72" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+          </svg>
+        </button>
         <span class="link-badge badge-linked" id="linkBadge">LINKED</span>
       </div>
       <h1 class="page-title" id="pageTitle">Remote Control</h1>
+      <div class="page-subtitle" id="pageSubtitle">Arm, disarm and monitor your bike</div>
     </div>
 
-    <!-- Scrollable Content -->
+    <!-- Scrollable content -->
     <div class="tab-content-container">
 
       <!-- ================= TAB 1: CONTROL ================= -->
       <div class="view-tab active" id="viewControl">
 
-        <!-- Status Hero Card -->
         <div class="status-card armed" id="statusCard">
           <div class="hero-top">
-            <div class="hero-icon" id="heroIcon">🚫</div>
+            <div class="hero-rings armed" id="heroRings">
+              <svg id="heroIcon" viewBox="0 0 24 24">
+                <path fill-rule="evenodd" d="M12,2A10,10 0 1,0 12.02,2Z M12,3.6A8.4,8.4 0 1,1 11.98,3.6Z"/>
+                <path d="M4.4,17.6L17.6,4.4l2.5,2.5L6.9,20.1L4.4,17.6z"/>
+              </svg>
+            </div>
             <div class="hero-info">
+              <span class="hero-micro">SYSTEM STATUS</span>
               <span class="state-text state-armed" id="stateText">ARMED</span>
-              <span class="sub-text" id="subText">armed &amp; secured</span>
+              <span class="sub-text" id="subText">alarm active — bike is locked</span>
             </div>
           </div>
 
           <div class="hero-divider"></div>
 
-          <div class="hero-tele-row">
-            <div class="tele-col">
-              <span class="tele-label">BATTERY</span>
-              <span class="tele-val val-volt" id="voltText">72.4 V</span>
+          <div class="hero-stats">
+            <div class="stat-item stat-volt">
+              <svg viewBox="0 0 24 24"><path d="M7,2v11h3v9l7,-12h-4l4,-8H7z"/></svg>
+              <div>
+                <div class="stat-label">BATTERY</div>
+                <div class="stat-val val-volt" id="voltText">72.4 V</div>
+              </div>
             </div>
-            <div class="tele-col">
-              <span class="tele-label">FOB</span>
-              <span class="tele-val val-fob-near" id="fobText">near</span>
+            <div class="stat-vdiv"></div>
+            <div class="stat-item stat-fob">
+              <svg viewBox="0 0 24 24">
+                <path d="M12,12m-2.2,0a2.2,2.2 0 1,0 4.4,0a2.2,2.2 0 1,0 -4.4,0"/>
+                <path d="M9.1,14.9A4.4,4.4 0 0,1 9.1,9.1 M14.9,9.1A4.4,4.4 0 0,1 14.9,14.9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+                <path d="M6.5,17.5A7.8,7.8 0 0,1 6.5,6.5 M17.5,6.5A7.8,7.8 0 0,1 17.5,17.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+              </svg>
+              <div>
+                <div class="stat-label">FOB</div>
+                <div class="stat-val val-fob-near" id="fobText">near</div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Single Primary Security Toggle Button -->
-        <button class="toggle-security-btn btn-disarm-action" id="securityToggleBtn" onclick="handleSecurityToggle()">
-          <span>🔓</span> DISARM
+        <!-- Primary contextual action -->
+        <button class="cta-btn cta-disarm" id="ctaBtn" onclick="handleSecurityToggle()">
+          <svg class="cta-icon" id="ctaIcon" viewBox="0 0 24 24">
+            <path d="M18,8h-1V6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6h1.9c0,-1.71 1.39,-3.1 3.1,-3.1c1.71,0 3.1,1.39 3.1,3.1v2H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10C20,8.9 19.1,8 18,8zM18,20H6V10h12V20zM12,17c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2s-2,0.9 -2,2S10.9,17 12,17z"/>
+          </svg>
+          <div class="cta-texts">
+            <div class="cta-label" id="ctaLabel">DISARM</div>
+            <div class="cta-sub" id="ctaSub">tap to unlock the bike</div>
+          </div>
+          <div class="cta-chip" id="ctaChip">
+            <svg viewBox="0 0 24 24"><path d="M12,4L10.59,5.41 16.17,11H4v2h12.17l-5.58,5.59L12,20 20,12 12,4z"/></svg>
+          </div>
         </button>
 
-        <!-- Quick Actions Row: Connect + Panic -->
+        <!-- Secondary: Disconnect + Panic -->
         <div class="quick-actions-row">
-          <button class="quick-btn btn-connect" id="connectBtn" onclick="toggleConnect()">
-            Disconnect
+          <button class="quick-btn btn-disconnect" id="btnDisconnect" onclick="toggleConnect()">
+            <svg viewBox="0 0 24 24">
+              <path d="M3.9,12c0,-1.71 1.39,-3.1 3.1,-3.1h4V7H7c-2.76,0 -5,2.24 -5,5s2.24,5 5,5h4v-1.9H7c-1.71,0 -3.1,-1.39 -3.1,-3.1zM8,13h8v-2H8V13zM17,7h-4v1.9h4c1.71,0 3.1,1.39 3.1,3.1s-1.39,3.1 -3.1,3.1h-4V17h4c2.76,0 5,-2.24 5,-5S19.76,7 17,7z"/>
+              <path d="M4.2,4.2L19.8,19.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+            </svg>
+            <span id="btnDisconnectLabel">Disconnect</span>
           </button>
-          <button class="quick-btn btn-panic" id="panicBtn" onclick="triggerPanic()">
-            🚨 PANIC
+          <button class="quick-btn btn-panic" id="btnPanic" onclick="triggerPanic()">
+            <svg viewBox="0 0 24 24">
+              <path d="M7.58,4.08L6.15,2.65C3.75,4.48 2.17,7.3 2.03,10.5h2c0.15,-2.65 1.51,-4.97 3.55,-6.42zM20.37,10.5h2c-0.15,-3.2 -1.73,-6.02 -4.12,-7.85l-1.42,1.43C18.85,5.53 20.21,7.85 20.37,10.5zM18,11c0,-3.07 -1.64,-5.64 -4.5,-6.32V4c0,-0.83 -0.67,-1.5 -1.5,-1.5s-1.5,0.67 -1.5,1.5v0.68C7.63,5.36 6,7.92 6,11v5l-2,2v1h16v-1l-2,-2V11zM12,22c0.14,0 0.27,-0.01 0.4,-0.04c0.65,-0.14 1.18,-0.58 1.44,-1.18c0.1,-0.24 0.15,-0.5 0.15,-0.78h-4C10.99,21.1 11.88,22 12,22z"/>
+            </svg>
+            PANIC
           </button>
         </div>
 
-        <!-- Monospace Reply Log -->
-        <div class="reply-log" id="replyText">pod replied: OK ARMED</div>
+        <div class="ticker">
+          <div class="reply-log" id="replyText">pod replied: OK ARMED</div>
+        </div>
 
       </div>
 
       <!-- ================= TAB 2: CONFIG ================= -->
       <div class="view-tab" id="viewConfig">
 
-        <!-- Fetch Config -->
-        <button class="btn-small" style="width:100%; margin-bottom:14px; padding:12px;" onclick="logReply('config loaded from pod')">
-          ⟳ Read Config from Pod
-        </button>
+        <div class="config-card read-cfg-card" onclick="logReply('config loaded from pod')">
+          <svg viewBox="0 0 24 24"><path d="M17.65,6.35C16.2,4.9 14.21,4 12,4c-4.42,0 -7.99,3.58 -8,8s3.57,8 8,8c3.73,0 6.84,-2.55 7.73,-6h-2.08c-0.82,2.33 -3.04,4 -5.65,4 -3.31,0 -6,-2.69 -6,-6s2.69,-6 6,-6c1.66,0 3.14,0.69 4.22,1.78L13,11h7V4l-2.35,2.35z"/></svg>
+          <div class="read-cfg-texts">
+            <div class="read-cfg-title">Read Config from Pod</div>
+            <div class="read-cfg-sub">sync current settings over BLE</div>
+          </div>
+          <svg class="read-cfg-arrow" viewBox="0 0 24 24"><path d="M12,4L10.59,5.41 16.17,11H4v2h12.17l-5.58,5.59L12,20 20,12 12,4z"/></svg>
+        </div>
 
-        <!-- Security PIN Card -->
+        <!-- Security PIN -->
         <div class="config-card">
-          <div class="card-title">SECURITY PIN</div>
+          <div class="card-head">
+            <div class="card-badge badge-amber">
+              <svg viewBox="0 0 24 24"><path d="M18,8h-1V6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6v2H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10C20,8.9 19.1,8 18,8zM9,6c0,-1.66 1.34,-3 3,-3s3,1.34 3,3v2H9V6zM12,17c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2s2,0.9 2,2S13.1,17 12,17z"/></svg>
+            </div>
+            <div class="card-title amber">SECURITY PIN</div>
+          </div>
           <div class="card-status" id="cfgPinStatus">Current PIN: 1234</div>
           <div class="input-row">
             <input type="password" class="text-input" placeholder="New PIN (4-12 digits)" id="newPinInput">
@@ -859,9 +1062,14 @@
           </div>
         </div>
 
-        <!-- Wheel Circumference Card -->
+        <!-- Speed calibration -->
         <div class="config-card">
-          <div class="card-title">SPEED CALIBRATION</div>
+          <div class="card-head">
+            <div class="card-badge badge-teal">
+              <svg viewBox="0 0 24 24"><path d="M20.38,8.57l-1.23,1.85a8,8 0 0,1 -0.22,7.58H5.07A8,8 0 0,1 15.58,6.85l1.85,-1.23A10,10 0 0,0 3.35,19a2,2 0 0,0 1.72,1h13.85a2,2 0 0,0 1.74,-1a10,10 0 0,0 -0.27,-10.44zM10.59,15.41a2,2 0 0,0 2.83,0l5.66,-8.49l-8.49,5.66a2,2 0 0,0 0,2.83z"/></svg>
+            </div>
+            <div class="card-title teal">SPEED CALIBRATION</div>
+          </div>
           <div class="card-status" id="cfgWheelStatus">Wheel circumference: 2.05 m</div>
           <div class="input-row">
             <input type="text" class="text-input" placeholder="e.g. 2.05 (metres)" id="wheelInput" value="2.05">
@@ -869,20 +1077,51 @@
           </div>
         </div>
 
-        <!-- Physical Fobs Card -->
+        <!-- Physical fobs -->
         <div class="config-card">
-          <div class="card-title">PHYSICAL FOBS (iTAG)</div>
-          <div class="card-status" id="cfgFobStatus">Registered iTag fobs: 1</div>
-          <button class="btn-outline-red" onclick="clearFobs()">Clear all registered fobs</button>
+          <div class="card-head">
+            <div class="card-badge badge-green">
+              <svg viewBox="0 0 24 24">
+                <path d="M12,12m-2.2,0a2.2,2.2 0 1,0 4.4,0a2.2,2.2 0 1,0 -4.4,0"/>
+                <path d="M9.1,14.9A4.4,4.4 0 0,1 9.1,9.1 M14.9,9.1A4.4,4.4 0 0,1 14.9,14.9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+                <path d="M6.5,17.5A7.8,7.8 0 0,1 6.5,6.5 M17.5,6.5A7.8,7.8 0 0,1 17.5,17.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+              </svg>
+            </div>
+            <div class="card-title green">PHYSICAL FOBS (ITAG)</div>
+          </div>
+          <div class="card-status" id="cfgFobStatus">Registered fobs: 1</div>
+          <button class="btn-outline-red" onclick="clearFobs()">
+            <svg viewBox="0 0 24 24"><path d="M6,19c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V7H6V19zM19,4h-3.5l-1,-1h-5l-1,1H5v2h14V4z"/></svg>
+            Clear all registered fobs
+          </button>
         </div>
 
-        <!-- VOTOL Bridge BT Link Card -->
+        <!-- Bridge BT link -->
         <div class="config-card">
-          <div class="card-title">VOTOL BRIDGE BT LINK</div>
+          <div class="card-head">
+            <div class="card-badge badge-blue">
+              <svg viewBox="0 0 24 24"><path d="M17.71,7.71L12,2h-1v7.59L6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 11,14.41V22h1l5.71,-5.71 -4.3,-4.29 4.3,-4.29zM13,5.83l1.88,1.88L13,9.59V5.83zM14.88,16.29L13,18.17v-3.76L14.88,16.29z"/></svg>
+            </div>
+            <div class="card-title blue">VOTOL BRIDGE BT LINK</div>
+          </div>
           <div class="card-status" id="cfgBtStatus">Bridge BT dial: OFF (CAN Bus mode)</div>
           <div class="btn-group-row">
             <button class="btn-small" onclick="setBt(false)">Turn OFF (CAN)</button>
             <button class="btn-small" onclick="setBt(true)">Turn ON (BT)</button>
+          </div>
+        </div>
+
+        <!-- Appearance -->
+        <div class="config-card">
+          <div class="appearance-row">
+            <div class="card-badge badge-amber" id="appearanceBadge">
+              <svg id="appearanceIcon" viewBox="0 0 24 24"><path d="M14.2,3.1A9.4,9.4 0 1,0 20.9,14.3A7.6,7.6 0 0,1 14.2,3.1Z"/></svg>
+            </div>
+            <div class="appearance-texts">
+              <div class="card-title amber">APPEARANCE</div>
+              <div class="appearance-val">Dark theme</div>
+            </div>
+            <button class="theme-switch on" id="darkThemeSwitch" onclick="toggleTheme()" title="Toggle dark theme"></button>
           </div>
         </div>
 
@@ -891,25 +1130,30 @@
       <!-- ================= TAB 3: PAIRING ================= -->
       <div class="view-tab" id="viewPairing">
 
-        <div class="config-card" style="padding: 20px;">
-          <div class="card-title">PAIR WITH DISPLAY POD</div>
-          <div class="card-status" style="color:var(--text-muted); font-size:13px; margin-top:6px;">
-            Wake the screen, open SYS → SET, and tap Scan QR below.
+        <div class="config-card" style="padding: 20px; border-radius: 24px;">
+          <div class="card-head">
+            <div class="card-title amber" style="font-size:11px;">PAIR WITH DISPLAY POD</div>
+          </div>
+          <div class="card-status" style="margin-top: 6px;">
+            Wake the pod screen, open SYS → SET, then scan its QR code.
           </div>
 
           <button class="scan-qr-btn" onclick="simulateScan()">
-            <span>📷</span> Scan QR Code
+            <svg viewBox="0 0 24 24">
+              <path d="M12,12m-3.2,0a3.2,3.2 0 1,0 6.4,0a3.2,3.2 0 1,0 -6.4,0"/>
+              <path d="M9,2L7.17,4H4c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V6c0,-1.1 -0.9,-2 -2,-2h-3.17L15,2H9zM12,17c-2.76,0 -5,-2.24 -5,-5s2.24,-5 5,-5s5,2.24 5,5S14.76,17 12,17z"/>
+            </svg>
+            Scan QR Code
           </button>
 
-          <div class="divider-text">
-            <span>OR ENTER KEY MANUALLY</span>
-          </div>
+          <div class="pair-divider"></div>
+          <div class="divider-text">OR ENTER KEY MANUALLY</div>
 
-          <input type="text" class="text-input" style="width:100%; font-family:'JetBrains Mono', monospace; font-size:13px;" placeholder="32-hex key or PIN" value="a1b2c3d4e5f60718293a4b5c6d7e8f90" id="keyInput">
+          <input type="text" class="text-input" style="width:100%; font-family:'JetBrains Mono', monospace; margin-top:10px;" placeholder="32-hex key or PIN" value="a1b2c3d4e5f60718293a4b5c6d7e8f90" id="keyInput">
 
-          <div class="btn-group-row" style="margin-top:12px;">
-            <button class="btn-small" style="flex:1;" onclick="logReply('pairing key saved')">Save Key</button>
-            <button class="btn-small" style="color:var(--accent-red); border-color:var(--accent-red);" onclick="logReply('key removed')">Forget</button>
+          <div class="btn-group-row">
+            <button class="btn-small btn-save-key" onclick="logReply('pairing key saved')">Save Key</button>
+            <button class="btn-small btn-forget-key" onclick="logReply('key removed')">Forget</button>
           </div>
         </div>
 
@@ -917,7 +1161,7 @@
 
     </div>
 
-    <!-- Bottom Navigation Bar -->
+    <!-- Floating bottom nav -->
     <nav class="bottom-nav">
       <div class="nav-item active" id="navItemControl" onclick="switchTab('control')">
         <div class="nav-icon-container">
@@ -947,7 +1191,7 @@
       </div>
     </nav>
 
-    <!-- ARM Confirmation Dialog -->
+    <!-- ARM confirmation dialog -->
     <div class="modal-overlay" id="armModal">
       <div class="modal-card">
         <h3 class="modal-title">ARM the alarm?</h3>
@@ -961,232 +1205,242 @@
 
   </div>
 
-  <!-- Information notes for UI/UX Designer Agent -->
+  <!-- Info notes -->
   <div class="designer-notes">
-    <h4>📋 Specifications for UI/UX Designer:</h4>
+    <h4>⚡ VOTOL Pod Remote 3.0 — what changed:</h4>
     <ul>
-      <li><strong>App Purpose:</strong> Mobile companion controller for motorcycle display pod &amp; keyless immobilizer.</li>
-      <li><strong>Primary Action:</strong> Single context-aware 76dp high toggle button. In ARMED state, it renders an Emerald Green <code>[ 🔓 DISARM ]</code> button. In DISARMED state, it renders a Crimson <code>[ 🔒 ARM ]</code> button with confirmation dialog.</li>
-      <li><strong>Hero Card:</strong> Displays real-time status (🚫 ARMED / 🔓 DISARMED / 📡 OFFLINE), high-contrast battery voltage (Cyan), and fob presence indicator.</li>
-      <li><strong>Bottom Navigation:</strong> Material 3 structure with 3 items: Control (Hero + Quick Actions), Config (Settings), and Pairing (QR Scanner &amp; Manual Key).</li>
+      <li><strong>Redesign</strong>: amber-branded header (bolt logo + "EV SECURITY CONTROLLER" + LINKED/OFFLINE pill), state-tinted hero card with concentric-ring icon + SYSTEM STATUS, battery/fob stat row with vertical divider, full-width CTA with icon + label/sub + arrow chip, icon-badged config cards (amber PIN / teal speed / green fobs / blue BT), big amber Scan-QR pill, floating pill bottom nav.</li>
+      <li><strong>Light/Dark theme switcher</strong>: header sun/moon button, or Config → Appearance switch. URL: <code>?theme=light</code>.</li>
+      <li><strong>URL states</strong>: <code>?state=armed|disarmed|offline&tab=control|config|pairing&theme=dark|light&frame=raw&modal=arm</code>.</li>
     </ul>
   </div>
 
   <script>
-    // State model
-    let currentState = 'ARMED'; // 'ARMED' | 'DISARMED' | 'OFFLINE'
+    /* SVG icon path bundles (same paths as the Android vectors) */
+    const ICONS = {
+      bolt: '<path d="M7,2v11h3v9l7,-12h-4l4,-8H7z"/>',
+      lock: '<path d="M18,8h-1V6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6v2H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10C20,8.9 19.1,8 18,8zM9,6c0,-1.66 1.34,-3 3,-3s3,1.34 3,3v2H9V6zM12,17c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2s2,0.9 2,2S13.1,17 12,17z"/>',
+      lockOpen: '<path d="M18,8h-1V6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6h1.9c0,-1.71 1.39,-3.1 3.1,-3.1c1.71,0 3.1,1.39 3.1,3.1v2H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10C20,8.9 19.1,8 18,8zM18,20H6V10h12V20zM12,17c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2s-2,0.9 -2,2S10.9,17 12,17z"/>',
+      noEntry: '<path fill-rule="evenodd" d="M12,2A10,10 0 1,0 12.02,2Z M12,3.6A8.4,8.4 0 1,1 11.98,3.6Z"/><path d="M4.4,17.6L17.6,4.4l2.5,2.5L6.9,20.1L4.4,17.6z"/>',
+      linkOff: '<path d="M3.9,12c0,-1.71 1.39,-3.1 3.1,-3.1h4V7H7c-2.76,0 -5,2.24 -5,5s2.24,5 5,5h4v-1.9H7c-1.71,0 -3.1,-1.39 -3.1,-3.1zM8,13h8v-2H8V13zM17,7h-4v1.9h4c1.71,0 3.1,1.39 3.1,3.1s-1.39,3.1 -3.1,3.1h-4V17h4c2.76,0 5,-2.24 5,-5S19.76,7 17,7z"/><path d="M4.2,4.2L19.8,19.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/>',
+      radar: '<path d="M12,12m-2.2,0a2.2,2.2 0 1,0 4.4,0a2.2,2.2 0 1,0 -4.4,0"/><path d="M9.1,14.9A4.4,4.4 0 0,1 9.1,9.1 M14.9,9.1A4.4,4.4 0 0,1 14.9,14.9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/><path d="M6.5,17.5A7.8,7.8 0 0,1 6.5,6.5 M17.5,6.5A7.8,7.8 0 0,1 17.5,17.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>',
+      help: '<path d="M11,18h2v-2h-2V18zM12,2C6.48,2 2,6.48 2,12s4.48,10 10,10s10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.41,0 -8,-3.59 -8,-8s3.59,-8 8,-8s8,3.59 8,8S16.41,20 12,20zM12,6c-2.21,0 -4,1.79 -4,4h2c0,-1.1 0.9,-2 2,-2s2,0.9 2,2c0,2 -3,1.75 -3,5h2c0,-2.25 3,-2.5 3,-5C16,7.79 14.21,6 12,6z"/>',
+      arrow: '<path d="M12,4L10.59,5.41 16.17,11H4v2h12.17l-5.58,5.59L12,20 20,12 12,4z"/>',
+      sun: '<path d="M12,12m-3.6,0a3.6,3.6 0 1,0 7.2,0a3.6,3.6 0 1,0 -7.2,0"/><path d="M12,2.6V5.4 M12,18.6V21.4 M2.6,12H5.4 M18.6,12H21.4 M5.28,5.28L7.25,7.25 M16.75,16.75L18.72,18.72 M18.72,5.28L16.75,7.25 M7.25,16.75L5.28,18.72" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>',
+      moon: '<path d="M14.2,3.1A9.4,9.4 0 1,0 20.9,14.3A7.6,7.6 0 0,1 14.2,3.1Z"/>'
+    };
+
+    // State model — declarations MUST stay above every function (headless-safe)
+    let currentState = 'ARMED';     // 'ARMED' | 'DISARMED' | 'OFFLINE'
     let fobNear = true;
     let isConnected = true;
     let activeTab = 'control';
+    let currentTheme = 'dark';
 
+    const $ = (id) => document.getElementById(id);
+
+    /* ------------------------------ theme ------------------------------ */
+    function setTheme(theme) {
+      currentTheme = theme;
+      $('phoneWrapper').setAttribute('data-theme', theme);
+      $('btnThemeDark').classList.toggle('active', theme === 'dark');
+      $('btnThemeLight').classList.toggle('active', theme === 'light');
+      $('darkThemeSwitch').classList.toggle('on', theme === 'dark');
+      $('themeToggleIcon').innerHTML = theme === 'dark' ? ICONS.sun : ICONS.moon;
+      $('appearanceIcon').innerHTML = theme === 'dark' ? ICONS.moon : ICONS.sun;
+    }
+
+    function toggleTheme() { setTheme(currentTheme === 'dark' ? 'light' : 'dark'); }
+
+    /* ------------------------------ state ------------------------------ */
     function setState(state) {
       currentState = state;
-      document.querySelectorAll('#btnStateArmed, #btnStateDisarmed, #btnStateOffline').forEach(b => b.classList.remove('active'));
-      if (state === 'ARMED') document.getElementById('btnStateArmed').classList.add('active');
-      if (state === 'DISARMED') document.getElementById('btnStateDisarmed').classList.add('active');
-      if (state === 'OFFLINE') document.getElementById('btnStateOffline').classList.add('active');
 
-      const statusCard = document.getElementById('statusCard');
-      const heroIcon = document.getElementById('heroIcon');
-      const stateText = document.getElementById('stateText');
-      const subText = document.getElementById('subText');
-      const voltText = document.getElementById('voltText');
-      const fobText = document.getElementById('fobText');
-      const toggleBtn = document.getElementById('securityToggleBtn');
-      const linkBadge = document.getElementById('linkBadge');
-      const connectBtn = document.getElementById('connectBtn');
-      const replyText = document.getElementById('replyText');
+      ['btnStateArmed', 'btnStateDisarmed', 'btnStateOffline'].forEach(id => $(id).classList.remove('active'));
+      if (state === 'ARMED') $('btnStateArmed').classList.add('active');
+      if (state === 'DISARMED') $('btnStateDisarmed').classList.add('active');
+      if (state === 'OFFLINE') $('btnStateOffline').classList.add('active');
+
+      const linkBadge = $('linkBadge');
+      const ctaBtn = $('ctaBtn');
+      const ctaIcon = $('ctaIcon');
+      const ctaLabel = $('ctaLabel');
+      const ctaSub = $('ctaSub');
 
       if (state === 'OFFLINE') {
         isConnected = false;
         linkBadge.textContent = 'OFFLINE';
         linkBadge.className = 'link-badge badge-offline';
-        connectBtn.textContent = 'Connect';
+        $('btnDisconnectLabel').textContent = 'Connect';
 
-        statusCard.className = 'status-card offline';
-        heroIcon.textContent = '📡';
-        stateText.textContent = 'OFFLINE';
-        stateText.className = 'state-text state-offline';
-        subText.textContent = 'not connected';
-        voltText.textContent = '--.- V';
-        fobText.textContent = '--';
-        fobText.className = 'tele-val val-fob-none';
+        $('statusCard').className = 'status-card offline';
+        $('heroRings').className = 'hero-rings offline';
+        $('heroIcon').innerHTML = ICONS.linkOff;
+        $('stateText').textContent = 'OFFLINE';
+        $('stateText').className = 'state-text state-offline';
+        $('subText').textContent = 'not connected';
+        $('voltText').textContent = '--.- V';
+        $('fobText').textContent = '--';
+        $('fobText').className = 'stat-val val-fob-none';
 
-        toggleBtn.className = 'toggle-security-btn btn-offline-action';
-        toggleBtn.innerHTML = 'Connect to Control';
-        replyText.textContent = 'tap connect to scan pod';
+        ctaBtn.className = 'cta-btn cta-connect';
+        ctaIcon.innerHTML = ICONS.radar;
+        ctaLabel.textContent = 'Connect to Control';
+        ctaSub.textContent = 'link with the display pod';
+        $('replyText').textContent = 'tap connect to scan for the pod';
       } else if (state === 'ARMED') {
         isConnected = true;
         linkBadge.textContent = 'LINKED';
         linkBadge.className = 'link-badge badge-linked';
-        connectBtn.textContent = 'Disconnect';
+        $('btnDisconnectLabel').textContent = 'Disconnect';
 
-        statusCard.className = 'status-card armed';
-        heroIcon.textContent = '🚫';
-        stateText.textContent = 'ARMED';
-        stateText.className = 'state-text state-armed';
-        subText.textContent = 'armed & secured';
-        voltText.textContent = '72.4 V';
+        $('statusCard').className = 'status-card armed';
+        $('heroRings').className = 'hero-rings armed';
+        $('heroIcon').innerHTML = ICONS.noEntry;
+        $('stateText').textContent = 'ARMED';
+        $('stateText').className = 'state-text state-armed';
+        $('subText').textContent = 'alarm active — bike is locked';
+        $('voltText').textContent = '72.4 V';
         updateFobDisplay();
 
-        toggleBtn.className = 'toggle-security-btn btn-disarm-action';
-        toggleBtn.innerHTML = '<span>🔓</span> DISARM';
-        replyText.textContent = 'pod replied: OK ARMED';
+        ctaBtn.className = 'cta-btn cta-disarm';
+        ctaIcon.innerHTML = ICONS.lockOpen;
+        ctaLabel.textContent = 'DISARM';
+        ctaSub.textContent = 'tap to unlock the bike';
+        $('replyText').textContent = 'pod replied: OK ARMED';
       } else if (state === 'DISARMED') {
         isConnected = true;
         linkBadge.textContent = 'LINKED';
         linkBadge.className = 'link-badge badge-linked';
-        connectBtn.textContent = 'Disconnect';
+        $('btnDisconnectLabel').textContent = 'Disconnect';
 
-        statusCard.className = 'status-card disarmed';
-        heroIcon.textContent = '🔓';
-        stateText.textContent = 'DISARMED';
-        stateText.className = 'state-text state-disarmed';
-        subText.textContent = 'keyless active';
-        voltText.textContent = '72.4 V';
+        $('statusCard').className = 'status-card disarmed';
+        $('heroRings').className = 'hero-rings disarmed';
+        $('heroIcon').innerHTML = ICONS.lockOpen;
+        $('stateText').textContent = 'DISARMED';
+        $('stateText').className = 'state-text state-disarmed';
+        $('subText').textContent = 'keyless active — ready to ride';
+        $('voltText').textContent = '72.4 V';
         updateFobDisplay();
 
-        toggleBtn.className = 'toggle-security-btn btn-arm-action';
-        toggleBtn.innerHTML = '<span>🔒</span> ARM';
-        replyText.textContent = 'pod replied: OK DISARM';
+        ctaBtn.className = 'cta-btn cta-arm';
+        ctaIcon.innerHTML = ICONS.lock;
+        ctaLabel.textContent = 'ARM';
+        ctaSub.textContent = 'tap to lock & arm the bike';
+        $('replyText').textContent = 'pod replied: OK DISARM';
       }
     }
 
     function setFob(near) {
       fobNear = near;
-      document.getElementById('btnFobNear').classList.toggle('active', near);
-      document.getElementById('btnFobAway').classList.toggle('active', !near);
+      $('btnFobNear').classList.toggle('active', near);
+      $('btnFobAway').classList.toggle('active', !near);
       updateFobDisplay();
     }
 
     function updateFobDisplay() {
       if (currentState === 'OFFLINE') return;
-      const fobText = document.getElementById('fobText');
+      const fobText = $('fobText');
       if (fobNear) {
         fobText.textContent = 'near';
-        fobText.className = 'tele-val val-fob-near';
+        fobText.className = 'stat-val val-fob-near';
+      } else if (currentState === 'ARMED') {
+        fobText.textContent = 'away';
+        fobText.className = 'stat-val val-fob-away-armed';
       } else {
         fobText.textContent = 'away';
-        fobText.className = 'tele-val val-fob-away';
+        fobText.className = 'stat-val val-fob-away';
       }
     }
 
+    /* ------------------------------ actions ------------------------------ */
     function handleSecurityToggle() {
-      if (!isConnected) {
-        setState('ARMED');
-        return;
-      }
-      if (currentState === 'ARMED') {
-        setState('DISARMED');
-      } else {
-        document.getElementById('armModal').classList.add('show');
-      }
+      if (!isConnected) { setState('ARMED'); return; }
+      if (currentState === 'ARMED') setState('DISARMED');
+      else $('armModal').classList.add('show');
     }
 
-    function closeArmModal() {
-      document.getElementById('armModal').classList.remove('show');
-    }
-
-    function confirmArm() {
-      closeArmModal();
-      setState('ARMED');
-    }
+    function closeArmModal() { $('armModal').classList.remove('show'); }
+    function confirmArm() { closeArmModal(); setState('ARMED'); }
 
     function toggleConnect() {
-      if (isConnected) {
-        setState('OFFLINE');
-      } else {
-        setState('ARMED');
-      }
+      setState(isConnected ? 'OFFLINE' : 'ARMED');
     }
 
     function triggerPanic() {
-      document.getElementById('replyText').textContent = 'pod replied: OK PANIC (chirping)';
+      $('replyText').textContent = 'pod replied: OK PANIC (chirping)';
     }
 
     function switchTab(tab) {
       activeTab = tab;
       document.querySelectorAll('.view-tab').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('#btnTabControl, #btnTabConfig, #btnTabPairing').forEach(el => el.classList.remove('active'));
+      ['btnTabControl', 'btnTabConfig', 'btnTabPairing'].forEach(id => $(id).classList.remove('active'));
 
       const titles = {
-        control: 'Remote Control',
-        config: 'Configuration',
-        pairing: 'Device Pairing'
+        control: ['Remote Control', 'Arm, disarm and monitor your bike'],
+        config: ['Configuration', 'Configure the display pod'],
+        pairing: ['Device Pairing', 'Link your phone with the pod']
       };
+      $('pageTitle').textContent = titles[tab][0];
+      $('pageSubtitle').textContent = titles[tab][1];
 
-      document.getElementById('pageTitle').textContent = titles[tab];
-
-      if (tab === 'control') {
-        document.getElementById('viewControl').classList.add('active');
-        document.getElementById('navItemControl').classList.add('active');
-        document.getElementById('btnTabControl').classList.add('active');
-      } else if (tab === 'config') {
-        document.getElementById('viewConfig').classList.add('active');
-        document.getElementById('navItemConfig').classList.add('active');
-        document.getElementById('btnTabConfig').classList.add('active');
-      } else if (tab === 'pairing') {
-        document.getElementById('viewPairing').classList.add('active');
-        document.getElementById('navItemPairing').classList.add('active');
-        document.getElementById('btnTabPairing').classList.add('active');
-      }
+      const cap = tab.charAt(0).toUpperCase() + tab.slice(1);
+      $('view' + cap).classList.add('active');
+      $('navItem' + cap).classList.add('active');
+      $('btnTab' + cap).classList.add('active');
     }
 
-    function toggleFrame() {
-      document.getElementById('phoneWrapper').classList.toggle('raw-viewport');
-    }
+    function toggleFrame() { $('phoneWrapper').classList.toggle('raw-viewport'); }
 
-    function logReply(msg) {
-      document.getElementById('replyText').textContent = msg;
-    }
+    function logReply(msg) { $('replyText').textContent = msg; }
 
     function savePin() {
-      const pin = document.getElementById('newPinInput').value;
+      const pin = $('newPinInput').value;
       if (pin) {
-        document.getElementById('cfgPinStatus').textContent = `Current PIN: ${pin}`;
-        document.getElementById('newPinInput').value = '';
+        $('cfgPinStatus').textContent = `Current PIN: ${pin}`;
+        $('newPinInput').value = '';
         logReply('PIN updated to ' + pin);
       }
     }
 
     function saveWheel() {
-      const val = document.getElementById('wheelInput').value;
-      document.getElementById('cfgWheelStatus').textContent = `Wheel circumference: ${val} m`;
+      const val = $('wheelInput').value;
+      $('cfgWheelStatus').textContent = `Wheel circumference: ${val} m`;
       logReply('Wheel circumference updated to ' + val);
     }
 
     function clearFobs() {
-      document.getElementById('cfgFobStatus').textContent = 'Registered iTag fobs: 0';
+      $('cfgFobStatus').textContent = 'Registered fobs: 0';
       logReply('all fobs cleared');
     }
 
     function setBt(on) {
-      document.getElementById('cfgBtStatus').textContent = `Bridge BT dial: ${on ? 'ON (Bluetooth)' : 'OFF (CAN Bus mode)'}`;
+      $('cfgBtStatus').textContent = `Bridge BT dial: ${on ? 'ON (Bluetooth)' : 'OFF (CAN Bus mode)'}`;
       logReply(`BT dial turned ${on ? 'ON' : 'OFF'}`);
     }
 
     function simulateScan() {
-      alert("QR Scanner Simulator: Pointing phone camera to display screen SYS -> SET tab. Key paired successfully!");
       logReply('paired via QR scan: a1b2c3d4e5f60718293a4b5c6d7e8f90');
     }
 
-    // Initialize from URL parameters if provided
+    // URL-param initialization
     window.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
       const paramState = urlParams.get('state');
       const paramTab = urlParams.get('tab');
       const paramFrame = urlParams.get('frame');
       const paramModal = urlParams.get('modal');
+      const paramTheme = urlParams.get('theme');
       const hideToolbar = urlParams.get('hideToolbar');
 
       if (paramFrame === 'raw') {
         document.body.style.padding = '0';
-        document.body.style.background = '#07090D';
+        document.body.style.background = '#0A0F14';
         document.body.style.justifyContent = 'flex-start';
-        const tb = document.getElementById('previewToolbar');
+        const tb = $('previewToolbar');
         if (tb) tb.style.display = 'none';
-        const pw = document.getElementById('phoneWrapper');
+        const pw = $('phoneWrapper');
         if (pw) {
           pw.classList.add('raw-viewport');
           pw.style.width = '100vw';
@@ -1199,26 +1453,20 @@
         const descNotes = document.querySelector('.designer-notes');
         if (descNotes) descNotes.style.display = 'none';
       } else if (hideToolbar === '1') {
-        const tb = document.getElementById('previewToolbar');
+        const tb = $('previewToolbar');
         if (tb) tb.style.display = 'none';
         const descNotes = document.querySelector('.designer-notes');
         if (descNotes) descNotes.style.display = 'none';
       }
 
-      if (paramState) {
-        setState(paramState.toUpperCase());
-      } else {
-        setState('ARMED');
-      }
+      setTheme(paramTheme === 'light' ? 'light' : 'dark');
+      setState(paramState ? paramState.toUpperCase() : 'ARMED');
 
-      if (paramTab) {
-        switchTab(paramTab.toLowerCase());
-      }
+      if (paramTab) switchTab(paramTab.toLowerCase());
 
       if (paramModal === 'arm') {
         setState('DISARMED');
-        const modal = document.getElementById('armModal');
-        if (modal) modal.classList.add('show');
+        $('armModal').classList.add('show');
       }
     });
   </script>

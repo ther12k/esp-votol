@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VOTOL Pod Remote — UI/UX Screen Designs</title>
+  <title>VOTOL Pod Remote 3.0 — UI/UX Screen Designs</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <style>
     body {
       background: #030407;
-      color: #F5F7FB;
+      color: #F2F5F8;
       font-family: 'Inter', sans-serif;
       margin: 0;
       padding: 30px 20px;
@@ -16,34 +16,28 @@
     .header {
       max-width: 1400px;
       margin: 0 auto 30px auto;
-      border-bottom: 1px solid #2A3242;
+      border-bottom: 1px solid #2A3440;
       padding-bottom: 20px;
     }
     .brand {
-      color: #F59E0B;
+      color: #F5B301;
       font-size: 13px;
       font-weight: 800;
       letter-spacing: 0.15em;
       text-transform: uppercase;
     }
-    h1 {
-      margin: 8px 0;
-      font-size: 28px;
-      font-weight: 800;
-    }
+    h1 { margin: 8px 0; font-size: 28px; font-weight: 800; }
+    h2.section { margin: 44px 0 6px 0; font-size: 20px; max-width: 1400px; margin-left: auto; margin-right: auto; }
+    p.section-sub { color: #8A97A5; font-size: 14px; max-width: 1400px; margin: 0 auto 18px auto; }
     .desc {
       color: #9AA3B2;
       font-size: 15px;
       line-height: 1.5;
       max-width: 900px;
     }
-    .nav-links {
-      margin-top: 14px;
-      display: flex;
-      gap: 12px;
-    }
+    .nav-links { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 12px; }
     .nav-links a {
-      color: #F59E0B;
+      color: #F5B301;
       text-decoration: none;
       font-weight: 600;
       font-size: 14px;
@@ -52,9 +46,7 @@
       padding: 8px 16px;
       border-radius: 8px;
     }
-    .nav-links a:hover {
-      background: #1F2633;
-    }
+    .nav-links a:hover { background: #1F2633; }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
@@ -77,183 +69,210 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
     }
-    .card-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: #F5F7FB;
-    }
+    .card-title { font-size: 16px; font-weight: 700; color: #F2F5F8; }
     .card-tag {
-      font-size: 11px;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 10px;
-      text-transform: uppercase;
+      font-size: 11px; font-weight: 700; padding: 4px 10px;
+      border-radius: 10px; text-transform: uppercase; white-space: nowrap;
     }
-    .tag-armed { background: rgba(239, 68, 68, 0.2); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.4); }
-    .tag-disarmed { background: rgba(16, 185, 129, 0.2); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.4); }
-    .tag-offline { background: rgba(154, 163, 178, 0.2); color: #9AA3B2; border: 1px solid #2A3242; }
-    .tag-config { background: rgba(245, 158, 11, 0.2); color: #F59E0B; border: 1px solid rgba(245, 158, 11, 0.4); }
-    .tag-pairing { background: rgba(0, 200, 255, 0.2); color: #00C8FF; border: 1px solid rgba(0, 200, 255, 0.4); }
+    .tag-armed { background: rgba(229,72,77,0.2); color: #E5484D; border: 1px solid rgba(229,72,77,0.4); }
+    .tag-disarmed { background: rgba(34,224,106,0.2); color: #22E06A; border: 1px solid rgba(34,224,106,0.4); }
+    .tag-offline { background: rgba(138,151,165,0.2); color: #8A97A5; border: 1px solid #2A3242; }
+    .tag-config { background: rgba(245,179,1,0.2); color: #F5B301; border: 1px solid rgba(245,179,1,0.4); }
+    .tag-pairing { background: rgba(62,201,240,0.2); color: #3EC9F0; border: 1px solid rgba(62,201,240,0.4); }
+    .tag-theme { background: rgba(94,107,121,0.25); color: #8A97A5; border: 1px solid #2A3440; }
 
-    .card-body {
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-      background: #07090D;
-    }
+    .card-body { padding: 20px; display: flex; justify-content: center; background: #07090D; }
     .card-body img {
-      max-width: 100%;
-      height: auto;
-      border-radius: 12px;
-      border: 1px solid #2A3242;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      max-width: 100%; height: auto; border-radius: 12px;
+      border: 1px solid #2A3242; box-shadow: 0 10px 30px rgba(0,0,0,0.6);
     }
+    .card-body.light { background: #E9EDF2; }
     .card-footer {
-      padding: 16px 20px;
-      font-size: 13px;
-      color: #9AA3B2;
-      line-height: 1.4;
-      border-top: 1px solid #2A3242;
+      padding: 16px 20px; font-size: 13px; color: #9AA3B2;
+      line-height: 1.4; border-top: 1px solid #2A3242;
     }
     .specs-box {
-      max-width: 1400px;
-      margin: 40px auto 0 auto;
-      background: #11151F;
-      border: 1px solid #2A3242;
-      border-radius: 20px;
-      padding: 24px;
+      max-width: 1400px; margin: 40px auto 0 auto;
+      background: #11151F; border: 1px solid #2A3242;
+      border-radius: 20px; padding: 24px;
     }
-    .specs-box h2 {
-      color: #F59E0B;
-      font-size: 18px;
-      margin-bottom: 12px;
-    }
-    .specs-box ul {
-      margin-left: 20px;
-      line-height: 1.8;
-      color: #9AA3B2;
-      font-size: 14px;
-    }
+    .specs-box h2 { color: #F5B301; font-size: 18px; margin-bottom: 12px; }
+    .specs-box ul { margin-left: 20px; line-height: 1.8; color: #9AA3B2; font-size: 14px; }
+    .specs-box code { color: #3EC9F0; }
+    details summary { cursor: pointer; color: #8A97A5; font-size: 15px; font-weight: 700; }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <div class="brand">VOTOL Pod Remote</div>
-    <h1>UI/UX Design Gallery &amp; Screenshots</h1>
+    <div class="brand">⚡ VOTOL Pod Remote 3.0</div>
+    <h1>UI/UX Redesign Gallery — with Light &amp; Dark Themes</h1>
     <div class="desc">
-      Pixel-accurate renders of the native Android companion controller app for the VOTOL Display Pod &amp; Keyless Alarm. Use these screenshots to design new themes, improve layouts, or conduct UI/UX design reviews.
+      Renders of the redesigned (v3.0) native Android companion app: amber-branded header,
+      state-tinted hero cards, icon-badged config cards, arrow-chip CTA — and a
+      <strong>light/dark theme switcher</strong> (header sun/moon + Config → Appearance).
+      Screenshots are pixel-derived from the same design tokens as the shipped APK.
     </div>
     <div class="nav-links">
+      <a href="/index.html" target="_blank">🚀 Interactive Inspector (with theme switcher)</a>
+      <a href="/index.html?frame=raw&state=armed&theme=light" target="_blank">☀️ Light Theme Preview</a>
       <a href="/tft.html" target="_blank">🖥 TFT Pod Inspector (2.4&quot;)</a>
       <a href="/tft-gallery.html" target="_blank">🖥 TFT Pod Gallery</a>
-      <a href="/" target="_blank">🚀 Open Interactive Web App (Port 8096)</a>
-      <a href="/?tab=control&state=armed" target="_blank">🎮 Control Tab</a>
-      <a href="/?tab=config" target="_blank">⚙️ Config Tab</a>
-      <a href="/?tab=pairing" target="_blank">🔗 Pairing Tab</a>
     </div>
   </div>
 
+  <h2 class="section">🌙 Dark Theme (default)</h2>
+  <p class="section-sub">Background #0A0F14 · cards #131A24 · brand amber #FFC93C · green #22E06A · red #E5484D · cyan #3EC9F0</p>
   <div class="grid">
 
-    <!-- Screen 1: Control Armed -->
     <div class="card">
       <div class="card-header">
-        <div class="card-title">1. Control Tab — Armed State</div>
+        <div class="card-title">1. Control — ARMED</div>
         <div class="card-tag tag-armed">ARMED</div>
       </div>
-      <div class="card-body">
-        <img src="/screenshots/01_control_armed_mobile.png" alt="Control Armed">
-      </div>
+      <div class="card-body"><img src="/screenshots/app3/dark_armed.png" alt="Dark Armed"></div>
       <div class="card-footer">
-        Shows prohibited 🚫 symbol hero card in crimson (#2A1115), battery voltage in cyan (72.4 V), fob status, and large single contextual toggle action: <strong>[ 🔓 DISARM ]</strong> emerald button.
+        Red-tinted hero (#2A1115) with no-entry icon in concentric rings, SYSTEM STATUS label,
+        battery/fob stat row with divider, green <strong>DISARM</strong> CTA with arrow chip,
+        Disconnect + PANIC tiles, monospace pod-reply ticker.
       </div>
     </div>
 
-    <!-- Screen 2: Control Disarmed -->
     <div class="card">
       <div class="card-header">
-        <div class="card-title">2. Control Tab — Disarmed State</div>
+        <div class="card-title">2. Control — DISARMED</div>
         <div class="card-tag tag-disarmed">DISARMED</div>
       </div>
-      <div class="card-body">
-        <img src="/screenshots/02_control_disarmed_mobile.png" alt="Control Disarmed">
-      </div>
+      <div class="card-body"><img src="/screenshots/app3/dark_disarmed.png" alt="Dark Disarmed"></div>
       <div class="card-footer">
-        Shows unlocked 🔓 symbol hero card in dark emerald (#10241C), battery voltage, and primary contextual toggle action: <strong>[ 🔒 ARM ]</strong> crimson button.
+        Green-tinted hero (#10241C) with open-padlock rings; outlined red <strong>ARM</strong> CTA
+        (opens a confirmation dialog — a stray tap can never arm).
       </div>
     </div>
 
-    <!-- Screen 3: ARM Confirmation Dialog -->
     <div class="card">
       <div class="card-header">
-        <div class="card-title">3. Arm Confirmation Modal</div>
-        <div class="card-tag tag-armed">SECURITY GATE</div>
-      </div>
-      <div class="card-body">
-        <img src="/screenshots/04_arm_confirm_modal_mobile.png" alt="Arm Confirmation Modal">
-      </div>
-      <div class="card-footer">
-        Modal sheet asking "ARM the alarm? Pod screen will enter armed standby mode." with Cancel and ARM buttons to prevent accidental arming.
-      </div>
-    </div>
-
-    <!-- Screen 4: Control Offline -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">4. Control Tab — Offline State</div>
+        <div class="card-title">3. Control — OFFLINE</div>
         <div class="card-tag tag-offline">OFFLINE</div>
       </div>
-      <div class="card-body">
-        <img src="/screenshots/03_control_offline_mobile.png" alt="Control Offline">
-      </div>
+      <div class="card-body"><img src="/screenshots/app3/dark_offline.png" alt="Dark Offline"></div>
       <div class="card-footer">
-        When Bluetooth LE link is disconnected. Shows 📡 OFFLINE hero card and disabled toggle button ("Connect to Control").
+        Neutral slate hero with broken-link icon; CTA becomes <strong>Connect to Control</strong>
+        (tap = scan for the pod). Header pill shows OFFLINE.
       </div>
     </div>
 
-    <!-- Screen 5: Config Tab -->
     <div class="card">
       <div class="card-header">
-        <div class="card-title">5. Configuration Tab</div>
+        <div class="card-title">4. ARM Confirmation</div>
+        <div class="card-tag tag-armed">SECURITY GATE</div>
+      </div>
+      <div class="card-body"><img src="/screenshots/app3/dark_arm_modal.png" alt="Arm Modal"></div>
+      <div class="card-footer">
+        Scrim + dialog asking "ARM the alarm?" — Cancel / ARM. Prevents accidental arming from the big CTA.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">5. Configuration</div>
         <div class="card-tag tag-config">CONFIG</div>
       </div>
-      <div class="card-body">
-        <img src="/screenshots/05_config_tab_mobile.png" alt="Configuration Tab">
-      </div>
+      <div class="card-body"><img src="/screenshots/app3/dark_config.png" alt="Dark Config"></div>
       <div class="card-footer">
-        Read config button, Security PIN update, Speed calibration (wheel circumference in metres), Physical iTag fobs clear, and VOTOL Bridge BT Link toggle (CAN vs BT mode).
+        "Read Config from Pod" card-button, then icon-badged cards: SECURITY PIN (amber lock),
+        SPEED CALIBRATION (teal gauge), PHYSICAL FOBS (green radar) + red destructive clear,
+        VOTOL BRIDGE BT LINK (blue). APPEARANCE card (dark-theme switch) sits below the fold.
       </div>
     </div>
 
-    <!-- Screen 6: Pairing Tab -->
     <div class="card">
       <div class="card-header">
-        <div class="card-title">6. Device Pairing Tab</div>
+        <div class="card-title">6. Device Pairing</div>
         <div class="card-tag tag-pairing">PAIRING</div>
       </div>
-      <div class="card-body">
-        <img src="/screenshots/06_pairing_tab_mobile.png" alt="Pairing Tab">
-      </div>
+      <div class="card-body"><img src="/screenshots/app3/dark_pairing.png" alt="Dark Pairing"></div>
       <div class="card-footer">
-        "Pair with Display Pod" card featuring prominent 📷 Scan QR Code camera button (to scan pod's SYS → SET screen), and fallback 32-hex manual key entry.
+        Big amber <strong>Scan QR Code</strong> pill (camera icon, dark text) — scans the pod's
+        SYS → SET screen; divider then monospace 32-hex manual key entry, green Save Key + red Forget.
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section">☀️ Light Theme</h2>
+  <p class="section-sub">Background #F2F5F8 · cards #FFFFFF · amber text #B45309 · green #0E9F5B · red #D93A3F · cyan #0E8FB8</p>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">7. Control — ARMED</div>
+        <div class="card-tag tag-theme">LIGHT</div>
+      </div>
+      <div class="card-body light"><img src="/screenshots/app3/light_armed.png" alt="Light Armed"></div>
+      <div class="card-footer">
+        Same layout, light tokens: white cards on #F2F5F8, pink-tinted armed hero (#FBEBEC),
+        darkened state colors for AA contrast. Toggle from the header sun/moon button.
       </div>
     </div>
 
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">8. Control — DISARMED</div>
+        <div class="card-tag tag-theme">LIGHT</div>
+      </div>
+      <div class="card-body light"><img src="/screenshots/app3/light_disarmed.png" alt="Light Disarmed"></div>
+      <div class="card-footer">
+        Mint-tinted disarmed hero (#E7F8EF), green DISARM CTA keeps its saturated fill with dark text for punch.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">9. Configuration</div>
+        <div class="card-tag tag-theme">LIGHT</div>
+      </div>
+      <div class="card-body light"><img src="/screenshots/app3/light_config.png" alt="Light Config"></div>
+      <div class="card-footer">
+        Config cards on white; icon badges keep their tinted fills with darkened accent strokes/labels.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">10. Device Pairing</div>
+        <div class="card-tag tag-theme">LIGHT</div>
+      </div>
+      <div class="card-body light"><img src="/screenshots/app3/light_pairing.png" alt="Light Pairing"></div>
+      <div class="card-footer">
+        Amber scan pill works identically in light theme (dark text on amber).
+      </div>
+    </div>
   </div>
 
   <div class="specs-box">
-    <h2>📐 Design System Specifications for Designer Agent</h2>
+    <h2>📐 v3.0 Design Tokens (mirror of the APK resources)</h2>
     <ul>
-      <li><strong>Target Device:</strong> Android Smartphone (390×844 to 412×915 viewport), Material 3 Dark theme.</li>
-      <li><strong>Background:</strong> <code>#07090D</code> (Deep obsidian black).</li>
-      <li><strong>Card Surfaces:</strong> <code>#161B27</code> (Control Hero card), <code>#11151F</code> (Config/Pairing cards), with 1dp border <code>#2A3242</code>.</li>
-      <li><strong>Typography:</strong> Clean geometric sans-serif (Inter / Roboto) + Monospace (JetBrains Mono) for status replies and keys.</li>
-      <li><strong>Accent Colors:</strong> Amber <code>#F59E0B</code> (Brand &amp; Badges), Emerald <code>#10B981</code> (Disarmed &amp; Safe), Crimson <code>#EF4444</code> (Armed &amp; Panic), Cyan <code>#00C8FF</code> (Battery Voltage).</li>
-      <li><strong>Primary CTA:</strong> 76dp height, corner radius 20dp, context-aware toggle button on the Control tab.</li>
-      <li><strong>Navigation:</strong> Material 3 Bottom Navigation Bar (72dp height, background <code>#0B0E14</code>, active pill indicator).</li>
+      <li><strong>Theme system:</strong> DayNight resource aliases — <code>values/colors.xml</code> (light) vs <code>values-night/colors.xml</code> (dark); switched live via <code>AppCompatDelegate.setDefaultNightMode</code>, persisted in prefs (<code>darkTheme</code>, default true).</li>
+      <li><strong>Brand:</strong> amber fill <code>#F5B301</code> (logo badge, scan pill, nav indicator); amber text <code>#FFC93C</code> dark / <code>#B45309</code> light.</li>
+      <li><strong>State colors:</strong> green <code>#22E06A</code>/#0E9F5B, red <code>#E5484D</code>/#D93A3F, cyan battery <code>#3EC9F0</code>/#0E8FB8; hero tints armed <code>#2A1115</code>/#FBEBEC, disarmed <code>#10241C</code>/#E7F8EF, offline <code>#161B27</code>/#EDF1F6.</li>
+      <li><strong>Surfaces:</strong> bg <code>#0A0F14</code>/#F2F5F8, card <code>#131A24</code>/#FFFFFF, border <code>#2A3440</code>/#DFE5EC.</li>
+      <li><strong>Primary CTA:</strong> 84dp, radius 24dp — icon + label(19sp)/sub(12sp) + 40dp arrow chip; green DISARM / outlined-red ARM / neutral Connect.</li>
+      <li><strong>Config badges:</strong> 34dp rounded-12 tinted squares with amber/teal/green/blue strokes and matching icons.</li>
+      <li><strong>Bottom nav:</strong> floating pill (radius 28, margins 12/10, 64dp) with amber active indicator.</li>
+      <li><strong>URL states:</strong> <code>/index.html?state=armed|disarmed|offline&tab=control|config|pairing&theme=dark|light&frame=raw&modal=arm</code></li>
     </ul>
+  </div>
+
+  <div class="specs-box">
+    <details>
+      <summary>📁 Previous design (v2.1) — for reference</summary>
+      <p style="color:#9AA3B2;font-size:14px;margin-top:10px;">
+        The pre-redesign screens (emoji icons, plain Material buttons) are still in
+        <code>/screenshots/01…09_*.png</code> and the git history.
+      </p>
+    </details>
   </div>
 
 </body>

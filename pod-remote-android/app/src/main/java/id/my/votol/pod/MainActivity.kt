@@ -17,7 +17,7 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
-import android.graphics.Color
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -25,15 +25,18 @@ import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
+import com.google.android.material.materialswitch.MaterialSwitch
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import java.util.UUID
@@ -42,9 +45,12 @@ import java.util.UUID
  * VOTOL Pod Remote — mobile control center for the tft-dash display pod.
  *
  * Three sections with Material 3 Bottom Navigation:
- *  1. Control: Hero status, battery voltage, fob presence, DISARM / ARM / PANIC.
- *  2. Config: Manage PIN, wheel circumference, physical fobs, bridge BT dial.
+ *  1. Control: Hero status, battery voltage, fob presence, ARM / DISARM toggle, PANIC.
+ *  2. Config: Manage PIN, wheel circumference, physical fobs, bridge BT dial, dark theme.
  *  3. Pairing: QR scanner (SYS → SET), manual key entry, forget pod.
+ *
+ * v3.0: full UI/UX redesign (amber brand, state-tinted hero, arrow-chip CTA,
+ * icon-badged config cards) + light/dark theme switcher (header button + Config switch).
  */
 class MainActivity : AppCompatActivity() {
 
@@ -75,48 +81,84 @@ class MainActivity : AppCompatActivity() {
 
     // Views: Global
     private lateinit var pageTitle: TextView
+    private lateinit var pageSubtitle: TextView
     private lateinit var linkBadge: TextView
+    private lateinit var themeToggle: ImageButton
+    private lateinit var darkThemeSwitch: MaterialSwitch
     private lateinit var bottomNav: BottomNavigationView
 
     // Views: Control Tab
     private lateinit var viewControl: View
-    private lateinit var statusCard: MaterialCardView
-    private lateinit var stateIcon: TextView
+    private lateinit var heroCard: com.google.android.material.card.MaterialCardView
+    private lateinit var heroRings: FrameLayout
+    private lateinit var heroIcon: ImageView
     private lateinit var stateText: TextView
     private lateinit var subText: TextView
     private lateinit var voltText: TextView
     private lateinit var fobText: TextView
-    private lateinit var securityToggleBtn: MaterialButton
-    private lateinit var connectBtn: MaterialButton
-    private lateinit var panicBtn: MaterialButton
+    private lateinit var ctaBtn: View
+    private lateinit var ctaIcon: ImageView
+    private lateinit var ctaLabel: TextView
+    private lateinit var ctaSub: TextView
+    private lateinit var ctaChip: FrameLayout
+    private lateinit var ctaArrow: ImageView
+    private lateinit var btnDisconnect: com.google.android.material.button.MaterialButton
+    private lateinit var btnPanic: com.google.android.material.button.MaterialButton
     private lateinit var replyText: TextView
 
     // Views: Config Tab
     private lateinit var viewConfig: View
-    private lateinit var refreshCfgBtn: MaterialButton
+    private lateinit var refreshCfgBtn: View
     private lateinit var cfgPinStatus: TextView
     private lateinit var newPinInput: EditText
-    private lateinit var setPinBtn: MaterialButton
+    private lateinit var setPinBtn: com.google.android.material.button.MaterialButton
     private lateinit var cfgWheelStatus: TextView
     private lateinit var wheelInput: EditText
-    private lateinit var setWheelBtn: MaterialButton
+    private lateinit var setWheelBtn: com.google.android.material.button.MaterialButton
     private lateinit var cfgFobStatus: TextView
-    private lateinit var clrFobsBtn: MaterialButton
+    private lateinit var clrFobsBtn: com.google.android.material.button.MaterialButton
     private lateinit var cfgBtStatus: TextView
-    private lateinit var btOffBtn: MaterialButton
-    private lateinit var btOnBtn: MaterialButton
+    private lateinit var btOffBtn: com.google.android.material.button.MaterialButton
+    private lateinit var btOnBtn: com.google.android.material.button.MaterialButton
 
     // Views: Pairing Tab
     private lateinit var viewPairing: View
-    private lateinit var scanBtn: MaterialButton
+    private lateinit var scanBtn: View
     private lateinit var keyInput: EditText
-    private lateinit var saveKeyBtn: MaterialButton
-    private lateinit var forgetKeyBtn: MaterialButton
+    private lateinit var saveKeyBtn: com.google.android.material.button.MaterialButton
+    private lateinit var forgetKeyBtn: com.google.android.material.button.MaterialButton
 
     private fun prefs() = getSharedPreferences("votol_pod", Context.MODE_PRIVATE)
     private fun key(): String? = prefs().getString("key", null)
 
+    /* ------------------------------ theme ------------------------------ */
+
+    private fun isDark(): Boolean =
+        (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
+
+    private fun applyThemePref() {
+        val dark = prefs().getBoolean("darkTheme", true)
+        AppCompatDelegate.setDefaultNightMode(
+            if (dark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+        )
+    }
+
+    private fun setDarkTheme(dark: Boolean) {
+        prefs().edit().putBoolean("darkTheme", dark).apply()
+        AppCompatDelegate.setDefaultNightMode(
+            if (dark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+        )
+    }
+
+    private fun refreshThemeControls() {
+        // in dark mode offer the sun (tap → light), in light offer the moon
+        themeToggle.setImageResource(if (isDark()) R.drawable.ic_sun else R.drawable.ic_moon)
+        if (darkThemeSwitch.isChecked != isDark()) darkThemeSwitch.isChecked = isDark()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        applyThemePref()                       // must run before the activity inflates
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
@@ -128,25 +170,35 @@ class MainActivity : AppCompatActivity() {
         // Show saved key in input if present
         key()?.let { keyInput.setText(it) }
 
+        refreshThemeControls()
         refreshUi()
         ensurePermissions()
     }
 
     private fun bindViews() {
         pageTitle = findViewById(R.id.pageTitle)
+        pageSubtitle = findViewById(R.id.pageSubtitle)
         linkBadge = findViewById(R.id.linkBadge)
+        themeToggle = findViewById(R.id.themeToggle)
+        darkThemeSwitch = findViewById(R.id.darkThemeSwitch)
         bottomNav = findViewById(R.id.bottomNav)
 
         viewControl = findViewById(R.id.viewControl)
-        statusCard = findViewById(R.id.statusCard)
-        stateIcon = findViewById(R.id.stateIcon)
+        heroCard = findViewById(R.id.heroCard)
+        heroRings = findViewById(R.id.heroRings)
+        heroIcon = findViewById(R.id.heroIcon)
         stateText = findViewById(R.id.stateText)
         subText = findViewById(R.id.subText)
         voltText = findViewById(R.id.voltText)
         fobText = findViewById(R.id.fobText)
-        securityToggleBtn = findViewById(R.id.securityToggleBtn)
-        connectBtn = findViewById(R.id.connectBtn)
-        panicBtn = findViewById(R.id.panicBtn)
+        ctaBtn = findViewById(R.id.ctaBtn)
+        ctaIcon = findViewById(R.id.ctaIcon)
+        ctaLabel = findViewById(R.id.ctaLabel)
+        ctaSub = findViewById(R.id.ctaSub)
+        ctaChip = findViewById(R.id.ctaChip)
+        ctaArrow = findViewById(R.id.ctaArrow)
+        btnDisconnect = findViewById(R.id.btnDisconnect)
+        btnPanic = findViewById(R.id.btnPanic)
         replyText = findViewById(R.id.replyText)
 
         viewConfig = findViewById(R.id.viewConfig)
@@ -180,10 +232,13 @@ class MainActivity : AppCompatActivity() {
             true
         }
 
+        themeToggle.setOnClickListener { setDarkTheme(!isDark()) }
+        darkThemeSwitch.setOnCheckedChangeListener { _, checked -> setDarkTheme(checked) }
+
         // Control Tab
-        connectBtn.setOnClickListener { connectOrDisconnect() }
-        securityToggleBtn.setOnClickListener { handleSecurityToggle() }
-        panicBtn.setOnClickListener { send("PANIC") }
+        btnDisconnect.setOnClickListener { connectOrDisconnect() }
+        ctaBtn.setOnClickListener { handleSecurityToggle() }
+        btnPanic.setOnClickListener { send("PANIC") }
 
         // Config Tab
         refreshCfgBtn.setOnClickListener { send("GETCFG") }
@@ -240,10 +295,10 @@ class MainActivity : AppCompatActivity() {
         viewConfig.visibility = if (idx == 1) View.VISIBLE else View.GONE
         viewPairing.visibility = if (idx == 2) View.VISIBLE else View.GONE
 
-        pageTitle.text = when (idx) {
-            0 -> "Remote Control"
-            1 -> "Pod Settings"
-            else -> "Pairing & Key"
+        when (idx) {
+            0 -> { pageTitle.text = "Remote Control"; pageSubtitle.text = "Arm, disarm and monitor your bike" }
+            1 -> { pageTitle.text = "Configuration"; pageSubtitle.text = "Configure the display pod" }
+            else -> { pageTitle.text = "Device Pairing"; pageSubtitle.text = "Link your phone with the pod" }
         }
 
         if (idx == 1 && isConnected) {
@@ -309,7 +364,7 @@ class MainActivity : AppCompatActivity() {
     private fun hasBlePermission(): Boolean = if (Build.VERSION.SDK_INT >= 31) {
         ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) ==
             PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) ==
+        ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) ==
             PackageManager.PERMISSION_GRANTED
     } else {
         ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
@@ -344,7 +399,7 @@ class MainActivity : AppCompatActivity() {
     private fun startScan() {
         if (scanning) return
         scanning = true
-        subText.text = "scanning for pod… stand near bike"
+        subText.text = "searching for pod… stand near bike"
         refreshUi()
 
         val scanner = adapter?.bluetoothLeScanner ?: run { scanning = false; return }
@@ -619,87 +674,130 @@ class MainActivity : AppCompatActivity() {
     private fun updateConfigUi() {
         cfgPinStatus.text = "Current PIN: $podPin"
         cfgWheelStatus.text = "Wheel circumference: $podWheel m"
-        cfgFobStatus.text = "Registered iTag fobs: $podFobCount"
+        cfgFobStatus.text = "Registered fobs: $podFobCount"
         cfgBtStatus.text = "Bridge BT dial: ${if (podBtOn) "ON (Bluetooth)" else "OFF (CAN Bus mode)"}"
     }
 
+    private fun col(res: Int) = ContextCompat.getColor(this, res)
+    private fun tint(v: ImageView, res: Int) { v.imageTintList = ColorStateList.valueOf(col(res)) }
+
     private fun refreshUi() {
         runOnUiThread {
-            // Header badge
-            if (isConnected) {
-                linkBadge.text = "LINKED"
-                linkBadge.setTextColor(Color.parseColor("#10B981"))
-            } else if (scanning) {
-                linkBadge.text = "SEARCHING"
-                linkBadge.setTextColor(Color.parseColor("#F59E0B"))
-            } else {
-                linkBadge.text = "OFFLINE"
-                linkBadge.setTextColor(Color.parseColor("#9AA3B2"))
+            refreshThemeControls()
+
+            // Header link pill
+            when {
+                isConnected -> {
+                    linkBadge.text = "LINKED"
+                    linkBadge.setBackgroundResource(R.drawable.bg_pill_good)
+                    linkBadge.setTextColor(col(R.color.stateGreen))
+                }
+                scanning -> {
+                    linkBadge.text = "SEARCHING"
+                    linkBadge.setBackgroundResource(R.drawable.bg_pill_warn)
+                    linkBadge.setTextColor(col(R.color.stateWarn))
+                }
+                else -> {
+                    linkBadge.text = "OFFLINE"
+                    linkBadge.setBackgroundResource(R.drawable.bg_pill_gray)
+                    linkBadge.setTextColor(col(R.color.statGray))
+                }
             }
 
-            // Connect button state
-            connectBtn.text = when {
+            // Secondary connect/disconnect tile
+            btnDisconnect.text = when {
                 scanning -> "Scanning…"
                 isConnected -> "Disconnect"
                 gatt != null -> "Connecting…"
                 else -> "Connect"
             }
 
-            // Hero state & security toggle button display
+            // Hero state + primary CTA
             when {
                 !isConnected -> {
-                    stateIcon.text = "📡"
+                    heroRings.setBackgroundResource(R.drawable.rings_offline)
+                    heroIcon.setImageResource(R.drawable.ic_link_off)
+                    tint(heroIcon, R.color.statGray)
                     stateText.text = "OFFLINE"
-                    stateText.setTextColor(Color.parseColor("#9AA3B2"))
-                    statusCard.setCardBackgroundColor(Color.parseColor("#161B27"))
+                    stateText.setTextColor(col(R.color.statGray))
+                    heroCard.setCardBackgroundColor(col(R.color.heroOfflineBg))
+                    if (!scanning && gatt == null) subText.text = "not connected"
                     voltText.text = "--.- V"
                     fobText.text = "--"
 
-                    securityToggleBtn.text = "Connect to Control"
-                    securityToggleBtn.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#161B27"))
-                    securityToggleBtn.setTextColor(Color.parseColor("#9AA3B2"))
-                    securityToggleBtn.strokeColor = ColorStateList.valueOf(Color.parseColor("#2A3242"))
+                    ctaBtn.setBackgroundResource(R.drawable.bg_cta_connect)
+                    ctaIcon.setImageResource(R.drawable.ic_radar)
+                    tint(ctaIcon, R.color.textSecondary)
+                    ctaLabel.text = "Connect to Control"
+                    ctaLabel.setTextColor(col(R.color.textPrimary))
+                    ctaSub.text = "link with the display pod"
+                    ctaChip.setBackgroundResource(R.drawable.bg_chip)
+                    tint(ctaArrow, R.color.textSecondary)
                 }
                 armed == true -> {
-                    stateIcon.text = "🚫"
+                    heroRings.setBackgroundResource(R.drawable.rings_armed)
+                    heroIcon.setImageResource(R.drawable.ic_no_entry)
+                    tint(heroIcon, R.color.stateRed)
                     stateText.text = "ARMED"
-                    stateText.setTextColor(Color.parseColor("#EF4444"))
-                    statusCard.setCardBackgroundColor(Color.parseColor("#2A1115"))
+                    stateText.setTextColor(col(R.color.stateRed))
+                    heroCard.setCardBackgroundColor(col(R.color.heroArmedBg))
+                    subText.text = "alarm active — bike is locked"
                     voltText.text = voltage
                     fobText.text = if (fobNear == true) "near" else "away"
-                    fobText.setTextColor(if (fobNear == true) Color.parseColor("#10B981") else Color.parseColor("#EF4444"))
+                    fobText.setTextColor(
+                        col(if (fobNear == true) R.color.stateGreen else R.color.stateRed))
 
-                    securityToggleBtn.text = "🔓 DISARM"
-                    securityToggleBtn.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
-                    securityToggleBtn.setTextColor(Color.parseColor("#07090D"))
-                    securityToggleBtn.strokeColor = ColorStateList.valueOf(Color.parseColor("#10B981"))
+                    ctaBtn.setBackgroundResource(R.drawable.bg_cta_disarm)
+                    ctaIcon.setImageResource(R.drawable.ic_lock_open)
+                    tint(ctaIcon, R.color.onGreen)
+                    ctaLabel.text = "DISARM"
+                    ctaLabel.setTextColor(col(R.color.onGreen))
+                    ctaSub.text = "tap to unlock the bike"
+                    ctaChip.setBackgroundResource(R.drawable.bg_chip_on_accent)
+                    tint(ctaArrow, R.color.onGreen)
                 }
                 armed == false -> {
-                    stateIcon.text = "🔓"
+                    heroRings.setBackgroundResource(R.drawable.rings_disarmed)
+                    heroIcon.setImageResource(R.drawable.ic_lock_open)
+                    tint(heroIcon, R.color.stateGreen)
                     stateText.text = "DISARMED"
-                    stateText.setTextColor(Color.parseColor("#10B981"))
-                    statusCard.setCardBackgroundColor(Color.parseColor("#10241C"))
+                    stateText.setTextColor(col(R.color.stateGreen))
+                    heroCard.setCardBackgroundColor(col(R.color.heroDisarmedBg))
+                    subText.text = "keyless active — ready to ride"
                     voltText.text = voltage
                     fobText.text = if (fobNear == true) "near" else "away"
-                    fobText.setTextColor(if (fobNear == true) Color.parseColor("#10B981") else Color.parseColor("#9AA3B2"))
+                    fobText.setTextColor(
+                        col(if (fobNear == true) R.color.stateGreen else R.color.statGray))
 
-                    securityToggleBtn.text = "🔒 ARM"
-                    securityToggleBtn.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#2A1115"))
-                    securityToggleBtn.setTextColor(Color.parseColor("#EF4444"))
-                    securityToggleBtn.strokeColor = ColorStateList.valueOf(Color.parseColor("#EF4444"))
+                    ctaBtn.setBackgroundResource(R.drawable.bg_cta_arm)
+                    ctaIcon.setImageResource(R.drawable.ic_lock)
+                    tint(ctaIcon, R.color.stateRed)
+                    ctaLabel.text = "ARM"
+                    ctaLabel.setTextColor(col(R.color.stateRed))
+                    ctaSub.text = "tap to lock & arm the bike"
+                    ctaChip.setBackgroundResource(R.drawable.bg_chip)
+                    tint(ctaArrow, R.color.stateRed)
                 }
                 else -> {
-                    stateIcon.text = "❔"
+                    // linked but no status frame yet
+                    heroRings.setBackgroundResource(R.drawable.rings_offline)
+                    heroIcon.setImageResource(R.drawable.ic_help)
+                    tint(heroIcon, R.color.textSecondary)
                     stateText.text = "LINKED"
-                    stateText.setTextColor(Color.parseColor("#F5F7FB"))
-                    statusCard.setCardBackgroundColor(Color.parseColor("#161B27"))
+                    stateText.setTextColor(col(R.color.textPrimary))
+                    heroCard.setCardBackgroundColor(col(R.color.heroOfflineBg))
+                    subText.text = "waiting for pod status…"
                     voltText.text = voltage
                     fobText.text = "--"
 
-                    securityToggleBtn.text = "🔒 ARM"
-                    securityToggleBtn.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#1E2638"))
-                    securityToggleBtn.setTextColor(Color.parseColor("#F5F7FB"))
-                    securityToggleBtn.strokeColor = ColorStateList.valueOf(Color.parseColor("#2A3242"))
+                    ctaBtn.setBackgroundResource(R.drawable.bg_cta_connect)
+                    ctaIcon.setImageResource(R.drawable.ic_lock)
+                    tint(ctaIcon, R.color.textSecondary)
+                    ctaLabel.text = "ARM"
+                    ctaLabel.setTextColor(col(R.color.textPrimary))
+                    ctaSub.text = "waiting for status…"
+                    ctaChip.setBackgroundResource(R.drawable.bg_chip)
+                    tint(ctaArrow, R.color.textSecondary)
                 }
             }
         }
