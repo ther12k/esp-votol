@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VOTOL TFT Pod 2.4&quot; — UI/UX Preview</title>
+<style>
+  :root { --amber:#F59E0B; --mut:#9AA3B2; --bord:#2A3242; --panel:#11151F; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:#030407; color:#F5F7FB; font-family:'Inter',system-ui,sans-serif;
+         min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:20px 10px; }
+  .toolbar { background:var(--panel); border:1px solid var(--bord); border-radius:16px; padding:10px 16px;
+             margin-bottom:20px; width:100%; max-width:760px; box-shadow:0 8px 30px rgba(0,0,0,.5); }
+  .tb-title { font-size:11px; font-weight:700; letter-spacing:.1em; color:var(--amber); text-transform:uppercase;
+              display:flex; justify-content:space-between; margin-bottom:8px; }
+  .tb-title .live { color:#10B981; }
+  .grp { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:6px; }
+  .lbl { font-size:11px; color:var(--mut); font-weight:600; margin-right:2px; }
+  button.opt { background:#1F2633; border:1px solid var(--bord); color:#F5F7FB; padding:5px 11px;
+               border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; }
+  button.opt:hover { background:#2D3748; }
+  button.opt.active { background:var(--amber); color:#07090D; border-color:var(--amber); }
+  .sw { width:26px; height:20px; border-radius:5px; cursor:pointer; border:1px solid rgba(255,255,255,.15); }
+  .sw.sel { outline:2px solid #F5F7FB; outline-offset:1px; }
+  .stage { display:flex; gap:28px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+  .bezel { padding:14px; border-radius:18px; background:#101318;
+           box-shadow:0 0 0 3px #1b202a, 0 0 0 5px #06070a, 0 25px 60px rgba(0,0,0,.9); }
+  .bezel .pcb { padding:6px; border-radius:6px; background:#0b0d11; border:1px dashed #232a36; }
+  canvas { display:block; image-rendering: pixelated; image-rendering: crisp-edges; border-radius:2px; }
+  .cap { text-align:center; font-size:12px; color:var(--mut); margin-top:10px; }
+  .cap b { color:#F5F7FB; }
+  .notes { margin-top:24px; max-width:760px; width:100%; background:var(--panel); border:1px solid var(--bord);
+           border-radius:14px; padding:16px; font-size:13px; color:var(--mut); line-height:1.55; }
+  .notes h4 { color:var(--amber); margin-bottom:6px; }
+  .notes ul { margin-left:18px; }
+  .notes code { color:#00C8FF; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="tb-title"><span>🖥 VOTOL TFT POD 2.4&quot; (240×320) — UI/UX INSPECTOR</span><span class="live">PIXEL-ACCURATE REPLICA</span></div>
+  <div class="grp"><span class="lbl">Screen:</span><span id="screenBtns"></span></div>
+  <div class="grp"><span class="lbl">Text size:</span>
+    <button class="opt" data-scale="0" onclick="setScale(0)">S</button>
+    <button class="opt active" data-scale="1" onclick="setScale(1)">M</button>
+    <button class="opt" data-scale="2" onclick="setScale(2)">L</button>
+    <span class="lbl" style="margin-left:12px">Value color:</span><span id="valSw"></span>
+    <span class="lbl" style="margin-left:12px">Accent:</span><span id="accSw"></span>
+    <span class="lbl" style="margin-left:12px">BT link:</span>
+    <button class="opt active" id="btBtn" onclick="toggleBt()">ON</button>
+    <span class="lbl" style="margin-left:12px">Zoom:</span>
+    <button class="opt" data-z="2" onclick="setZoom(2)">2×</button>
+    <button class="opt active" data-z="3" onclick="setZoom(3)">3×</button>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="bezel" id="bezel">
+    <div class="pcb"><canvas id="tft" width="720" height="960"></canvas></div>
+    <div class="cap"><b>MCUFRIEND 2.4&quot; TFT shield</b> · WEMOS D1 R32 · resistive touch</div>
+  </div>
+</div>
+
+<div class="notes">
+  <h4>📋 Specs for the UI/UX designer</h4>
+  <ul>
+    <li>Panel: 240×320 portrait, ILI9341, classic 5×7 bitmap font (6×8 px per char at size 1; sizes 1–5 used).</li>
+    <li>Palette (fixed): bg <code>#0A101A</code>, widgets <code>#121A28</code>, text <code>#DEE6F0</code>, dim <code>#6E7C8C</code>,
+        red <code>#FF3C32</code>, green <code>#00FF78</code>, yellow <code>#FFC800</code>. Value/accent color is user-selectable (6 swatches) and text size S/M/L is live-applied.</li>
+    <li>3 pages via bottom tab bar: <b>TELE</b> (RIDE / ELEC / MOTOR panes; auto-maximizes speed while riding),
+        <b>LOCK</b> (keyless state + ARM/PANIC), <b>SYS</b> (STAT / CFG / SET sub-tabs).</li>
+    <li>Armed idle = full-screen prohibited symbol (14-px ring + 34-px X strokes) + battery; double-tap opens the edge-to-edge PIN keypad.</li>
+    <li>Backlight is hardwired — "screen off" is either pure black (unarmed) or the standby emblem (armed).</li>
+  </ul>
+</div>
+
+<script type="module">
+import { FONT } from './glcdfont.js';
+
+/* ---------- firmware palette ---------- */
+const C = {
+  bg:  '#0A101A', bg2: '#121A28', txt: '#DEE6F0', dim: '#6E7C8C',
+  acc: '#00C8FF', good:'#00FF78', warn:'#FFC800', bad: '#FF3C32',
+  black:'#000000', white:'#FFFFFF'
+};
+const PALETTE = ['#00C8FF','#00FF78','#FFC800','#FF9628','#EBF0F5','#F05ADC'];
+
+/* ---------- state ---------- */
+const W = 240, H = 320;
+let screen = 'ride';
+let uiScale = 1, uiVal = PALETTE[0], uiAcc = PALETTE[0];
+let btLinkOn = true, zoom = 3;
+
+const szBig  = () => uiScale === 0 ? 3 : uiScale === 1 ? 4 : 5;
+const szMid  = () => uiScale === 2 ? 3 : 2;
+const szHero = () => uiScale === 0 ? 3 : 4;
+
+const PAGE_NAMES = ['TELE','LOCK','SYS'];
+const PANE_NAMES = ['RIDE','ELEC','MOTOR'];
+
+/* fake live data */
+const T = { v:'72.4', a:'12.5', rpm:540, gear:'L', tc:42, tm:55, status:'RUN',
+            rx:128, tx:64, age:2, wheel:2.05 };
+const rideKmh = Math.round(T.rpm * T.wheel * 0.06);           // 66
+const FOBS = ['AA:BB:CC:DD:EE:FF', 'N:galaxy'];
+const KEY  = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
+
+/* ---------- GFX primitives on a 240x320 offscreen ---------- */
+const off = document.createElement('canvas'); off.width = W; off.height = H;
+const g = off.getContext('2d');
+const cv = document.getElementById('tft');
+const disp = cv.getContext('2d');
+
+function fillRect(x,y,w,h,c){ g.fillStyle=c; g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h)); }
+function drawRect(x,y,w,h,c){ g.strokeStyle=c; g.lineWidth=1; g.strokeRect(Math.round(x)+.5,Math.round(y)+.5,Math.round(w)-1,Math.round(h)-1); }
+function px(x,y,c){ g.fillStyle=c; g.fillRect(x,y,1,1); }
+function fillCircle(cx,cy,r,c){ for(let y=-r;y<=r;y++){ const w=Math.floor(Math.sqrt(r*r-y*y)); g.fillStyle=c; g.fillRect(cx-w,cy+y,2*w+1,1);} }
+function drawCircle(cx,cy,r,c){                 // GFX Bresenham octants
+  let f = 1-r, ddF_x = 1, ddF_y = -2*r, x=0, y=r;
+  px(cx,cy+y,c); px(cx,cy-y,c); px(cx+x,cy,c); px(cx-x,cy,c);
+  while(x<y){ if(f>=0){ y--; ddF_y+=2; f+=ddF_y; } x++; ddF_x+=2; f+=ddF_x;
+    px(cx+x,cy+y,c); px(cx-x,cy+y,c); px(cx+x,cy-y,c); px(cx-x,cy-y,c);
+    px(cx+y,cy+x,c); px(cx-y,cy+x,c); px(cx+y,cy-x,c); px(cx-y,cy-x,c); }
+}
+function fillRoundRect(x,y,w,h,r,c){
+  g.fillStyle=c;
+  g.beginPath();
+  g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r);
+  g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); g.fill();
+}
+function text(x,y,size,str,c){                  // classic 5x7, 1px spacing, LSB = top
+  g.fillStyle = c;
+  let cx = Math.round(x);
+  for(const ch of str){
+    const code = ch.charCodeAt(0);
+    if(code < 32 || code > 126){ cx += 6*size; continue; }
+    const base = (code-32)*5;
+    for(let col=0; col<5; col++){
+      const colb = FONT[base+col];
+      for(let row=0; row<8; row++)
+        if(colb >> row & 1) g.fillRect(cx+col*size, Math.round(y)+row*size, size, size);
+    }
+    cx += 6*size;
+  }
+}
+const tw = (s,size)=> s.length*6*size;
+function textC(y,size,str,c,cx=120){ text(cx - tw(str,size)/2, y, size, str, c); }
+function slot(x,y,w,h,size,str,c,bg){           // firmware slotPrint (vert-centered)
+  fillRect(x,y,w,h,bg);
+  text(x+2, y + (h > 8*size ? (h-8*size)/2 : 1), size, str, c);
+}
+
+/* ---------- chrome ---------- */
+function tabBar(page){
+  for(let i=0;i<3;i++){
+    const x = i*80, act = i===page;
+    fillRect(x+1,278,78,40, act?uiAcc:C.bg2);
+    drawRect(x+1,278,78,40, C.dim);
+    text(x+(80-tw(PAGE_NAMES[i],2))/2, 293, 2, PAGE_NAMES[i], act?C.bg:C.txt);
+  }
+}
+function subTabs(setupTab){
+  const names = ['STAT','CFG','SET'];
+  for(let i=0;i<3;i++){
+    const x = 8+i*76, act = setupTab===i;
+    fillRect(x,28,72,40, act?uiAcc:C.bg2);
+    drawRect(x,28,72,40, C.dim);
+    text(x+(72-tw(names[i],2))/2, 40, 2, names[i], act?C.bg:C.txt);
+  }
+}
+function header(str, col, dot){
+  slot(0,0,190,26,2,str,col,C.bg2);
+  fillRect(216,7,18,12,C.bg2);
+  if(dot) fillCircle(225,13,6,dot);
+  if(!btLinkOn){                                 // crossed BT badge
+    fillRect(190,4,24,20,C.bg2);
+    text(196,10,1,'BT',C.dim);
+    g.strokeStyle=C.bad; g.lineWidth=1.5;
+    g.beginPath(); g.moveTo(193,4); g.lineTo(213,22); g.stroke();
+    g.beginPath(); g.moveTo(194,4); g.lineTo(214,22); g.stroke();
+  }
+}
+function chrome(page, pane, setupTab){
+  fillRect(0,27,W,250,C.bg);
+  tabBar(page);
+  if(page===2) subTabs(setupTab);
+  if(page===0){
+    g.fillStyle=C.dim;
+    if(pane===0){ text(8,34,2,'SPEED',C.dim); }
+    else if(pane===1){ text(8,32,2,'BATTERY',C.dim); text(128,32,2,'CURRENT',C.dim);
+                       text(8,96,2,'POWER',C.dim);   text(128,96,2,'GEAR',C.dim); }
+    else { text(8,32,2,'RPM',C.dim); text(128,32,2,'GEAR',C.dim); text(8,100,2,'CTRL/MOT C',C.dim); }
+  }
+}
+function teleTail(statusStr, statusCol, hasData){
+  slot(8,214,224,18,2, statusStr, statusCol, C.bg);
+  slot(8,236,224,16,1, `bt rx ${T.rx}  tx ${T.tx}  age ${hasData?T.age+'s':'-'}`, C.dim, C.bg);
+  slot(8,256,224,16,1, '', C.dim, C.bg);
+}
+
+/* ---------- screens ---------- */
+const SCREENS = {
+  ride(){ chrome(0,0); header('VOTOL RIDE', C.txt, C.good);
+    let s = uiScale===0?4:5; const v = String(rideKmh); if(v.length>4 && s>4) s=4;
+    slot(8,58,224,76,s, v, uiVal, C.bg);
+    slot(8,140,224,20,2,'km/h',C.dim,C.bg);
+    slot(8,170,110,24,szMid(), T.v+'V', C.txt, C.bg);
+    slot(122,170,110,24,szMid(), T.a+' A', C.txt, C.bg);
+    teleTail(T.status, C.dim, true);
+  },
+  elec(){ chrome(0,1); header('VOTOL ELEC', C.txt, C.good);
+    slot(8,48,150,42,szBig(), T.v+'V', uiVal, C.bg);
+    slot(128,48,108,26,szMid(), T.a+' A', C.txt, C.bg);
+    slot(8,112,108,26,szMid(), Math.round(72.4*12.5)+'W', C.txt, C.bg);
+    slot(128,112,108,26,szMid(), T.gear, C.txt, C.bg);
+    teleTail(T.status, C.dim, true);
+  },
+  motor(){ chrome(0,2); header('VOTOL MOTOR', C.txt, C.good);
+    slot(8,48,150,42,szBig(), String(T.rpm), uiVal, C.bg);
+    slot(128,48,108,26,szMid(), T.gear, C.txt, C.bg);
+    slot(8,116,150,26,szMid(), `${T.tc}/${T.tm}C`, C.txt, C.bg);
+    teleTail(T.status, C.dim, true);
+  },
+  nodata(){ chrome(0,0); header('VOTOL  bt search', C.warn, C.bad);
+    slot(8,58,224,76, uiScale===0?4:5, '--', C.dim, C.bg);
+    slot(8,170,110,24,szMid(),'--',C.dim,C.bg);
+    slot(122,170,110,24,szMid(),'--',C.dim,C.bg);
+    slot(8,140,224,20,2,'motor rpm',C.dim,C.bg);
+    teleTail('bluetooth: searching bridge', C.warn, false);
+  },
+  lock(){ chrome(1); header('VOTOL LOCK', C.txt, C.good);
+    slot(8,44,224,32,szHero(),'DISARMED',C.good,C.bg);
+    slot(8,90,224,18,2,'fob: near -58 dBm',C.good,C.bg);
+    slot(8,112,224,14,1,'heard: N:galaxy',C.dim,C.bg);
+    fobRows();
+    panicBtn('ARM', C.dim, C.txt);
+  },
+  lockarmed(){ chrome(1); header('VOTOL LOCK', C.txt, C.good);
+    slot(8,44,224,32,szHero(),'ARMED',C.bad,C.bg);
+    slot(8,90,224,18,2,'fob: away 12s',C.dim,C.bg);
+    slot(8,112,224,14,1,'heard: AA:BB:CC:DD:EE:FF',C.dim,C.bg);
+    fobRows();
+    panicBtn('PANIC', C.bad, C.bad);
+  },
+  nofob(){ chrome(1); header('VOTOL LOCK', C.txt, C.warn);
+    slot(8,44,224,32,szHero(),'NO FOB',C.dim,C.bg);
+    slot(8,90,224,16,1,'add fobs over USB serial:',C.warn,C.bg);
+    slot(8,108,224,16,1,"'m' iTag / 'f <mac>' / 'f N:<name>' phone",C.warn,C.bg);
+    fillRect(8,190,224,60,C.bg);
+  },
+  stat(){ chrome(2,0,0); header('VOTOL SYS', C.txt, C.good);
+    const bt = !btLinkOn ? 'bt OFF VOTOL-BT' : 'bt LINKED VOTOL-BT';
+    slot(8,80,224,18,2, bt, (!btLinkOn)?C.dim:C.good, C.bg);
+    slot(8,96,224,18,2, `rx ${T.rx} tx ${T.tx}`, C.txt, C.bg);
+    slot(8,118,224,18,2,'touch v0', C.txt, C.bg);
+    slot(8,140,224,18,2,'raw 1234  5678  9012', C.dim, C.bg);
+    slot(8,162,224,18,2,'up 123s  heap 168kB', C.txt, C.bg);
+    slot(8,184,224,18,2, `wheel ${T.wheel.toFixed(2)}m  km/h`, C.dim, C.bg);
+    fillRect(8,212,224,44,C.bg2);
+    drawRect(8,212,224,44, uiAcc);
+    const t = 'release BT for phone';
+    text(8+(224-tw(t,2))/2, 226, 2, t, uiAcc);
+  },
+  cfg(){ chrome(2,0,1); header('VOTOL SYS', C.txt, C.good);
+    text(8,72,1,'TEXT SIZE',C.dim);
+    ['S','M','L'].forEach((s,i)=>{
+      const x = 8+i*78, act = uiScale===i;
+      fillRect(x,84,68,40, act?uiAcc:C.bg2);
+      drawRect(x,84,68,40, act?uiAcc:C.dim);
+      text(x+(68-18)/2, 95, 3, s, act?C.bg:C.txt);
+    });
+    swatchRow('VALUE COLOR', 134, uiVal, i=>uiVal=PALETTE[i]);
+    swatchRow('ACCENT COLOR', 180, uiAcc, i=>uiAcc=PALETTE[i]);
+    text(8,222,1,'SECURITY',C.dim);
+    fillRect(8,232,224,34,C.bg2); drawRect(8,232,224,34,C.dim);
+    text(8+(224-tw('CHANGE PIN',2))/2, 241, 2, 'CHANGE PIN', C.txt);
+    slot(8,270,224,14,1,'', C.dim, C.bg);
+  },
+  set(){ chrome(2,0,2); header('VOTOL SYS', C.txt, C.good);
+    drawQr(KEY);
+    slot(22,268,196,12,1, KEY, C.txt, C.bg);
+  },
+  standby(){                                     // armed idle: full-screen 🚫
+    fillRect(0,0,W,H,C.bg);
+    const cx=120, cy=134, R=98;
+    for(let r=R; r>R-14; r--) drawCircle(cx,cy,r,C.bad);
+    const a=66, sq=24;
+    for(let i=-a;i<=a;i+=2){
+      fillRect(cx+i-sq/2, cy+i-sq/2, sq, sq, C.bad);
+      fillRect(cx+i-sq/2, cy-i-sq/2, sq, sq, C.bad);
+    }
+    textC(244,4,'ARMED',C.bad);
+    const b = `BAT ${T.v}V`;
+    text(120-tw(b,2)/2, 284, 2, b, C.txt);
+    textC(306,1,'double-tap: enter PIN',C.dim);
+  },
+  pin(){                                         // PIN gate over standby
+    fillRect(0,0,W,H,C.bg);
+    fillRect(30,34,180,26,C.bg2); drawRect(30,34,180,26,C.dim);
+    textC(22,1,'PIN TO DISARM',C.dim);
+    const line='     ****';                      // 5 spaces + 4 asterisks (centered in 15)
+    slot(34,38,172,18,2,line,C.txt,C.bg2);
+    slot(8,64,224,12,1,'wrong PIN locks 15 s after 3 tries',C.dim,C.bg);
+    const lab=['1','2','3','4','5','6','7','8','9','C','0','OK'];
+    for(let r=0;r<4;r++) for(let c=0;c<3;c++){
+      const i=r*3+c, x=2+c*79, y=78+r*60, ok=i===11, clr=i===9;
+      fillRect(x,y,76,54, ok?C.good:C.bg2);
+      drawRect(x,y,76,54, ok?C.good: clr?C.warn:C.dim);
+      text(x+(76-18*lab[i].length)/2, y+15, 3, lab[i], ok?C.bg: clr?C.warn:C.txt);
+    }
+  },
+  armask(){                                      // device ARM confirmation
+    fillRect(0,0,W,H,C.bg);
+    textC(92,2,'ARM THE ALARM?',C.txt);
+    textC(120,1,'screen will rest at the lock screen',C.dim);
+    fillRect(8,168,224,58,C.bg2); drawRect(8,168,224,58,C.good);
+    textC(186,3,'NO',C.good);
+    fillRect(8,242,224,58,C.bg2); drawRect(8,242,224,58,C.bad);
+    textC(260,3,'YES, ARM',C.bad);
+  },
+  animarm(){                                     // ARM animation final frame
+    animLock(C.bad, 92, 52);
+    textC(232,4,'ARMED',C.bad);
+  },
+  animdisarm(){                                  // DISARM final frame + sonar pings
+    for(let r=52;r<=116;r+=16) drawCircle(120,150,r,C.good);
+    animLock(C.good, 66, 20);
+    textC(232,4,'DISARMED',C.good);
+  },
+  bootdark(){ fillRect(0,0,W,H,C.black); },
+  wifi(){                                        // 30s WiFi/OTA boot window
+    chrome(0,0);
+    slot(0,0,190,26,2,'setup window 28s',C.acc,C.bg2);
+    text(8,60,1,'WiFi + OTA open for a short window',C.dim);
+    text(8,74,1,'after boot; then it turns off and',C.dim);
+    text(8,88,1,'Bluetooth + touch take over.',C.dim);
+    text(8,112,1,'ip 192.168.1.191',C.dim);
+  }
+};
+function fobRows(){
+  for(let i=0;i<4;i++){
+    const lb = i<FOBS.length ? `${i+1} ${FOBS[i]}` : '';
+    slot(8,130+i*14,224,14,1, lb, C.dim, C.bg);
+  }
+}
+function panicBtn(label, bord, colr){
+  fillRect(8,190,224,60,C.bg2);
+  drawRect(8,190,224,60,bord);
+  text(8+(224-tw(label,3))/2, 208, 3, label, colr);
+}
+function animLock(col, shY, rLeg){               // firmware animLock()
+  fillRect(0,27,W,250,C.bg);
+  fillRect(80,shY,12,144-shY,col);
+  fillRect(80,shY,80,12,col);
+  fillRect(148,shY,12,rLeg,col);
+  fillRoundRect(70,138,100,74,10,col);
+  fillCircle(120,176,10,C.bg);
+  fillRect(115,162,10,18,C.bg);
+}
+function swatchRow(label, y, cur, pick){
+  text(8,y-12,1,label,C.dim);
+  for(let i=0;i<6;i++){
+    const x=8+i*38;
+    fillRect(x,y,32,28,PALETTE[i]);
+    if(PALETTE[i]===cur) drawRect(x-2,y-2,36,32,C.txt);
+  }
+}
+/* deterministic QR v2 mock (finder/timing/alignment real, data seeded) */
+function drawQr(str){
+  const n=25, sc=7, px=n*sc, ox=(W-(px+16))/2, oy=72;
+  fillRect(ox,oy,px+16,px+16,C.white);
+  let seed=0x9E37; for(const ch of str) seed=(seed*33+ch.charCodeAt(0))>>>0;
+  const rnd=()=>{ seed^=seed<<13; seed^=seed>>>17; seed^=seed<<5; seed>>>=0; return seed/4294967296; };
+  const finder=(fx,fy)=>{ for(let y=0;y<7;y++) for(let x=0;x<7;x++){
+      const ring=Math.max(Math.abs(x-3),Math.abs(y-3));     // 7x7: border+3x3 dark, middle ring light
+      if(ring!==2) mod(fx+x, fy+y, true);
+  }};
+  const mod=(x,y,on)=>{ if(on) fillRect(ox+8+x*sc, oy+8+y*sc, sc, sc, C.black); };
+  for(let y=0;y<n;y++) for(let x=0;x<n;x++){
+    const inF = (x<9&&y<9)||(x>n-10&&y<9)||(x<9&&y>n-10);
+    const inA = x>=16&&x<=20&&y>=16&&y<=20;
+    if(inF||inA) continue;
+    const timing = (x===6) ? (y%2===0) : (y===6) ? (x%2===0) : null;
+    if(timing!==null){ mod(x,y,timing); continue; }
+    mod(x,y, rnd()<0.47);
+  }
+  finder(0,0); finder(18,0); finder(0,18);
+  for(let y=-2;y<=2;y++) for(let x=-2;x<=2;x++){    // alignment 5x5 at (18,18)
+    const ring=Math.max(Math.abs(x),Math.abs(y));
+    mod(18+x,18+y, ring===0||ring===2);
+  }
+}
+
+/* ---------- render + UI wiring ---------- */
+function render(){
+  (SCREENS[screen]||SCREENS.ride)();
+  cv.width = W*zoom; cv.height = H*zoom;
+  disp.imageSmoothingEnabled = false;
+  disp.drawImage(off, 0, 0, W*zoom, H*zoom);
+}
+window.render = render;
+
+const ORDER = [
+  ['ride','TELE · RIDE'], ['elec','TELE · ELEC'], ['motor','TELE · MOTOR'], ['nodata','TELE · no data'],
+  ['lock','LOCK · disarmed'], ['lockarmed','LOCK · armed'], ['nofob','LOCK · no fob'],
+  ['stat','SYS · STAT'], ['cfg','SYS · CFG'], ['set','SYS · SET (QR)'],
+  ['standby','ARMED STANDBY 🚫'], ['pin','PIN GATE'], ['armask','ARM CONFIRM'],
+  ['animarm','ANIM · ARM 🔒'], ['animdisarm','ANIM · DISARM 🔓+pings'],
+  ['bootdark','BOOT DARK'], ['wifi','WIFI SETUP WINDOW']
+];
+const sb = document.getElementById('screenBtns');
+for(const [id,label] of ORDER){
+  const b=document.createElement('button');
+  b.className='opt'; b.textContent=label; b.dataset.screen=id;
+  b.onclick=()=>{ screen=id; syncBtns(); render(); };
+  sb.appendChild(b);
+}
+document.getElementById('valSw').innerHTML =
+  PALETTE.map((c,i)=>`<span class="sw" data-val="${i}" style="background:${c}" onclick="pickVal(${i})"></span>`).join('');
+document.getElementById('accSw').innerHTML =
+  PALETTE.map((c,i)=>`<span class="sw" data-acc="${i}" style="background:${c}" onclick="pickAcc(${i})"></span>`).join('');
+window.pickVal = i=>{ uiVal=PALETTE[i]; syncBtns(); render(); };
+window.pickAcc = i=>{ uiAcc=PALETTE[i]; syncBtns(); render(); };
+window.setScale = s=>{ uiScale=s; syncBtns(); render(); };
+window.setZoom  = z=>{ zoom=z;  syncBtns(); render(); };
+window.toggleBt = ()=>{ btLinkOn=!btLinkOn; syncBtns(); render(); };
+
+function syncBtns(){
+  document.querySelectorAll('[data-screen]').forEach(b=>b.classList.toggle('active', b.dataset.screen===screen));
+  document.querySelectorAll('[data-scale]').forEach(b=>b.classList.toggle('active', +b.dataset.scale===uiScale));
+  document.querySelectorAll('[data-val]').forEach(b=>b.classList.toggle('sel', PALETTE[+b.dataset.val]===uiVal));
+  document.querySelectorAll('[data-acc]').forEach(b=>b.classList.toggle('sel', PALETTE[+b.dataset.acc]===uiAcc));
+  document.querySelectorAll('[data-z]').forEach(b=>b.classList.toggle('active', +b.dataset.z===zoom));
+  const bb=document.getElementById('btBtn');
+  bb.textContent = btLinkOn?'ON':'OFF'; bb.classList.toggle('active', btLinkOn);
+}
+
+/* URL params: screen, scale, val, acc, bt, zoom, frame=raw */
+const p = new URLSearchParams(location.search);
+if(p.get('screen') && SCREENS[p.get('screen')]) screen = p.get('screen');
+if(p.get('scale')!==null && p.get('scale')!=='') uiScale = +p.get('scale');
+if(p.get('val')!==null  && p.get('val')!=='')  uiVal  = PALETTE[+p.get('val')]  || uiVal;
+if(p.get('acc')!==null  && p.get('acc')!=='')  uiAcc  = PALETTE[+p.get('acc')]  || uiAcc;
+if(p.get('bt')==='0') btLinkOn = false;
+if(p.get('zoom')) zoom = +p.get('zoom');
+if(p.get('frame')==='raw'){
+  document.querySelector('.toolbar').style.display='none';
+  document.querySelector('.notes').style.display='none';
+  document.getElementById('bezel').className='';
+  document.getElementById('bezel').style.padding='0';
+  document.getElementById('bezel').style.boxShadow='none';
+  document.getElementById('bezel').style.background='transparent';
+  document.querySelector('.pcb').style.border='none';
+  document.querySelector('.pcb').style.padding='0';
+  document.querySelector('.cap').style.display='none';
+  document.body.style.padding='0';
+}
+syncBtns();
+render();
+</script>
+</body>
+</html>

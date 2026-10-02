@@ -64,3 +64,45 @@ High-resolution screenshots are located in `/home/ther12k/Workspace/Learning/esp
   - Crimson Red `#EF4444`: Armed state, ARM button, Panic button, danger actions
   - Electric Cyan `#00C8FF`: High-visibility battery voltage
 - **Typography:** Inter / Roboto for UI text, JetBrains Mono for hex keys and device logs.
+
+---
+
+# Part 2 — Display Pod (2.4" TFT, 240×320)
+
+The bike itself carries a handlebar display pod: ESP32 WEMOS D1 R32 + MCUFRIEND 2.4" TFT
+(ILI9341, 8-bit parallel) + resistive touch. A pixel-accurate browser replica of **every
+pod screen** exists for design work:
+
+- **Interactive TFT Inspector:** [http://192.168.1.55:8096/tft.html](http://192.168.1.55:8096/tft.html) / [http://localhost:8096/tft.html](http://localhost:8096/tft.html)
+  — cycle all 17 screens, switch text size S/M/L, value/accent color swatches, BT badge, zoom. URL params supported: `?screen=ride&val=3&acc=5&bt=0&zoom=3&frame=raw`.
+- **TFT Gallery:** [http://192.168.1.55:8096/tft-gallery.html](http://192.168.1.55:8096/tft-gallery.html) / [http://localhost:8096/tft-gallery.html](http://localhost:8096/tft-gallery.html)
+- **Screenshots:** `output/screenshots/tft/tft_*.png` (720×960, 3× zoom)
+
+| File | Screen | Notes |
+|---|---|---|
+| `tft/tft_ride.png` | TELE · RIDE | Huge speed number while riding (km/h from wheel calibration) |
+| `tft/tft_elec.png` | TELE · ELEC | Parked rotation: battery/current/power/gear |
+| `tft/tft_motor.png` | TELE · MOTOR | Parked rotation: RPM/gear/temps |
+| `tft/tft_nodata.png` | TELE · no data | Bridge link lost state |
+| `tft/tft_lock.png` | LOCK · disarmed | Green state, fob RSSI, fob list, ARM |
+| `tft/tft_lockarmed.png` | LOCK · armed | Red state, PANIC (30 s siren) |
+| `tft/tft_nofob.png` | LOCK · setup | No fob registered instructions |
+| `tft/tft_stat.png` | SYS · STAT | Link/rx/tx/heap/uptime + BT release |
+| `tft/tft_cfg.png` | SYS · CFG | Theme: S/M/L + 6 value/accent swatches + CHANGE PIN |
+| `tft/tft_set.png` | SYS · SET | Pairing QR (v2, bare 32-hex) + printed key |
+| `tft/tft_standby.png` | ARMED STANDBY | Full-screen bold 🚫 + battery; double-tap → PIN |
+| `tft/tft_pin.png` | PIN GATE | Edge-to-edge keypad, 76×54 keys |
+| `tft/tft_armask.png` | ARM CONFIRM | Full-screen YES/NO anti-stray-tap gate |
+| `tft/tft_animarm.png` | ARM ANIM | Closing padlock final frame |
+| `tft/tft_animdisarm.png` | DISARM ANIM | Open padlock + sonar pings |
+| `tft/tft_bootdark.png` | BOOT DARK | Pure black when fob away at power-on |
+| `tft/tft_wifi.png` | WIFI WINDOW | 30 s boot OTA window |
+| `tft/tft_ride_orange.png` | ALT THEME | Orange value / pink accent / BT-off badge |
+
+### Hard constraints (different from the phone app!)
+- 240×320 portrait, **no anti-aliasing, no custom fonts** — classic 5×7 bitmap font, sizes 1–5.
+- Fixed palette: bg `#0A101A`, widget `#121A28`, text `#DEE6F0`, dim `#6E7C8C`,
+  red `#FF3C32`, green `#00FF78`, yellow `#FFC800`; value/accent selectable from 6 swatches (default cyan `#00C8FF`).
+- Layout grid: header 0–26, sub-tabs 28–68 (SYS only), content 27–277, tab bar 278–318 (TELE/LOCK/SYS, 80 px each).
+- Backlight is hardwired — "off" is either pure black or the static armed emblem; standby is a single still frame.
+- Touch targets ≥ ~60 px for gloves; redraws are slot-cached (flicker-free partial updates).

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VOTOL TFT Pod 2.4&quot; — UI/UX Screen Designs</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { background:#030407; color:#F5F7FB; font-family:'Inter',sans-serif; margin:0; padding:30px 20px; }
+  .header { max-width:1400px; margin:0 auto 30px auto; border-bottom:1px solid #2A3242; padding-bottom:20px; }
+  .brand { color:#F59E0B; font-size:13px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; }
+  h1 { margin:8px 0; font-size:28px; font-weight:800; }
+  .desc { color:#9AA3B2; font-size:15px; line-height:1.5; max-width:940px; }
+  .nav-links { margin-top:14px; display:flex; gap:12px; flex-wrap:wrap; }
+  .nav-links a { color:#F59E0B; text-decoration:none; font-weight:600; font-size:14px; background:#11151F;
+                 border:1px solid #2A3242; padding:8px 16px; border-radius:8px; }
+  .nav-links a:hover { background:#1F2633; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:26px; max-width:1400px; margin:0 auto; }
+  .card { background:#11151F; border:1px solid #2A3242; border-radius:20px; overflow:hidden; display:flex; flex-direction:column; }
+  .card-header { padding:14px 18px; background:#161B27; border-bottom:1px solid #2A3242; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .card-title { font-size:15px; font-weight:700; }
+  .tag { font-size:10px; font-weight:700; padding:4px 10px; border-radius:10px; text-transform:uppercase; white-space:nowrap; }
+  .t-tele { background:rgba(0,200,255,.15); color:#00C8FF; border:1px solid rgba(0,200,255,.4); }
+  .t-lock { background:rgba(0,255,120,.15); color:#00FF78; border:1px solid rgba(0,255,120,.4); }
+  .t-sec  { background:rgba(255,60,50,.15); color:#FF3C32; border:1px solid rgba(255,60,50,.4); }
+  .t-sys  { background:rgba(245,158,11,.15); color:#F59E0B; border:1px solid rgba(245,158,11,.4); }
+  .card-body { padding:18px; display:flex; justify-content:center; background:#07090D; }
+  .card-body img { width:100%; max-width:300px; height:auto; border-radius:8px; border:1px solid #2A3242;
+                   image-rendering:pixelated; box-shadow:0 10px 30px rgba(0,0,0,.6); }
+  .card-footer { padding:14px 18px; font-size:13px; color:#9AA3B2; line-height:1.45; border-top:1px solid #2A3242; }
+  .specs { max-width:1400px; margin:40px auto 0 auto; background:#11151F; border:1px solid #2A3242; border-radius:20px; padding:24px; }
+  .specs h2 { color:#F59E0B; font-size:18px; margin-bottom:12px; }
+  .specs ul { margin-left:20px; line-height:1.8; color:#9AA3B2; font-size:14px; }
+  .specs code { color:#00C8FF; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand">VOTOL Display Pod — 2.4&quot; TFT</div>
+  <h1>UI/UX Design Gallery — 240×320 TFT Screens</h1>
+  <div class="desc">
+    Pixel-accurate replica of every screen on the motorcycle's 2.4&quot; TFT display pod
+    (same 5×7 bitmap font, same coordinates and colors as the firmware).
+    Use these for theme/layout redesign, or open the interactive inspector to cycle
+    screens, text sizes, and value/accent colors live.
+  </div>
+  <div class="nav-links">
+    <a href="/tft.html" target="_blank">🖥 Open Interactive TFT Inspector</a>
+    <a href="/" target="_blank">📱 Phone App Gallery</a>
+  </div>
+</div>
+
+<div class="grid">
+
+  <div class="card"><div class="card-header"><div class="card-title">1. TELE — RIDE pane</div><div class="tag t-tele">RIDING</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_ride.png" alt="TELE RIDE"></div>
+    <div class="card-footer">Auto-shown while riding: one huge speed number (km/h, calibrated by wheel circumference), battery volts + amps, controller status line, BT rx/tx link stats.</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">2. TELE — ELEC pane</div><div class="tag t-tele">PARKED</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_elec.png" alt="TELE ELEC"></div>
+    <div class="card-footer">Rotates while parked. Battery volts (hero), current, computed power (W) and gear letter.</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">3. TELE — MOTOR pane</div><div class="tag t-tele">PARKED</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_motor.png" alt="TELE MOTOR"></div>
+    <div class="card-footer">Motor RPM hero, gear, controller/motor temperatures (°C).</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">4. TELE — no data</div><div class="tag t-tele">LINK LOST</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_nodata.png" alt="TELE no data"></div>
+    <div class="card-footer">Bridge not linked: yellow header "bt search", red status dot, placeholder dashes and a warning status line.</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">5. LOCK — disarmed</div><div class="tag t-lock">KEYLESS</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_lock.png" alt="LOCK disarmed"></div>
+    <div class="card-footer">Big green DISARMED state, live fob RSSI, last-heard label, up to 4 registered fobs, ARM action button.</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">6. LOCK — armed</div><div class="tag t-sec">ARMED</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_lockarmed.png" alt="LOCK armed"></div>
+    <div class="card-footer">Red ARMED state, fob away countdown, red PANIC button (30 s siren).</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">7. LOCK — no fob registered</div><div class="tag t-lock">SETUP</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_nofob.png" alt="LOCK no fob"></div>
+    <div class="card-footer">Fresh install: instructions to register iTag (MAC) or phone (NAME) fobs over USB serial.</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">8. SYS — STAT</div><div class="tag t-sys">SYS</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_stat.png" alt="SYS STAT"></div>
+    <div class="card-footer">Bridge link state, rx/tx counters, touch variant/diagnostics, uptime + free heap, wheel calibration, "release BT for phone" button.</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">9. SYS — CFG (theme)</div><div class="tag t-sys">SYS</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_cfg.png" alt="SYS CFG"></div>
+    <div class="card-footer">On-device theming: text size S/M/L, VALUE color and ACCENT color swatches (cyan/green/yellow/orange/white/pink, NVS-persisted), and CHANGE PIN entry.</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">10. SYS — SET (pairing QR)</div><div class="tag t-sys">SYS</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_set.png" alt="SYS SET"></div>
+    <div class="card-footer">Version-2 QR (bare 32-hex secret, big 7-px modules for a 2.4&quot; glass) the phone app scans to pair; the key is also printed below.</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">11. ARMED standby 🚫</div><div class="tag t-sec">SECURITY</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_standby.png" alt="Armed standby"></div>
+    <div class="card-footer">Armed idle: full-screen bold prohibited symbol (14-px ring + 34-px X), readable from a distance, battery voltage, double-tap hint. Static — no animation.</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">12. PIN gate</div><div class="tag t-sec">SECURITY</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_pin.png" alt="PIN gate"></div>
+    <div class="card-footer">Double-tap wake → edge-to-edge 4×3 keypad, 76×54 px keys. Green OK, yellow C. Wrong PIN locks 15 s after 3 tries.</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">13. ARM confirmation</div><div class="tag t-sec">SECURITY</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_armask.png" alt="ARM confirmation"></div>
+    <div class="card-footer">Full-screen YES/NO gate so a stray tap can never arm. NO (green) first, YES, ARM (red) below — timed out after 10 s.</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">14. ARM animation 🔒</div><div class="tag t-sec">ANIM</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_animarm.png" alt="ARM animation"></div>
+    <div class="card-footer">5-frame closing padlock (shackle seats, right leg plugs in) + zooming "ARMED" text, then the standby emblem.</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">15. DISARM animation 🔓</div><div class="tag t-lock">ANIM</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_animdisarm.png" alt="DISARM animation"></div>
+    <div class="card-footer">Opening padlock (air gap on the right leg = unlocked) + expanding sonar ping rings ("fob is back") + zooming "DISARMED".</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">16. Boot dark</div><div class="tag t-lock">BOOT</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_bootdark.png" alt="Boot dark"></div>
+    <div class="card-footer">Registered fob away at power-on: display stays pure black from the first second (backlight is hardwired, so "off" = black).</div></div>
+
+  <div class="card"><div class="card-header"><div class="card-title">17. WiFi/OTA setup window</div><div class="tag t-sys">BOOT</div></div>
+    <div class="card-body"><img src="/screenshots/tft/tft_wifi.png" alt="WiFi window"></div>
+    <div class="card-footer">First 30 s after boot only: WiFi + ArduinoOTA are open (resistive touch unavailable during this window), then BT + touch take over.</div></div>
+
+</div>
+
+<div class="specs">
+  <h2>📐 TFT Design Constraints for the Designer Agent</h2>
+  <ul>
+    <li>Panel: 240×320 portrait ILI9341 over 8-bit parallel; <strong>no anti-aliasing, no custom fonts</strong> — classic 5×7 bitmap font, sizes 1–5 (char cell 6×8 px × size).</li>
+    <li>Fixed palette: bg <code>#0A101A</code>, widget <code>#121A28</code>, text <code>#DEE6F0</code>, dim <code>#6E7C8C</code>, red <code>#FF3C32</code>, green <code>#00FF78</code>, yellow <code>#FFC800</code>; the user can pick value/accent from 6 swatches (cyan default <code>#00C8FF</code>).</li>
+    <li>Layout grid: header 0–26, sub-tabs 28–68 (SYS only), content 27–277, tab bar 278–318 (3 × 80 px tabs: TELE / LOCK / SYS).</li>
+    <li>Backlight hardwired to 3.3 V — "screen off" is either pure black (disarmed) or the static armed emblem; standby must be a single still frame.</li>
+    <li>Touch: resistive film shared with the LCD bus — targets must be ≥ ~60 px for gloved fingers; PIN keypad keys are 76×54 px.</li>
+    <li>State machine: fob near → disarmed; fob away 30 s → armed (+chirp); riding (rpm ≥ 50 for 2 s) locks TELE to RIDE pane; phone/PIN disarm is sticky until explicit ARM.</li>
+  </ul>
+</div>
+
+</body>
+</html>
