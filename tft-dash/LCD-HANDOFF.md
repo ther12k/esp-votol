@@ -9,7 +9,7 @@ time.
 
 | Thing | What it is |
 |---|---|
-| Board | WEMOS D1 R32 (clone: "Wifi&Bluetooth R32 Base ESP32 V1.0.0") — ESP32-WROOM in Arduino UNO form factor, micro-USB (CH340) |
+| Board | WEMOS D1 R32 (clone: "Wifi&Bluetooth R32 Base ESP32 V1.0.0") — ESP32-WROOM in Arduino UNO form factor, micro-USB (CH340). **Ours: ESP32-D0WD-V3, MAC `b4:bf:e9:22:85:dc`** (how to tell it from the other ESP32s on the desk: §10.1) |
 | Shield | 2.4" UNO TFT shield, mcufriend-style **8-bit parallel**, controller **ILI9341** (reads ID `0x9341`), 240×320 |
 | Touch | **resistive film** wired to 4 UNO pins shared with the LCD — there is **no XPT2046 touch chip** on this shield (proven empirically) |
 | SD slot | present, unused (its pins are free — see §3) |
@@ -264,7 +264,90 @@ python3 ~/.platformio/packages/tool-esptoolpy/esptool.py \
 pio run -e myapp -t upload
 ```
 
-## 10. Where to look in this repo
+`python3 -m esptool` does NOT work on this host — the system python has
+no esptool module; always call the PlatformIO-bundled script by path
+(and via `python3` — the `.py` is not executable).
+
+## 10. Deploying the tft-dash firmware (runbook)
+
+The exact procedure we use to push a new build onto the pod.
+
+### 10.1 Identify the pod FIRST (several ESP32s live on this desk)
+
+`ls /dev/ttyUSB*` — the pod is a **CH340** (`udevadm info -q property -n
+/dev/ttyUSB0 | grep ID_MODEL_FROM_DATABASE`), ours is **ESP32-D0WD-V3,
+MAC `b4:bf:e9:22:85:dc`**. A CH340 + ESP32 is *necessary but not
+sufficient* — the bridge board looks the same. Confirm by sniffing the
+boot banner (the tft firmware says `[tft-dash]`):
+
+```python
+import serial, time
+s = serial.Serial('/dev/ttyUSB0', 115200, timeout=0.5)
+s.dtr = False; s.rts = True; time.sleep(0.1); s.rts = False   # reset pulse
+t0 = time.time(); out = b""
+while time.time() - t0 < 3: out += s.read(256)
+print(out.decode('utf-8', 'replace'))   # expect "[tft-dash] LCD id 0x9341 ..."
+```
+
+Do **not** trust "capture right after `esptool chip_id` exits" — the
+banner prints within ~1 s of the reset and you will lose the race; open
+the port and pulse RTS yourself (as above). Flashing the wrong board
+overwrites that board's firmware.
+
+### 10.2 Flash (USB — the default path)
+
+```bash
+cd tft-dash
+pio run -e votol-dash -t upload --upload-port /dev/ttyUSB0
+```
+
+~30 s; success = `Hash of data verified` + hard reset. A normal upload
+**keeps NVS** — registered fobs, touch calibration, wheel size, PIN and
+pair key all survive. Use `erase_flash` (§9) only for recovery, never
+routinely.
+
+### 10.3 OTA alternative (rarely worth it)
+
+OTA answers only during the **first 30 s after boot** (then WiFi goes
+off for touch, §6) — you must power-cycle the pod and immediately:
+
+```bash
+pio run -e votol-dash-ota -t upload --upload-port votol-dash.local
+```
+
+(UDP 3232, mDNS `votol-dash.local`.) USB needs no timing, so it is the
+default. **At the bike: never USB and bike-5V power at the same time** —
+unplug the bike feed before plugging USB.
+
+### 10.4 Post-flash verification (serial CLI — no eyes needed)
+
+Capture per §10.1 after the flash reset. Healthy boot shows:
+
+```
+[tft-dash] LCD id 0x9341
+[tft-dash] fobs: N            (N = your fob count, NVS survived)
+[tft-dash] wifi window 30s, then BT->VOTOL-BT
+[tft-dash] wifi off — touch + BT mode
+[kl] armed silently — fob off since boot      <-- fob away: NORMAL
+```
+
+The pod boots with the display DARK when the fob is away (armed) — the
+banner is on serial even though the screen is black; don't re-flash,
+just send single-letter commands (no newline needed):
+
+| Key | Effect |
+|---|---|
+| `d` | display on, 2-min override — the screen lights now |
+| `a` / `A` | play the ARM / DISARM animation (needs display on; one queued while dark fires the moment it wakes) |
+| `L` | list fobs — proves NVS |
+| `p` | send one SHOW poll frame |
+| `B` | BT link on/off toggle |
+
+Any panic / `Guru Meditation` / spontaneous reboot in the log = bad
+build, not bad luck. At the desk `[bt] connect failed` retries are
+expected (the VOTOL-BT bridge isn't here); it links at the bike.
+
+## 11. Where to look in this repo
 
 - `tft-dash/src/main.cpp` — the full app: LCD + touch + BLE keyless +
   BT + display power management. The touch section (§6 here) and the
