@@ -74,8 +74,9 @@
     <li>3 pages: <b>TELE</b> (RIDE hero number + BATTERY/CURRENT segment bars + RIDE MODE/TRIP; ELEC; MOTOR panes;
         auto-maximizes speed while riding), <b>LOCK</b> (padlock icon + ARMED/DISARMED + fob rows + DISARM/PANIC or ARM),
         <b>SYS</b> (STAT / CFG / SET sub-tabs; SET = QR + pairing-key box).</li>
-    <li>Armed idle = full-screen closed red padlock + ARMED + battery (mockup lock screen); double-tap opens the
-        edge-to-edge PIN keypad (PIN boxes, backspace, green OK).</li>
+    <li>Armed idle = full-screen bold prohibition symbol (ring + X) + ARMED + battery — clearer than a
+        padlock at parking-lot distance; double-tap opens the edge-to-edge PIN keypad (PIN boxes,
+        backspace, green OK).</li>
     <li>Backlight is hardwired — "screen off" is either pure black (unarmed) or the standby lock (armed).</li>
   </ul>
 </div>
@@ -367,12 +368,18 @@ const SCREENS = {
     fillRect(10,258,220,19,C.bg2); drawRect(10,258,220,19,uiAcc);
     slotC(10,258,220,19,1, KEY, uiAcc, C.bg2);
   },
-  standby(){                                     // armed idle: mockup lock screen
+  standby(){                                     // armed idle: prohibition sign
     fillRect(0,0,W,H,C.bg);
-    drawLockShape(C.bad, 92, 52);
-    textC(232,4,'ARMED',C.bad);
-    text(120-tw(`BAT ${T.v}V`,2)/2, 272, 2, `BAT ${T.v}V`, C.txt);
-    textC(300,1,'double-tap: enter PIN',C.dim);
+    const cx=120, cy=134, R=98;
+    for(let r=R; r>R-14; r--) drawCircle(cx,cy,r,C.bad);
+    const a=66, sq=24;
+    for(let i=-a;i<=a;i+=2){
+      fillRect(cx+i-sq/2, cy+i-sq/2, sq, sq, C.bad);
+      fillRect(cx+i-sq/2, cy-i-sq/2, sq, sq, C.bad);
+    }
+    textC(244,4,'ARMED',C.bad);
+    text(120-tw(`BAT ${T.v}V`,2)/2, 284, 2, `BAT ${T.v}V`, C.txt);
+    textC(306,1,'double-tap: enter PIN',C.dim);
   },
   pin(){                                         // PIN gate over standby
     fillRect(0,0,W,H,C.bg);

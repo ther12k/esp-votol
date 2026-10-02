@@ -1490,24 +1490,35 @@ void playAnim(uint8_t kind) {            // 1 = ARM (close), 2 = DISARM (open)
 
 /* ---- armed standby screen: STILL image, FULL screen ----
  * The backlight can't be turned off on this shield, so armed idle shows
- * the mockup lock screen: big red closed padlock + ARMED + battery —
- * readable from a distance. Double-tap wakes the PIN gate. */
+ * a bold PROHIBITED symbol (thick ring + thick X) — chosen over a
+ * padlock because it stays legible from across a parking lot.
+ * Double-tap wakes the PIN gate. */
 void drawStandby() {
   pinScreen = false;
   tft.fillRect(0, 0, W, H, cBg);
-  drawLockShape(cBad, 92, 52);                // closed padlock, big
+  const int cx = 120, cy = 134, R = 98;
+  for (int r = R; r > R - 14; r--)            // ~14px bold ring
+    tft.drawCircle(cx, cy, r, cBad);
+  // bold X: overlapping filled squares along each diagonal — offsetting
+  // drawLine by (d,d) slides ALONG a 45° line (hairline bug), so union
+  // squares instead: guaranteed solid ~34px strokes
+  const int a = 66, sq = 24;
+  for (int i = -a; i <= a; i += 2) {
+    tft.fillRect(cx + i - sq / 2, cy + i - sq / 2, sq, sq, cBad);   // "\" arm
+    tft.fillRect(cx + i - sq / 2, cy - i - sq / 2, sq, sq, cBad);   // "/" arm
+  }
   tft.setTextColor(cBad); tft.setTextSize(4);
-  tft.setCursor(120 - (int)strlen("ARMED") * 12, 232);
+  tft.setCursor((W - 5 * 24) / 2, 244);       // "ARMED", centered
   tft.print("ARMED");
   tft.setTextSize(2); tft.setTextColor(cTxt);
   char b[24];
   if (tele.has && millis() - tele.atMs < 30000) snprintf(b, sizeof(b), "BAT %.1fV", tele.v);
   else snprintf(b, sizeof(b), "BAT --.-V");
-  tft.setCursor(120 - strlen(b) * 12, 272);
+  tft.setCursor((W - (int)strlen(b) * 12) / 2, 284);
   tft.print(b);
   tft.setTextSize(1); tft.setTextColor(cDim);
   const char *h = "double-tap: enter PIN";
-  tft.setCursor(120 - (int)strlen(h) * 3, 300);
+  tft.setCursor((W - (int)strlen(h) * 6) / 2, 306);
   tft.print(h);
 }
 

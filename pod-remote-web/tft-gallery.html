@@ -93,9 +93,9 @@
     <div class="card-body"><img src="/screenshots/tft/tft_set.png" alt="SYS SET"></div>
     <div class="card-footer">Version-2 QR (bare 32-hex secret, 6-px modules) the phone app scans to pair; below it, the key in a cyan-outlined box — mockup pairing-screen style.</div></div>
 
-  <div class="card"><div class="card-header"><div class="card-title">11. ARMED standby 🔒</div><div class="tag t-sec">SECURITY</div></div>
+  <div class="card"><div class="card-header"><div class="card-title">11. ARMED standby 🚫</div><div class="tag t-sec">SECURITY</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_standby.png" alt="Armed standby"></div>
-    <div class="card-footer">Armed idle: full-screen red closed padlock + ARMED + battery voltage (mockup lock screen), readable from a distance, double-tap hint. Static — no animation.</div></div>
+    <div class="card-footer">Armed idle: full-screen bold prohibition symbol (14-px ring + 34-px X strokes) — kept over the mockup padlock because it stays legible from far away; battery voltage, double-tap hint. Static — no animation.</div></div>
 
   <div class="card"><div class="card-header"><div class="card-title">12. PIN gate</div><div class="tag t-sec">SECURITY</div></div>
     <div class="card-body"><img src="/screenshots/tft/tft_pin.png" alt="PIN gate"></div>
@@ -129,7 +129,7 @@
     <li>Panel: 240×320 portrait ILI9341 over 8-bit parallel; <strong>no anti-aliasing, no custom fonts</strong> — classic 5×7 bitmap font, sizes 1–8 (char cell 6×8 px × size).</li>
     <li>Kit v3 palette (Oct 2026 mockups): bg <code>#08111D</code>, card <code>#121C2C</code>, border <code>#38485C</code>, text <code>#E6EEF7</code>, muted <code>#86A1BF</code>, cyan <code>#00D0FF</code>, green <code>#00FF80</code>, red <code>#FF3B3B</code>, amber <code>#FFC107</code>; value/accent user-pickable from 6 swatches (cyan default).</li>
     <li>Layout grid: header 0–28 (title left · status dot + battery gauge right) over a 1-px divider at y29, sub-tabs 32–68 (SYS only), content 30–277, tab bar 278–318 (3 × 80 px tabs: TELE / LOCK / SYS, active = accent fill).</li>
-    <li>Backlight hardwired to 3.3 V — "screen off" is either pure black (disarmed) or the static red-padlock armed standby; standby must be a single still frame.</li>
+    <li>Backlight hardwired to 3.3 V — "screen off" is either pure black (disarmed) or the static armed prohibition sign (ring + X, far-distance legible); standby must be a single still frame.</li>
     <li>Touch: resistive film shared with the LCD bus — targets must be ≥ ~60 px for gloved fingers; PIN keypad keys are 76×54 px.</li>
     <li>State machine: fob near → disarmed; fob away 30 s → armed (+chirp); riding (rpm ≥ 50 for 2 s) locks TELE to RIDE pane; phone/PIN disarm is sticky until explicit ARM.</li>
   </ul>
