@@ -3,84 +3,90 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>VOTOL Pod Remote 3.0 — UI/UX Preview</title>
+  <title>VOTOL Pod Remote 4.0 — UI/UX Preview</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      /* dark palette (default) — mirrors values-night/colors.xml of the APK */
-      --bg: #0A0F14;
-      --surface: #0D141C;
-      --card: #131A24;
-      --cardAlt: #161C24;
-      --border: #2A3440;
-      --text: #F2F5F8;
-      --text2: #8A97A5;
-      --muted: #5E6B79;
-      --brand: #F5B301;
-      --onBrand: #1A1205;
-      --brandText: #FFC93C;
-      --green: #22E06A;
+      /* dark = design kit tokens verbatim */
+      --bg: #070B0F;
+      --surface: #0D141A;
+      --surfaceElevated: #121B22;
+      --border: #2B3A43;
+      --text: #F4F7F8;
+      --text2: #93A4B2;
+      --muted: #5E707D;
+      --brand: #F7A915;
+      --onBrand: #241A02;
+      --brandText: #F7A915;
+      --jade: #40F0B6;
+      --green: #21D99B;
       --onGreen: #06230F;
-      --red: #E5484D;
-      --stateGreen: #22E06A;
-      --stateRed: #E5484D;
-      --statGray: #9AA3B2;
-      --statVolt: #3EC9F0;
-      --heroArmed: #2A1115;
-      --heroDisarmed: #10241C;
-      --heroOffline: #161B27;
-      --ctaArmBg: #2A1115;
-      --ctaArmStroke: #7A2E33;
-      --accentTeal: #2DD4E8;
-      --accentGreen: #22E06A;
-      --accentBlue: #5B9DFF;
-      --accentAmber: #FFC93C;
+      --red: #FF4D57;
+      --onRed: #FFFFFF;
+      --stateGreen: #40F0B6;
+      --stateRed: #FF4D57;
+      --statGray: #93A4B2;
+      --statVolt: #59E6FF;
+      --heroArmed: #1C1216;
+      --heroDisarmed: #0F1E1B;
+      --heroOffline: #121B22;
+      --ctaArmBg: #24161A;
+      --ctaArmStroke: #8A3038;
+      --accentTeal: #59E6FF;
+      --accentGreen: #40F0B6;
+      --accentBlue: #55A7FF;
+      --accentViolet: #7B7CFF;
+      --accentAmber: #F7A915;
       --chipBg: rgba(255,255,255,0.10);
-      --navIndicator: rgba(245,179,1,0.18);
+      --navIndicator: rgba(247,169,21,0.18);
+      --glowGreen: 0 10px 30px rgba(33,217,155,0.25);
+      --glowRed: 0 10px 30px rgba(255,77,87,0.25);
+      --glowAmber: 0 10px 28px rgba(247,169,21,0.22);
       --scrim: rgba(0,0,0,0.75);
+      --tick: #2B3A43;
     }
 
     .phone-wrapper[data-theme="light"] {
-      /* light palette — mirrors values/colors.xml of the APK */
-      --bg: #F2F5F8;
-      --surface: #FFFFFF;
-      --card: #FFFFFF;
-      --cardAlt: #F5F8FA;
-      --border: #DFE5EC;
-      --text: #10161D;
-      --text2: #5A6672;
-      --muted: #98A4B1;
-      --brandText: #B45309;
-      --stateGreen: #0E9F5B;
-      --stateRed: #D93A3F;
-      --statGray: #5A6672;
-      --statVolt: #0E8FB8;
-      --heroArmed: #FBEBEC;
-      --heroDisarmed: #E7F8EF;
-      --heroOffline: #EDF1F6;
-      --ctaArmBg: #FBEBEC;
-      --ctaArmStroke: #F0B9BD;
-      --accentTeal: #0E8FA8;
-      --accentGreen: #0E9F5B;
-      --accentBlue: #2563EB;
-      --accentAmber: #B45309;
+      /* light = derived from kit hues */
+      --bg: #EFF3F2;
+      --surface: #F7FAF9;
+      --surfaceElevated: #FFFFFF;
+      --border: #D8E2DF;
+      --text: #10181B;
+      --text2: #55646D;
+      --muted: #93A4B2;
+      --brandText: #9A6A03;
+      --jade: #0BA47A;
+      --stateGreen: #0C9E6E;
+      --stateRed: #D93440;
+      --statGray: #55646D;
+      --statVolt: #0793B5;
+      --heroArmed: #FBE9EA;
+      --heroDisarmed: #E5F7EF;
+      --heroOffline: #EDF1F3;
+      --ctaArmBg: #FBE9EA;
+      --ctaArmStroke: #F0B6BB;
+      --accentTeal: #0793B5;
+      --accentGreen: #0C9E6E;
+      --accentBlue: #2F6FE0;
+      --accentViolet: #5758D6;
+      --accentAmber: #9A6A03;
       --chipBg: rgba(170,170,170,0.14);
-      --navIndicator: rgba(245,179,1,0.15);
+      --navIndicator: rgba(247,169,21,0.15);
+      --glowGreen: 0 8px 22px rgba(12,158,110,0.16);
+      --glowRed: 0 8px 22px rgba(217,52,64,0.14);
+      --glowAmber: 0 8px 20px rgba(247,169,21,0.18);
       --scrim: rgba(16,22,29,0.45);
+      --tick: #C3D2CE;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
     body {
       background: #030407;
-      color: #F2F5F8;
+      color: #F4F7F8;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       min-height: 100vh;
       display: flex;
@@ -108,39 +114,21 @@
     }
 
     .preview-toolbar-title {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #F5B301;
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: #F7A915; width: 100%;
+      display: flex; justify-content: space-between; align-items: center;
     }
 
     .toolbar-group { display: flex; align-items: center; gap: 6px; }
-    .tool-label { font-size: 11px; color: #9AA3B2; font-weight: 600; }
+    .tool-label { font-size: 11px; color: #93A4B2; font-weight: 600; }
 
     .tool-btn {
-      background: #1F2633;
-      border: 1px solid #2A3242;
-      color: #F5F7FB;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s ease;
+      background: #1F2633; border: 1px solid #2A3242; color: #F4F7F8;
+      padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s ease;
     }
-
     .tool-btn:hover { background: #2D3748; border-color: #4A5568; }
-
-    .tool-btn.active {
-      background: #F5B301;
-      color: #07090D;
-      border-color: #F5B301;
-    }
+    .tool-btn.active { background: #F7A915; color: #241A02; border-color: #F7A915; }
 
     /* Phone shell */
     .phone-wrapper {
@@ -155,146 +143,58 @@
       overflow: hidden;
       border: 1px solid #2A3242;
     }
+    .phone-wrapper.raw-viewport { box-shadow: none; border-radius: 0; border: none; }
 
-    .phone-wrapper.raw-viewport {
-      box-shadow: none;
-      border-radius: 0;
-      border: none;
-    }
-
-    /* Android status bar mock */
     .status-bar {
-      height: 38px;
-      padding: 8px 24px 0 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text2);
-      z-index: 10;
-      user-select: none;
-      flex-shrink: 0;
+      height: 38px; padding: 8px 24px 0 24px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; font-weight: 600; color: var(--text2);
+      z-index: 10; user-select: none; flex-shrink: 0;
     }
+    .status-bar .notch { width: 80px; height: 20px; background: #000; border-radius: 20px; margin: 0 auto; }
 
-    .status-bar .notch {
-      width: 80px;
-      height: 20px;
-      background: #000;
-      border-radius: 20px;
-      margin: 0 auto;
-    }
-
-    /* ============ App header: logo + wordmark + theme toggle + pill ============ */
-    .app-header {
-      padding: 10px 20px 0 20px;
-      flex-shrink: 0;
-    }
-
-    .header-top {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    /* ============ App header ============ */
+    .app-header { padding: 10px 20px 0 20px; flex-shrink: 0; }
+    .header-top { display: flex; align-items: center; gap: 10px; }
 
     .logo-badge {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
+      width: 36px; height: 36px; border-radius: 50%;
       background: var(--brand);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-
-    .logo-badge svg { width: 20px; height: 20px; fill: #1A1205; }
+    .logo-badge svg { width: 20px; height: 20px; color: #241A02; }
 
     .brand-block { flex: 1; min-width: 0; }
-
-    .brand-title {
-      color: var(--brandText);
-      font-size: 13px;
-      font-weight: 800;
-      letter-spacing: 0.18em;
-    }
-
+    .brand-title { color: var(--brandText); font-size: 13px; font-weight: 800; letter-spacing: 0.18em; }
     .brand-sub {
-      color: var(--muted);
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.18em;
-      margin-top: 1px;
+      color: var(--muted); font-size: 9px; font-weight: 700;
+      letter-spacing: 0.14em; margin-top: 1px;
+      font-family: 'JetBrains Mono', monospace;
     }
 
     .theme-toggle {
-      width: 38px;
-      height: 38px;
-      border: none;
-      border-radius: 50%;
-      background: transparent;
-      color: var(--text2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      flex-shrink: 0;
+      width: 38px; height: 38px; border: none; border-radius: 50%;
+      background: transparent; color: var(--text2);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
     }
-
-    .theme-toggle svg { width: 22px; height: 22px; fill: currentColor; }
+    .theme-toggle svg { width: 22px; height: 22px; }
     .theme-toggle:active { transform: scale(0.92); }
 
     .link-badge {
-      padding: 5px 12px;
-      border-radius: 999px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      border: 1px solid var(--border);
-      background: var(--card);
-      flex-shrink: 0;
+      padding: 5px 12px; border-radius: 999px; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace;
+      border: 1px solid var(--border); background: var(--surface); flex-shrink: 0;
     }
+    .badge-linked   { color: var(--stateGreen); border-color: var(--stateGreen); background: color-mix(in srgb, var(--stateGreen) 10%, transparent); }
+    .badge-offline  { color: var(--statGray);   border-color: var(--statGray);   background: color-mix(in srgb, var(--statGray) 8%, transparent); }
+    .badge-searching{ color: var(--brandText);  border-color: var(--brandText);  background: color-mix(in srgb, var(--brand) 10%, transparent); }
 
-    .badge-linked {
-      color: var(--stateGreen);
-      border-color: var(--stateGreen);
-      background: color-mix(in srgb, var(--stateGreen) 9%, transparent);
-    }
-
-    .badge-offline {
-      color: var(--statGray);
-      border-color: var(--statGray);
-      background: color-mix(in srgb, var(--statGray) 8%, transparent);
-    }
-
-    .badge-searching {
-      color: var(--brandText);
-      border-color: var(--brandText);
-      background: color-mix(in srgb, var(--brandText) 10%, transparent);
-    }
-
-    .page-title {
-      color: var(--text);
-      font-size: 22px;
-      font-weight: 700;
-      margin-top: 12px;
-    }
-
-    .page-subtitle {
-      color: var(--text2);
-      font-size: 13px;
-      margin-top: 2px;
-    }
+    .page-title { color: var(--text); font-size: 22px; font-weight: 700; margin-top: 12px; }
+    .page-subtitle { color: var(--text2); font-size: 13px; margin-top: 2px; }
 
     /* Scrollable content */
-    .tab-content-container {
-      flex: 1;
-      overflow-y: auto;
-      padding: 14px 20px 16px 20px;
-      scrollbar-width: none;
-    }
-
+    .tab-content-container { flex: 1; overflow-y: auto; padding: 14px 20px 16px 20px; scrollbar-width: none; }
     .tab-content-container::-webkit-scrollbar { display: none; }
 
     .view-tab { display: none; flex-direction: column; animation: fadeIn 0.18s ease-out; }
@@ -305,241 +205,139 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* ============ Hero status card ============ */
+    /* kit stroke icons inherit color */
+    svg.ico { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ============ Hero card ============ */
     .status-card {
       border-radius: 24px;
       border: 1px solid var(--border);
-      padding: 20px;
+      padding: 18px;
       transition: all 0.25s ease;
     }
-
     .status-card.armed { background: var(--heroArmed); }
     .status-card.disarmed { background: var(--heroDisarmed); }
     .status-card.offline { background: var(--heroOffline); }
 
-    .hero-top { display: flex; align-items: center; gap: 16px; }
+    .hero-top { display: flex; align-items: center; gap: 18px; }
 
-    .hero-rings {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      position: relative;
-    }
-
-    .hero-rings::before,
-    .hero-rings::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      border: 1.5px solid var(--ring, rgba(255,255,255,0.2));
-    }
-
-    .hero-rings::after {
-      inset: 7px;
-      border-color: var(--ring2, rgba(255,255,255,0.12));
-      box-shadow: 0 0 0 7px var(--bg2, rgba(255,255,255,0.06));
-    }
-
-    .hero-rings.armed   { --ring: rgba(229,72,77,0.36);  --ring2: rgba(229,72,77,0.22);  --bg2: rgba(229,72,77,0.12); }
-    .hero-rings.disarmed{ --ring: rgba(34,224,106,0.36); --ring2: rgba(34,224,106,0.22); --bg2: rgba(34,224,106,0.12); }
-    .hero-rings.offline { --ring: rgba(100,116,139,0.36);--ring2: rgba(100,116,139,0.22);--bg2: rgba(100,116,139,0.12); }
-
-    .hero-rings svg { width: 30px; height: 30px; fill: currentColor; position: relative; z-index: 1; }
-    .hero-rings.armed    { color: var(--stateRed); }
-    .hero-rings.disarmed { color: var(--stateGreen); }
-    .hero-rings.offline  { color: var(--statGray); }
+    .hero-dial { position: relative; width: 104px; height: 104px; flex-shrink: 0; }
+    .hero-dial svg.dial-svg { width: 104px; height: 104px; display: block; }
 
     .hero-info { display: flex; flex-direction: column; min-width: 0; }
 
     .hero-micro {
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.2em;
-      color: var(--text2);
-      text-transform: uppercase;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.18em;
+      color: var(--text2); font-family: 'JetBrains Mono', monospace;
     }
 
-    .state-text {
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: -0.01em;
-      line-height: 1.15;
-      margin-top: 2px;
-    }
-
+    .state-text { font-size: 28px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; margin-top: 3px; }
     .state-armed { color: var(--stateRed); }
     .state-disarmed { color: var(--stateGreen); }
     .state-offline { color: var(--statGray); }
 
-    .sub-text { font-size: 13px; color: var(--text2); margin-top: 2px; }
+    .sub-text { font-size: 13px; color: var(--text2); margin-top: 3px; }
 
     .hero-divider { height: 1px; background: var(--border); margin: 16px 0 14px 0; }
 
     .hero-stats { display: flex; align-items: center; }
-
-    .stat-item {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 0;
-    }
-
-    .stat-item svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
-
-    .stat-volt svg { color: var(--statVolt); }
-    .stat-fob svg { color: var(--accentGreen); }
+    .stat-item { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .stat-item svg.ico { width: 19px; height: 19px; flex-shrink: 0; }
+    .stat-volt svg.ico { color: var(--statVolt); }
+    .stat-fob svg.ico { color: var(--stateGreen); }
 
     .stat-label {
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      color: var(--text2);
-      text-transform: uppercase;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.14em; color: var(--text2);
+      font-family: 'JetBrains Mono', monospace;
     }
-
-    .stat-val { font-size: 16px; font-weight: 700; margin-top: 1px; }
+    .stat-val {
+      font-size: 16px; font-weight: 700; margin-top: 1px;
+      font-family: 'JetBrains Mono', monospace;
+    }
     .val-volt { color: var(--statVolt); }
     .val-fob-near { color: var(--stateGreen); }
     .val-fob-away-armed { color: var(--stateRed); }
     .val-fob-away { color: var(--statGray); }
     .val-fob-none { color: var(--text2); }
 
-    .stat-vdiv {
-      width: 1px;
-      height: 32px;
-      background: var(--border);
-      margin-right: 16px;
-      flex-shrink: 0;
-    }
+    .stat-vdiv { width: 1px; height: 34px; background: var(--border); margin-right: 18px; flex-shrink: 0; }
 
-    /* ============ Primary CTA (ARM / DISARM / Connect) ============ */
+    /* ============ Primary CTA ============ */
+    .cta-wrap { margin-top: 18px; position: relative; }
+
     .cta-btn {
+      position: relative;
       width: 100%;
       height: 84px;
       border-radius: 24px;
-      margin-top: 18px;
       padding: 0 20px;
       display: flex;
       align-items: center;
       gap: 14px;
       cursor: pointer;
       border: none;
-      transition: transform 0.12s ease, filter 0.12s ease;
+      transition: transform 0.12s ease;
       font-family: inherit;
       text-align: left;
     }
-
     .cta-btn:active { transform: scale(0.985); }
 
-    .cta-btn .cta-icon { width: 26px; height: 26px; fill: currentColor; flex-shrink: 0; }
+    .cta-btn .cta-icon { width: 27px; height: 27px; flex-shrink: 0; }
     .cta-btn .cta-texts { flex: 1; min-width: 0; }
-    .cta-btn .cta-label { font-size: 19px; font-weight: 800; letter-spacing: 0.01em; }
+    .cta-btn .cta-label { font-size: 19px; font-weight: 800; }
     .cta-btn .cta-sub { font-size: 12px; opacity: 0.85; margin-top: 1px; }
 
     .cta-chip {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
+      width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
+    .cta-chip svg.ico { width: 18px; height: 18px; }
 
-    .cta-chip svg { width: 18px; height: 18px; fill: currentColor; }
-
-    .cta-disarm {
-      background: var(--green);
-      color: var(--onGreen);
-      box-shadow: 0 10px 26px rgba(34,224,106,0.22);
-    }
-
+    .cta-disarm { background: var(--green); color: var(--onGreen); box-shadow: var(--glowGreen); }
     .cta-disarm .cta-chip { background: rgba(255,255,255,0.18); color: var(--onGreen); }
+    .cta-disarm .cta-sub { color: var(--onGreen); opacity: 0.75; }
 
     .cta-arm {
       background: var(--ctaArmBg);
       color: var(--stateRed);
       border: 1.5px solid var(--ctaArmStroke);
+      box-shadow: var(--glowRed);
     }
-
     .cta-arm .cta-chip { background: var(--chipBg); color: var(--stateRed); }
+    .cta-arm .cta-sub { color: var(--stateRed); opacity: 0.72; }
 
-    .cta-connect {
-      background: var(--card);
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-
+    .cta-connect { background: var(--surfaceElevated); color: var(--text); border: 1px solid var(--border); }
     .cta-connect .cta-chip { background: var(--chipBg); color: var(--text2); }
-    .cta-connect .cta-sub { color: var(--text2); }
+    .cta-connect .cta-sub { color: var(--text2); opacity: 1; }
 
     /* ============ Secondary tiles ============ */
     .quick-actions-row { display: flex; gap: 12px; margin-top: 12px; }
 
     .quick-btn {
-      flex: 1;
-      height: 56px;
-      border-radius: 18px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.15s ease;
-      font-family: inherit;
+      flex: 1; height: 56px; border-radius: 18px; font-size: 14px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      gap: 8px; transition: all 0.15s ease; font-family: inherit;
     }
-
-    .quick-btn svg { width: 18px; height: 18px; fill: currentColor; }
+    .quick-btn svg.ico { width: 18px; height: 18px; }
     .quick-btn:active { transform: scale(0.97); }
 
-    .btn-disconnect {
-      background: transparent;
-      color: var(--text2);
-      border: 1px solid var(--border);
-    }
-
+    .btn-disconnect { background: transparent; color: var(--text2); border: 1px solid var(--border); }
     .btn-panic {
-      background: var(--red);
-      color: #FFFFFF;
-      border: none;
+      background: var(--red); color: var(--onRed); border: none;
+      font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em;
+      box-shadow: var(--glowRed);
     }
 
-    /* Ticker */
-    .ticker {
-      margin-top: 18px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .ticker::before, .ticker::after {
-      content: "";
-      width: 24px;
-      height: 1px;
-      background: var(--border);
-      flex-shrink: 0;
-    }
-
+    .ticker { margin-top: 18px; display: flex; align-items: center; gap: 10px; }
+    .ticker::before, .ticker::after { content: ""; width: 24px; height: 1px; background: var(--border); flex-shrink: 0; }
     .reply-log {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      color: var(--text2);
-      text-align: center;
-      min-height: 18px;
-      flex: 1;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: var(--text2); text-align: center; min-height: 18px; flex: 1;
     }
 
     /* ============ Config cards ============ */
     .config-card {
-      background: var(--card);
+      background: var(--surfaceElevated);
       border: 1px solid var(--border);
       border-radius: 18px;
       padding: 16px;
@@ -547,65 +345,47 @@
     }
 
     .read-cfg-card {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 16px;
-      cursor: pointer;
-      transition: border-color 0.15s ease;
+      display: flex; align-items: center; gap: 14px; padding: 16px;
+      cursor: pointer; transition: border-color 0.15s ease;
     }
-
     .read-cfg-card:hover { border-color: var(--accentAmber); }
     .read-cfg-card:active { transform: scale(0.99); }
-
-    .read-cfg-card > svg { width: 22px; height: 22px; fill: var(--accentAmber); flex-shrink: 0; }
-
+    .read-cfg-card > svg.ico { width: 22px; height: 22px; color: var(--accentAmber); flex-shrink: 0; }
     .read-cfg-texts { flex: 1; min-width: 0; }
     .read-cfg-title { font-size: 15px; font-weight: 700; color: var(--text); }
     .read-cfg-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
-
-    .read-cfg-arrow { width: 18px; height: 18px; fill: var(--muted); flex-shrink: 0; }
+    .read-cfg-arrow { width: 18px; height: 18px; color: var(--muted); flex-shrink: 0; }
 
     .card-head { display: flex; align-items: center; gap: 12px; }
-
     .card-badge {
-      width: 34px;
-      height: 34px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      border: 1px solid currentColor;
+      width: 34px; height: 34px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; border: 1px solid currentColor;
     }
-
-    .card-badge svg { width: 17px; height: 17px; fill: currentColor; }
-
+    .card-badge svg.ico { width: 18px; height: 18px; }
     .badge-amber { color: var(--accentAmber); background: color-mix(in srgb, var(--brand) 10%, transparent); }
     .badge-teal  { color: var(--accentTeal);  background: color-mix(in srgb, var(--accentTeal) 10%, transparent); }
     .badge-green { color: var(--accentGreen); background: color-mix(in srgb, var(--accentGreen) 10%, transparent); }
     .badge-blue  { color: var(--accentBlue);  background: color-mix(in srgb, var(--accentBlue) 10%, transparent); }
+    .badge-violet{ color: var(--accentViolet);background: color-mix(in srgb, var(--accentViolet) 10%, transparent); }
 
     .card-title {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+      font-family: 'JetBrains Mono', monospace;
     }
-
     .card-title.amber { color: var(--accentAmber); }
     .card-title.teal { color: var(--accentTeal); }
     .card-title.green { color: var(--accentGreen); }
     .card-title.blue { color: var(--accentBlue); }
+    .card-title.violet { color: var(--accentViolet); }
 
     .card-status { font-size: 13px; color: var(--text2); margin-top: 10px; }
 
     .input-row { display: flex; gap: 8px; margin-top: 10px; align-items: stretch; }
 
     .text-input {
-      flex: 1;
-      min-width: 0;
-      background: var(--cardAlt);
+      flex: 1; min-width: 0;
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 12px;
@@ -614,200 +394,113 @@
       outline: none;
       font-family: inherit;
     }
-
     .text-input:focus { border-color: var(--accentAmber); }
     .text-input::placeholder { color: var(--muted); }
 
     .btn-small {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 0 18px;
-      border-radius: 12px;
-      font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
-      font-family: inherit;
-      min-width: 72px;
+      background: transparent; border: 1px solid var(--border); color: var(--text);
+      padding: 0 18px; border-radius: 12px; font-weight: 700; font-size: 13px;
+      cursor: pointer; font-family: inherit; min-width: 72px;
     }
-
     .btn-small:hover { border-color: var(--text2); }
 
     .btn-outline-red {
-      width: 100%;
-      background: transparent;
-      border: 1px solid var(--ctaArmStroke);
-      color: var(--stateRed);
-      padding: 12px;
-      border-radius: 12px;
-      font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
-      margin-top: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-family: inherit;
+      width: 100%; background: transparent; border: 1px solid var(--ctaArmStroke);
+      color: var(--stateRed); padding: 12px; border-radius: 12px; font-weight: 700;
+      font-size: 13px; cursor: pointer; margin-top: 10px;
+      display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit;
     }
-
-    .btn-outline-red svg { width: 16px; height: 16px; fill: currentColor; }
+    .btn-outline-red svg.ico { width: 16px; height: 16px; }
     .btn-outline-red:hover { background: color-mix(in srgb, var(--red) 8%, transparent); }
 
     .btn-group-row { display: flex; gap: 10px; margin-top: 10px; }
     .btn-group-row .btn-small { flex: 1; padding: 12px; min-width: 0; }
-
-    /* Appearance row */
-    .appearance-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    .btn-small.bt-active {
+      border-color: var(--accentBlue);
+      color: var(--accentBlue);
+      background: color-mix(in srgb, var(--accentBlue) 10%, transparent);
     }
 
+    /* Appearance row */
+    .appearance-row { display: flex; align-items: center; gap: 12px; }
     .appearance-texts { flex: 1; min-width: 0; }
     .appearance-val { font-size: 13px; color: var(--text2); margin-top: 2px; }
 
     .theme-switch {
-      position: relative;
-      width: 52px;
-      height: 32px;
-      border-radius: 999px;
-      border: 2px solid var(--brand);
-      background: var(--cardAlt);
-      cursor: pointer;
-      transition: background 0.2s ease;
-      flex-shrink: 0;
+      position: relative; width: 52px; height: 32px; border-radius: 999px;
+      border: 2px solid var(--brand); background: var(--surface);
+      cursor: pointer; transition: background 0.2s ease; flex-shrink: 0;
     }
-
     .theme-switch.on { background: var(--brand); }
-
     .theme-switch::after {
-      content: "";
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: var(--brand);
-      transition: all 0.2s ease;
+      content: ""; position: absolute; top: 3px; left: 3px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--brand); transition: all 0.2s ease;
     }
-
-    .theme-switch.on::after {
-      left: 23px;
-      background: var(--onBrand);
-    }
+    .theme-switch.on::after { left: 23px; background: var(--onBrand); }
 
     /* ============ Pairing ============ */
     .scan-qr-btn {
-      width: 100%;
-      height: 62px;
-      background: var(--brand);
-      color: var(--onBrand);
-      border: none;
-      border-radius: 20px;
-      font-size: 16px;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      cursor: pointer;
-      margin-top: 16px;
-      box-shadow: 0 10px 24px color-mix(in srgb, var(--brand) 25%, transparent);
-      font-family: inherit;
-      transition: transform 0.12s ease;
+      width: 100%; height: 62px; background: var(--brand); color: var(--onBrand);
+      border: none; border-radius: 20px; font-size: 16px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      cursor: pointer; margin-top: 16px; font-family: inherit;
+      box-shadow: var(--glowAmber); transition: transform 0.12s ease;
     }
-
     .scan-qr-btn:active { transform: scale(0.985); }
-    .scan-qr-btn svg { width: 22px; height: 22px; fill: currentColor; }
+    .scan-qr-btn svg.ico { width: 22px; height: 22px; }
 
     .pair-divider { height: 1px; background: var(--border); margin: 18px 0 14px 0; }
-
     .divider-text {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      color: var(--muted);
-      text-transform: uppercase;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
     }
 
-    .btn-save-key {
-      background: var(--green);
-      color: var(--onGreen);
-      border: none;
-      font-weight: 800;
+    .key-input-wrap { position: relative; margin-top: 10px; }
+    .key-copy {
+      position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+      width: 40px; height: 40px; border: none; background: transparent;
+      color: var(--text2); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; border-radius: 50%;
     }
+    .key-copy svg.ico { width: 18px; height: 18px; }
+    .key-copy:hover { color: var(--text); }
 
-    .btn-forget-key {
-      background: transparent;
-      border: 1px solid var(--ctaArmStroke);
-      color: var(--stateRed);
-      font-weight: 700;
-    }
+    .btn-save-key { background: var(--green); color: var(--onGreen); border: none; font-weight: 800; }
+    .btn-forget-key { background: transparent; border: 1px solid var(--ctaArmStroke); color: var(--stateRed); font-weight: 700; }
 
-    /* ============ Floating bottom nav ============ */
+    /* ============ Bottom nav ============ */
     .bottom-nav {
-      flex-shrink: 0;
-      margin: 0 12px 10px 12px;
-      height: 64px;
-      background: var(--surface);
+      flex-shrink: 0; margin: 0 12px 10px 12px; height: 64px;
+      background: var(--surfaceElevated);
       border: 1px solid var(--border);
       border-radius: 28px;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      z-index: 20;
-      user-select: none;
+      display: flex; justify-content: space-around; align-items: center;
+      z-index: 20; user-select: none;
     }
-
     .nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 3px;
-      cursor: pointer;
-      color: var(--muted);
-      transition: color 0.15s ease;
-      height: 100%;
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 3px; cursor: pointer; color: var(--muted);
+      transition: color 0.15s ease; height: 100%;
     }
-
     .nav-icon-container {
-      width: 56px;
-      height: 30px;
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 56px; height: 30px; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
       transition: all 0.2s ease;
     }
-
-    .nav-icon { width: 22px; height: 22px; fill: currentColor; }
-    .nav-label { font-size: 12px; font-weight: 600; letter-spacing: 0.02em; }
-
+    .nav-icon-container svg.ico { width: 22px; height: 22px; }
+    .nav-label { font-size: 12px; font-weight: 600; }
     .nav-item.active { color: var(--brandText); }
-
-    .nav-item.active .nav-icon-container {
-      background: var(--navIndicator);
-    }
-
+    .nav-item.active .nav-icon-container { background: var(--navIndicator); }
     .nav-item.active .nav-label { font-weight: 700; }
 
     /* ============ ARM modal ============ */
     .modal-overlay {
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: var(--scrim);
-      backdrop-filter: blur(4px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      z-index: 100;
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: var(--scrim); backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center;
+      padding: 24px; z-index: 100;
     }
-
     .modal-overlay.show { display: flex; animation: modalFade 0.15s ease-out; }
 
     @keyframes modalFade {
@@ -816,63 +509,30 @@
     }
 
     .modal-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      padding: 24px;
-      width: 100%;
+      background: var(--surfaceElevated); border: 1px solid var(--border);
+      border-radius: 24px; padding: 24px; width: 100%;
       box-shadow: 0 20px 40px rgba(0,0,0,0.5);
     }
-
     .modal-title { font-size: 19px; font-weight: 700; color: var(--text); }
-
-    .modal-desc {
-      font-size: 14px;
-      color: var(--text2);
-      margin-top: 8px;
-      line-height: 1.4;
-    }
-
+    .modal-desc { font-size: 14px; color: var(--text2); margin-top: 8px; line-height: 1.4; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
 
     .btn-modal-cancel {
-      background: transparent;
-      border: none;
-      color: var(--text2);
-      font-weight: 700;
-      font-size: 15px;
-      padding: 10px 16px;
-      cursor: pointer;
-      font-family: inherit;
+      background: transparent; border: none; color: var(--text2);
+      font-weight: 700; font-size: 15px; padding: 10px 16px; cursor: pointer; font-family: inherit;
     }
-
     .btn-modal-confirm {
-      background: var(--red);
-      border: none;
-      color: #FFFFFF;
-      font-weight: 700;
-      font-size: 15px;
-      padding: 10px 20px;
-      border-radius: 12px;
-      cursor: pointer;
-      font-family: inherit;
+      background: var(--red); border: none; color: var(--onRed);
+      font-weight: 700; font-size: 15px; padding: 10px 20px; border-radius: 12px;
+      cursor: pointer; font-family: inherit;
     }
 
-    /* Designer notes */
     .designer-notes {
-      margin-top: 24px;
-      max-width: 620px;
-      width: 100%;
-      background: #11151F;
-      border: 1px solid #2A3242;
-      border-radius: 14px;
-      padding: 16px;
-      font-size: 13px;
-      color: #9AA3B2;
-      line-height: 1.5;
+      margin-top: 24px; max-width: 620px; width: 100%;
+      background: #11151F; border: 1px solid #2A3242; border-radius: 14px;
+      padding: 16px; font-size: 13px; color: #93A4B2; line-height: 1.5;
     }
-
-    .designer-notes h4 { color: #F5B301; margin-bottom: 6px; font-size: 13px; }
+    .designer-notes h4 { color: #F7A915; margin-bottom: 6px; font-size: 13px; }
     .designer-notes ul { margin-left: 20px; }
   </style>
 </head>
@@ -881,8 +541,8 @@
   <!-- Inspector toolbar -->
   <div class="preview-toolbar" id="previewToolbar">
     <div class="preview-toolbar-title">
-      <span>⚡ VOTOL POD REMOTE 3.0 — UI/UX INSPECTOR</span>
-      <span style="color:#22E06A; font-weight:600;">LIVE PREVIEW</span>
+      <span>&#9889; VOTOL POD REMOTE 4.0 — CYBER-INDUSTRIAL INSPECTOR</span>
+      <span style="color:#40F0B6; font-weight:600;">LIVE PREVIEW</span>
     </div>
 
     <div class="toolbar-group">
@@ -907,8 +567,8 @@
 
     <div class="toolbar-group">
       <span class="tool-label">Theme:</span>
-      <button class="tool-btn active" id="btnThemeDark" onclick="setTheme('dark')">🌙 Dark</button>
-      <button class="tool-btn" id="btnThemeLight" onclick="setTheme('light')">☀️ Light</button>
+      <button class="tool-btn active" id="btnThemeDark" onclick="setTheme('dark')">&#127769; Dark</button>
+      <button class="tool-btn" id="btnThemeLight" onclick="setTheme('light')">&#9728;&#65039; Light</button>
     </div>
 
     <div class="toolbar-group">
@@ -920,7 +580,6 @@
   <!-- Phone mockup -->
   <div class="phone-wrapper" id="phoneWrapper" data-theme="dark">
 
-    <!-- Android status bar -->
     <div class="status-bar">
       <span>09:41</span>
       <div class="notch"></div>
@@ -934,17 +593,14 @@
     <div class="app-header">
       <div class="header-top">
         <div class="logo-badge">
-          <svg viewBox="0 0 24 24"><path d="M7,2v11h3v9l7,-12h-4l4,-8H7z"/></svg>
+          <svg class="ico" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg>
         </div>
         <div class="brand-block">
           <div class="brand-title">VOTOL POD</div>
           <div class="brand-sub">EV SECURITY CONTROLLER</div>
         </div>
         <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light / dark theme">
-          <svg id="themeToggleIcon" viewBox="0 0 24 24">
-            <path d="M12,12m-3.6,0a3.6,3.6 0 1,0 7.2,0a3.6,3.6 0 1,0 -7.2,0"/>
-            <path d="M12,2.6V5.4 M12,18.6V21.4 M2.6,12H5.4 M18.6,12H21.4 M5.28,5.28L7.25,7.25 M16.75,16.75L18.72,18.72 M18.72,5.28L16.75,7.25 M7.25,16.75L5.28,18.72" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
-          </svg>
+          <svg class="ico" id="themeToggleIcon" viewBox="0 0 24 24"><path d="M12 2.6V5.2M12 18.8V21.4M2.6 12H5.2M18.8 12H21.4M5.4 5.4 7.2 7.2M16.8 16.8 18.6 18.6M18.6 5.4 16.8 7.2M7.2 16.8 5.4 18.6"/><circle cx="12" cy="12" r="3.6"/></svg>
         </button>
         <span class="link-badge badge-linked" id="linkBadge">LINKED</span>
       </div>
@@ -960,10 +616,33 @@
 
         <div class="status-card armed" id="statusCard">
           <div class="hero-top">
-            <div class="hero-rings armed" id="heroRings">
-              <svg id="heroIcon" viewBox="0 0 24 24">
-                <path fill-rule="evenodd" d="M12,2A10,10 0 1,0 12.02,2Z M12,3.6A8.4,8.4 0 1,1 11.98,3.6Z"/>
-                <path d="M4.4,17.6L17.6,4.4l2.5,2.5L6.9,20.1L4.4,17.6z"/>
+            <div class="hero-dial" id="heroDial">
+              <svg class="dial-svg" viewBox="0 0 104 104">
+                <defs>
+                  <radialGradient id="dialGlow" cx="50%" cy="50%" r="50%">
+                    <stop offset="34%" stop-color="var(--dial)" stop-opacity="0.24"/>
+                    <stop offset="60%" stop-color="var(--dial)" stop-opacity="0.10"/>
+                    <stop offset="100%" stop-color="var(--dial)" stop-opacity="0"/>
+                  </radialGradient>
+                  <linearGradient id="dialArc" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="var(--dial)" stop-opacity="0.05"/>
+                    <stop offset="45%" stop-color="var(--dial)" stop-opacity="1"/>
+                    <stop offset="100%" stop-color="var(--dial)" stop-opacity="0.55"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="52" cy="52" r="50" fill="url(#dialGlow)"/>
+                <circle cx="52" cy="52" r="46" fill="none"
+                        stroke="var(--tick)" stroke-width="2" stroke-linecap="round"
+                        pathLength="240" stroke-dasharray="1 3"
+                        transform="rotate(-91 52 52)"/>
+                <circle cx="52" cy="52" r="40" fill="none"
+                        stroke="url(#dialArc)" stroke-width="9" stroke-linecap="round"
+                        pathLength="360" stroke-dasharray="240 360"
+                        transform="rotate(150 52 52)"/>
+                <circle cx="52" cy="52" r="31" fill="var(--surfaceElevated)" stroke="var(--tick)" stroke-width="1.5"/>
+              </svg>
+              <svg class="ico" id="heroIcon" viewBox="0 0 24 24" style="position:absolute; inset:0; margin:auto; width:34px; height:34px; color:var(--dial);">
+                <rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>
               </svg>
             </div>
             <div class="hero-info">
@@ -977,7 +656,7 @@
 
           <div class="hero-stats">
             <div class="stat-item stat-volt">
-              <svg viewBox="0 0 24 24"><path d="M7,2v11h3v9l7,-12h-4l4,-8H7z"/></svg>
+              <svg class="ico" viewBox="0 0 24 24"><path d="M17 7H3v10h14V7Z"/><path d="M21 10v4"/><path d="M6 10h6"/></svg>
               <div>
                 <div class="stat-label">BATTERY</div>
                 <div class="stat-val val-volt" id="voltText">72.4 V</div>
@@ -985,11 +664,7 @@
             </div>
             <div class="stat-vdiv"></div>
             <div class="stat-item stat-fob">
-              <svg viewBox="0 0 24 24">
-                <path d="M12,12m-2.2,0a2.2,2.2 0 1,0 4.4,0a2.2,2.2 0 1,0 -4.4,0"/>
-                <path d="M9.1,14.9A4.4,4.4 0 0,1 9.1,9.1 M14.9,9.1A4.4,4.4 0 0,1 14.9,14.9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>
-                <path d="M6.5,17.5A7.8,7.8 0 0,1 6.5,6.5 M17.5,6.5A7.8,7.8 0 0,1 17.5,17.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>
-              </svg>
+              <svg class="ico" viewBox="0 0 24 24"><path d="M8 8a5 5 0 0 1 8 0"/><path d="M5 5a9 9 0 0 1 14 0"/><rect x="9" y="10" width="6" height="10" rx="2"/><circle cx="12" cy="14" r="1"/></svg>
               <div>
                 <div class="stat-label">FOB</div>
                 <div class="stat-val val-fob-near" id="fobText">near</div>
@@ -999,38 +674,35 @@
         </div>
 
         <!-- Primary contextual action -->
-        <button class="cta-btn cta-disarm" id="ctaBtn" onclick="handleSecurityToggle()">
-          <svg class="cta-icon" id="ctaIcon" viewBox="0 0 24 24">
-            <path d="M18,8h-1V6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6h1.9c0,-1.71 1.39,-3.1 3.1,-3.1c1.71,0 3.1,1.39 3.1,3.1v2H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10C20,8.9 19.1,8 18,8zM18,20H6V10h12V20zM12,17c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2s-2,0.9 -2,2S10.9,17 12,17z"/>
-          </svg>
-          <div class="cta-texts">
-            <div class="cta-label" id="ctaLabel">DISARM</div>
-            <div class="cta-sub" id="ctaSub">tap to unlock the bike</div>
-          </div>
-          <div class="cta-chip" id="ctaChip">
-            <svg viewBox="0 0 24 24"><path d="M12,4L10.59,5.41 16.17,11H4v2h12.17l-5.58,5.59L12,20 20,12 12,4z"/></svg>
-          </div>
-        </button>
+        <div class="cta-wrap">
+          <button class="cta-btn cta-disarm" id="ctaBtn" onclick="handleSecurityToggle()">
+            <svg class="ico cta-icon" id="ctaIcon" viewBox="0 0 24 24">
+              <rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/>
+            </svg>
+            <div class="cta-texts">
+              <div class="cta-label" id="ctaLabel">DISARM</div>
+              <div class="cta-sub" id="ctaSub">tap to unlock the bike</div>
+            </div>
+            <div class="cta-chip" id="ctaChip">
+              <svg class="ico" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+          </button>
+        </div>
 
         <!-- Secondary: Disconnect + Panic -->
         <div class="quick-actions-row">
-          <button class="quick-btn btn-disconnect" id="btnDisconnect" onclick="toggleConnect()">
-            <svg viewBox="0 0 24 24">
-              <path d="M3.9,12c0,-1.71 1.39,-3.1 3.1,-3.1h4V7H7c-2.76,0 -5,2.24 -5,5s2.24,5 5,5h4v-1.9H7c-1.71,0 -3.1,-1.39 -3.1,-3.1zM8,13h8v-2H8V13zM17,7h-4v1.9h4c1.71,0 3.1,1.39 3.1,3.1s-1.39,3.1 -3.1,3.1h-4V17h4c2.76,0 5,-2.24 5,-5S19.76,7 17,7z"/>
-              <path d="M4.2,4.2L19.8,19.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/>
-            </svg>
+          <button class="quick-btn btn-disconnect" onclick="toggleConnect()">
+            <svg class="ico" viewBox="0 0 24 24"><path d="m8 8 8 8"/><path d="M10.5 13.5 13.5 10.5"/><path d="M7.05 16.95l-1.4 1.4a4 4 0 0 1-5.66-5.66l3.54-3.54a4 4 0 0 1 5.66 0"/><path d="m16.95 7.05 1.4-1.4a4 4 0 0 1 5.66 5.66l-3.54 3.54a4 4 0 0 1-5.66 0"/></svg>
             <span id="btnDisconnectLabel">Disconnect</span>
           </button>
-          <button class="quick-btn btn-panic" id="btnPanic" onclick="triggerPanic()">
-            <svg viewBox="0 0 24 24">
-              <path d="M7.58,4.08L6.15,2.65C3.75,4.48 2.17,7.3 2.03,10.5h2c0.15,-2.65 1.51,-4.97 3.55,-6.42zM20.37,10.5h2c-0.15,-3.2 -1.73,-6.02 -4.12,-7.85l-1.42,1.43C18.85,5.53 20.21,7.85 20.37,10.5zM18,11c0,-3.07 -1.64,-5.64 -4.5,-6.32V4c0,-0.83 -0.67,-1.5 -1.5,-1.5s-1.5,0.67 -1.5,1.5v0.68C7.63,5.36 6,7.92 6,11v5l-2,2v1h16v-1l-2,-2V11zM12,22c0.14,0 0.27,-0.01 0.4,-0.04c0.65,-0.14 1.18,-0.58 1.44,-1.18c0.1,-0.24 0.15,-0.5 0.15,-0.78h-4C10.99,21.1 11.88,22 12,22z"/>
-            </svg>
+          <button class="quick-btn btn-panic" onclick="triggerPanic()">
+            <svg class="ico" viewBox="0 0 24 24"><path d="M7 17h10"/><path d="M8 17v-5a4 4 0 0 1 8 0v5"/><path d="M12 2v3"/><path d="m4.9 4.9 2.1 2.1"/><path d="m19.1 4.9-2.1 2.1"/><path d="M3 12h3"/><path d="M18 12h3"/></svg>
             PANIC
           </button>
         </div>
 
         <div class="ticker">
-          <div class="reply-log" id="replyText">pod replied: OK ARMED</div>
+          <div class="reply-log" id="replyText">SYS &#9656; OK ARMED</div>
         </div>
 
       </div>
@@ -1038,20 +710,20 @@
       <!-- ================= TAB 2: CONFIG ================= -->
       <div class="view-tab" id="viewConfig">
 
-        <div class="config-card read-cfg-card" onclick="logReply('config loaded from pod')">
-          <svg viewBox="0 0 24 24"><path d="M17.65,6.35C16.2,4.9 14.21,4 12,4c-4.42,0 -7.99,3.58 -8,8s3.57,8 8,8c3.73,0 6.84,-2.55 7.73,-6h-2.08c-0.82,2.33 -3.04,4 -5.65,4 -3.31,0 -6,-2.69 -6,-6s2.69,-6 6,-6c1.66,0 3.14,0.69 4.22,1.78L13,11h7V4l-2.35,2.35z"/></svg>
+        <div class="config-card read-cfg-card" onclick="logReply('SYS &#9656; config loaded from pod')">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
           <div class="read-cfg-texts">
             <div class="read-cfg-title">Read Config from Pod</div>
             <div class="read-cfg-sub">sync current settings over BLE</div>
           </div>
-          <svg class="read-cfg-arrow" viewBox="0 0 24 24"><path d="M12,4L10.59,5.41 16.17,11H4v2h12.17l-5.58,5.59L12,20 20,12 12,4z"/></svg>
+          <svg class="ico read-cfg-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
         </div>
 
         <!-- Security PIN -->
         <div class="config-card">
           <div class="card-head">
             <div class="card-badge badge-amber">
-              <svg viewBox="0 0 24 24"><path d="M18,8h-1V6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6v2H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10C20,8.9 19.1,8 18,8zM9,6c0,-1.66 1.34,-3 3,-3s3,1.34 3,3v2H9V6zM12,17c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2s2,0.9 2,2S13.1,17 12,17z"/></svg>
+              <svg class="ico" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
             </div>
             <div class="card-title amber">SECURITY PIN</div>
           </div>
@@ -1066,7 +738,7 @@
         <div class="config-card">
           <div class="card-head">
             <div class="card-badge badge-teal">
-              <svg viewBox="0 0 24 24"><path d="M20.38,8.57l-1.23,1.85a8,8 0 0,1 -0.22,7.58H5.07A8,8 0 0,1 15.58,6.85l1.85,-1.23A10,10 0 0,0 3.35,19a2,2 0 0,0 1.72,1h13.85a2,2 0 0,0 1.74,-1a10,10 0 0,0 -0.27,-10.44zM10.59,15.41a2,2 0 0,0 2.83,0l5.66,-8.49l-8.49,5.66a2,2 0 0,0 0,2.83z"/></svg>
+              <svg class="ico" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="m12 14 4-4"/><path d="M7 18h10"/></svg>
             </div>
             <div class="card-title teal">SPEED CALIBRATION</div>
           </div>
@@ -1081,17 +753,13 @@
         <div class="config-card">
           <div class="card-head">
             <div class="card-badge badge-green">
-              <svg viewBox="0 0 24 24">
-                <path d="M12,12m-2.2,0a2.2,2.2 0 1,0 4.4,0a2.2,2.2 0 1,0 -4.4,0"/>
-                <path d="M9.1,14.9A4.4,4.4 0 0,1 9.1,9.1 M14.9,9.1A4.4,4.4 0 0,1 14.9,14.9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>
-                <path d="M6.5,17.5A7.8,7.8 0 0,1 6.5,6.5 M17.5,6.5A7.8,7.8 0 0,1 17.5,17.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>
-              </svg>
+              <svg class="ico" viewBox="0 0 24 24"><path d="M8 8a5 5 0 0 1 8 0"/><path d="M5 5a9 9 0 0 1 14 0"/><rect x="9" y="10" width="6" height="10" rx="2"/><circle cx="12" cy="14" r="1"/></svg>
             </div>
-            <div class="card-title green">PHYSICAL FOBS (ITAG)</div>
+            <div class="card-title green">PHYSICAL FOBS / ITAG</div>
           </div>
           <div class="card-status" id="cfgFobStatus">Registered fobs: 1</div>
           <button class="btn-outline-red" onclick="clearFobs()">
-            <svg viewBox="0 0 24 24"><path d="M6,19c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V7H6V19zM19,4h-3.5l-1,-1h-5l-1,1H5v2h14V4z"/></svg>
+            <svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m7 7 1 13h8l1-13"/><path d="M10 11v5M14 11v5"/></svg>
             Clear all registered fobs
           </button>
         </div>
@@ -1100,25 +768,25 @@
         <div class="config-card">
           <div class="card-head">
             <div class="card-badge badge-blue">
-              <svg viewBox="0 0 24 24"><path d="M17.71,7.71L12,2h-1v7.59L6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 11,14.41V22h1l5.71,-5.71 -4.3,-4.29 4.3,-4.29zM13,5.83l1.88,1.88L13,9.59V5.83zM14.88,16.29L13,18.17v-3.76L14.88,16.29z"/></svg>
+              <svg class="ico" viewBox="0 0 24 24"><path d="m7 7 10 10-5 4V3l5 4L7 17"/></svg>
             </div>
             <div class="card-title blue">VOTOL BRIDGE BT LINK</div>
           </div>
           <div class="card-status" id="cfgBtStatus">Bridge BT dial: OFF (CAN Bus mode)</div>
           <div class="btn-group-row">
-            <button class="btn-small" onclick="setBt(false)">Turn OFF (CAN)</button>
-            <button class="btn-small" onclick="setBt(true)">Turn ON (BT)</button>
+            <button class="btn-small bt-active" id="btOffBtn" onclick="setBt(false)">Turn OFF (CAN)</button>
+            <button class="btn-small" id="btOnBtn" onclick="setBt(true)">Turn ON (BT)</button>
           </div>
         </div>
 
         <!-- Appearance -->
         <div class="config-card">
           <div class="appearance-row">
-            <div class="card-badge badge-amber" id="appearanceBadge">
-              <svg id="appearanceIcon" viewBox="0 0 24 24"><path d="M14.2,3.1A9.4,9.4 0 1,0 20.9,14.3A7.6,7.6 0 0,1 14.2,3.1Z"/></svg>
+            <div class="card-badge badge-violet">
+              <svg class="ico" id="appearanceIcon" viewBox="0 0 24 24"><path d="M20.2 14.2A8.6 8.6 0 1 1 9.8 3.8a7 7 0 0 0 10.4 10.4Z"/></svg>
             </div>
             <div class="appearance-texts">
-              <div class="card-title amber">APPEARANCE</div>
+              <div class="card-title violet">APPEARANCE</div>
               <div class="appearance-val">Dark theme</div>
             </div>
             <button class="theme-switch on" id="darkThemeSwitch" onclick="toggleTheme()" title="Toggle dark theme"></button>
@@ -1132,28 +800,30 @@
 
         <div class="config-card" style="padding: 20px; border-radius: 24px;">
           <div class="card-head">
-            <div class="card-title amber" style="font-size:11px;">PAIR WITH DISPLAY POD</div>
+            <div class="card-title amber">PAIR WITH DISPLAY POD</div>
           </div>
           <div class="card-status" style="margin-top: 6px;">
             Wake the pod screen, open SYS → SET, then scan its QR code.
           </div>
 
           <button class="scan-qr-btn" onclick="simulateScan()">
-            <svg viewBox="0 0 24 24">
-              <path d="M12,12m-3.2,0a3.2,3.2 0 1,0 6.4,0a3.2,3.2 0 1,0 -6.4,0"/>
-              <path d="M9,2L7.17,4H4c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V6c0,-1.1 -0.9,-2 -2,-2h-3.17L15,2H9zM12,17c-2.76,0 -5,-2.24 -5,-5s2.24,-5 5,-5s5,2.24 5,5S14.76,17 12,17z"/>
-            </svg>
+            <svg class="ico" viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><path d="M9 9h6v6H9z"/></svg>
             Scan QR Code
           </button>
 
           <div class="pair-divider"></div>
           <div class="divider-text">OR ENTER KEY MANUALLY</div>
 
-          <input type="text" class="text-input" style="width:100%; font-family:'JetBrains Mono', monospace; margin-top:10px;" placeholder="32-hex key or PIN" value="a1b2c3d4e5f60718293a4b5c6d7e8f90" id="keyInput">
+          <div class="key-input-wrap">
+            <input type="text" class="text-input" style="width:100%; font-family:'JetBrains Mono', monospace; padding-right:52px;" placeholder="32-hex key or PIN" value="a1b2c3d4e5f60718293a4b5c6d7e8f90" id="keyInput">
+            <button class="key-copy" onclick="copyKey()" title="Copy key">
+              <svg class="ico" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
 
           <div class="btn-group-row">
-            <button class="btn-small btn-save-key" onclick="logReply('pairing key saved')">Save Key</button>
-            <button class="btn-small btn-forget-key" onclick="logReply('key removed')">Forget</button>
+            <button class="btn-small btn-save-key" onclick="logReply('SYS &#9656; pairing key saved')">Save Key</button>
+            <button class="btn-small btn-forget-key" onclick="logReply('SYS &#9656; key removed')">Forget</button>
           </div>
         </div>
 
@@ -1165,27 +835,21 @@
     <nav class="bottom-nav">
       <div class="nav-item active" id="navItemControl" onclick="switchTab('control')">
         <div class="nav-icon-container">
-          <svg class="nav-icon" viewBox="0 0 24 24">
-            <path d="M18,8h-1V6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6v2H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10C20,8.9 19.1,8 18,8z M9,6c0,-1.66 1.34,-3 3,-3s3,1.34 3,3v2H9V6z M12,17c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2s2,0.9 2,2S13.1,17 12,17z"/>
-          </svg>
+          <svg class="ico" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
         </div>
         <span class="nav-label">Control</span>
       </div>
 
       <div class="nav-item" id="navItemConfig" onclick="switchTab('config')">
         <div class="nav-icon-container">
-          <svg class="nav-icon" viewBox="0 0 24 24">
-            <path d="M19.14,12.94c0.04,-0.3 0.06,-0.61 0.06,-0.94c0,-0.32 -0.02,-0.64 -0.07,-0.94l2.03,-1.58c0.18,-0.14 0.23,-0.41 0.12,-0.61l-1.92,-3.32c-0.12,-0.22 -0.37,-0.29 -0.59,-0.22l-2.39,0.96c-0.5,-0.38 -1.03,-0.7 -1.62,-0.94L14.4,2.81c-0.04,-0.24 -0.24,-0.41 -0.48,-0.41h-3.84c-0.24,0 -0.43,0.17 -0.47,0.41L9.25,5.35C8.66,5.59 8.12,5.92 7.63,6.29L5.24,5.33c-0.22,-0.08 -0.47,0 -0.59,0.22L2.74,8.87c-0.12,0.21 -0.08,0.47 0.12,0.61l2.03,1.58C4.84,11.36 4.8,11.69 4.8,12s0.02,0.64 0.07,0.94l-2.03,1.58c-0.18,0.14 -0.23,0.41 -0.12,0.61l1.92,3.32c0.12,0.22 0.37,0.29 0.59,0.22l2.39,-0.96c0.5,0.38 1.03,0.7 1.62,0.94l0.36,2.54c0.05,0.24 0.24,0.41 0.48,0.41h3.84c0.24,0 0.44,-0.17 0.47,-0.41l0.36,-2.54c0.59,-0.24 1.13,-0.56 1.62,-0.94l2.39,0.96c0.22,0.08 0.47,0 0.59,-0.22l1.92,-3.32c0.12,-0.22 0.07,-0.47 -0.12,-0.61L19.14,12.94z M12,15.6c-1.98,0 -3.6,-1.62 -3.6,-3.6s1.62,-3.6 3.6,-3.6s3.6,1.62 3.6,3.6S13.98,15.6 12,15.6z"/>
-          </svg>
+          <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21h-4v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3v-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3h4v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
         </div>
         <span class="nav-label">Config</span>
       </div>
 
       <div class="nav-item" id="navItemPairing" onclick="switchTab('pairing')">
         <div class="nav-icon-container">
-          <svg class="nav-icon" viewBox="0 0 24 24">
-            <path d="M3,3h8v8H3V3z M5,5v4h4V5H5z M3,13h8v8H3V13z M5,15v4h4v-4H5z M13,3h8v8h-8V3z M15,5v4h4V5H15z M13,13h2v2h-2V13z M19,13h2v2h-2V13z M17,15h2v2h-2V15z M15,17h2v2h-2V17z M13,19h2v2h-2V19z M19,19h2v2h-2V19z"/>
-          </svg>
+          <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM18 14h3M14 18v3"/></svg>
         </div>
         <span class="nav-label">Pairing</span>
       </div>
@@ -1207,27 +871,27 @@
 
   <!-- Info notes -->
   <div class="designer-notes">
-    <h4>⚡ VOTOL Pod Remote 3.0 — what changed:</h4>
+    <h4>&#9889; VOTOL Pod Remote 4.0 — cyber-industrial redesign (from the design kit):</h4>
     <ul>
-      <li><strong>Redesign</strong>: amber-branded header (bolt logo + "EV SECURITY CONTROLLER" + LINKED/OFFLINE pill), state-tinted hero card with concentric-ring icon + SYSTEM STATUS, battery/fob stat row with vertical divider, full-width CTA with icon + label/sub + arrow chip, icon-badged config cards (amber PIN / teal speed / green fobs / blue BT), big amber Scan-QR pill, floating pill bottom nav.</li>
-      <li><strong>Light/Dark theme switcher</strong>: header sun/moon button, or Config → Appearance switch. URL: <code>?theme=light</code>.</li>
+      <li><strong>Tokens</strong>: obsidian bg <code>#070B0F</code>, surfaces <code>#0D141A/#121B22</code>, jade <code>#40F0B6</code>, amber <code>#F7A915</code>, red <code>#FF4D57</code>, cyan <code>#59E6FF</code>, blue/violet accents; radius 12/18/24/32/999; kit stroke icons (currentColor, 1.8).</li>
+      <li><strong>Hero dial</strong>: 60-tick ring + 240&deg; gradient sweep arc + radial glow + center disc; jade when disarmed, red when armed, slate offline.</li>
+      <li><strong>Glows</strong> on the active CTA (green DISARM / red ARM) and the amber Scan pill.</li>
+      <li><strong>Light/dark switcher</strong> kept: header sun/moon, Config &rarr; Appearance, URL <code>?theme=light</code>.</li>
       <li><strong>URL states</strong>: <code>?state=armed|disarmed|offline&tab=control|config|pairing&theme=dark|light&frame=raw&modal=arm</code>.</li>
     </ul>
   </div>
 
   <script>
-    /* SVG icon path bundles (same paths as the Android vectors) */
+    /* kit icon inner markup (stroke attrs come from CSS class .ico) */
     const ICONS = {
-      bolt: '<path d="M7,2v11h3v9l7,-12h-4l4,-8H7z"/>',
-      lock: '<path d="M18,8h-1V6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6v2H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10C20,8.9 19.1,8 18,8zM9,6c0,-1.66 1.34,-3 3,-3s3,1.34 3,3v2H9V6zM12,17c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2s2,0.9 2,2S13.1,17 12,17z"/>',
-      lockOpen: '<path d="M18,8h-1V6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6h1.9c0,-1.71 1.39,-3.1 3.1,-3.1c1.71,0 3.1,1.39 3.1,3.1v2H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10C20,8.9 19.1,8 18,8zM18,20H6V10h12V20zM12,17c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2s-2,0.9 -2,2S10.9,17 12,17z"/>',
-      noEntry: '<path fill-rule="evenodd" d="M12,2A10,10 0 1,0 12.02,2Z M12,3.6A8.4,8.4 0 1,1 11.98,3.6Z"/><path d="M4.4,17.6L17.6,4.4l2.5,2.5L6.9,20.1L4.4,17.6z"/>',
-      linkOff: '<path d="M3.9,12c0,-1.71 1.39,-3.1 3.1,-3.1h4V7H7c-2.76,0 -5,2.24 -5,5s2.24,5 5,5h4v-1.9H7c-1.71,0 -3.1,-1.39 -3.1,-3.1zM8,13h8v-2H8V13zM17,7h-4v1.9h4c1.71,0 3.1,1.39 3.1,3.1s-1.39,3.1 -3.1,3.1h-4V17h4c2.76,0 5,-2.24 5,-5S19.76,7 17,7z"/><path d="M4.2,4.2L19.8,19.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/>',
-      radar: '<path d="M12,12m-2.2,0a2.2,2.2 0 1,0 4.4,0a2.2,2.2 0 1,0 -4.4,0"/><path d="M9.1,14.9A4.4,4.4 0 0,1 9.1,9.1 M14.9,9.1A4.4,4.4 0 0,1 14.9,14.9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/><path d="M6.5,17.5A7.8,7.8 0 0,1 6.5,6.5 M17.5,6.5A7.8,7.8 0 0,1 17.5,17.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>',
-      help: '<path d="M11,18h2v-2h-2V18zM12,2C6.48,2 2,6.48 2,12s4.48,10 10,10s10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.41,0 -8,-3.59 -8,-8s3.59,-8 8,-8s8,3.59 8,8S16.41,20 12,20zM12,6c-2.21,0 -4,1.79 -4,4h2c0,-1.1 0.9,-2 2,-2s2,0.9 2,2c0,2 -3,1.75 -3,5h2c0,-2.25 3,-2.5 3,-5C16,7.79 14.21,6 12,6z"/>',
-      arrow: '<path d="M12,4L10.59,5.41 16.17,11H4v2h12.17l-5.58,5.59L12,20 20,12 12,4z"/>',
-      sun: '<path d="M12,12m-3.6,0a3.6,3.6 0 1,0 7.2,0a3.6,3.6 0 1,0 -7.2,0"/><path d="M12,2.6V5.4 M12,18.6V21.4 M2.6,12H5.4 M18.6,12H21.4 M5.28,5.28L7.25,7.25 M16.75,16.75L18.72,18.72 M18.72,5.28L16.75,7.25 M7.25,16.75L5.28,18.72" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>',
-      moon: '<path d="M14.2,3.1A9.4,9.4 0 1,0 20.9,14.3A7.6,7.6 0 0,1 14.2,3.1Z"/>'
+      bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/>',
+      lock: '<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+      unlock: '<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/>',
+      disconnect: '<path d="m8 8 8 8"/><path d="M10.5 13.5 13.5 10.5"/><path d="M7.05 16.95l-1.4 1.4a4 4 0 0 1-5.66-5.66l3.54-3.54a4 4 0 0 1 5.66 0"/><path d="m16.95 7.05 1.4-1.4a4 4 0 0 1 5.66 5.66l-3.54 3.54a4 4 0 0 1-5.66 0"/>',
+      link: '<path d="M10.5 13.5 13.5 10.5"/><path d="M7.05 16.95l-1.4 1.4a4 4 0 0 1-5.66-5.66l3.54-3.54a4 4 0 0 1 5.66 0"/><path d="m16.95 7.05 1.4-1.4a4 4 0 0 1 5.66 5.66l-3.54 3.54a4 4 0 0 1-5.66 0"/>',
+      shield: '<path d="M12 3 5 6v5c0 5 3.5 8 7 10 3.5-2 7-5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/>',
+      sun: '<path d="M12 2.6V5.2M12 18.8V21.4M2.6 12H5.2M18.8 12H21.4M5.4 5.4 7.2 7.2M16.8 16.8 18.6 18.6M18.6 5.4 16.8 7.2M7.2 16.8 5.4 18.6"/><circle cx="12" cy="12" r="3.6"/>',
+      moon: '<path d="M20.2 14.2A8.6 8.6 0 1 1 9.8 3.8a7 7 0 0 0 10.4 10.4Z"/>'
     };
 
     // State model — declarations MUST stay above every function (headless-safe)
@@ -1248,9 +912,23 @@
       $('darkThemeSwitch').classList.toggle('on', theme === 'dark');
       $('themeToggleIcon').innerHTML = theme === 'dark' ? ICONS.sun : ICONS.moon;
       $('appearanceIcon').innerHTML = theme === 'dark' ? ICONS.moon : ICONS.sun;
+      applyDial();
     }
 
     function toggleTheme() { setTheme(currentTheme === 'dark' ? 'light' : 'dark'); }
+
+    /* ------------------------------ dial ------------------------------ */
+    function getCss(v) { return getComputedStyle($('phoneWrapper')).getPropertyValue(v).trim(); }
+
+    function dialColor() {
+      if (currentState === 'ARMED') return getCss('--stateRed');
+      if (currentState === 'DISARMED') return getCss('--jade');
+      return getCss('--statGray');
+    }
+
+    function applyDial() {
+      $('phoneWrapper').style.setProperty('--dial', dialColor());
+    }
 
     /* ------------------------------ state ------------------------------ */
     function setState(state) {
@@ -1274,8 +952,7 @@
         $('btnDisconnectLabel').textContent = 'Connect';
 
         $('statusCard').className = 'status-card offline';
-        $('heroRings').className = 'hero-rings offline';
-        $('heroIcon').innerHTML = ICONS.linkOff;
+        $('heroIcon').innerHTML = ICONS.disconnect;
         $('stateText').textContent = 'OFFLINE';
         $('stateText').className = 'state-text state-offline';
         $('subText').textContent = 'not connected';
@@ -1284,10 +961,10 @@
         $('fobText').className = 'stat-val val-fob-none';
 
         ctaBtn.className = 'cta-btn cta-connect';
-        ctaIcon.innerHTML = ICONS.radar;
+        ctaIcon.innerHTML = ICONS.link;
         ctaLabel.textContent = 'Connect to Control';
         ctaSub.textContent = 'link with the display pod';
-        $('replyText').textContent = 'tap connect to scan for the pod';
+        $('replyText').textContent = 'SYS \u25B8 tap connect to scan for the pod';
       } else if (state === 'ARMED') {
         isConnected = true;
         linkBadge.textContent = 'LINKED';
@@ -1295,8 +972,7 @@
         $('btnDisconnectLabel').textContent = 'Disconnect';
 
         $('statusCard').className = 'status-card armed';
-        $('heroRings').className = 'hero-rings armed';
-        $('heroIcon').innerHTML = ICONS.noEntry;
+        $('heroIcon').innerHTML = ICONS.lock;
         $('stateText').textContent = 'ARMED';
         $('stateText').className = 'state-text state-armed';
         $('subText').textContent = 'alarm active — bike is locked';
@@ -1304,10 +980,10 @@
         updateFobDisplay();
 
         ctaBtn.className = 'cta-btn cta-disarm';
-        ctaIcon.innerHTML = ICONS.lockOpen;
+        ctaIcon.innerHTML = ICONS.unlock;
         ctaLabel.textContent = 'DISARM';
         ctaSub.textContent = 'tap to unlock the bike';
-        $('replyText').textContent = 'pod replied: OK ARMED';
+        $('replyText').textContent = 'SYS \u25B8 OK ARMED';
       } else if (state === 'DISARMED') {
         isConnected = true;
         linkBadge.textContent = 'LINKED';
@@ -1315,8 +991,7 @@
         $('btnDisconnectLabel').textContent = 'Disconnect';
 
         $('statusCard').className = 'status-card disarmed';
-        $('heroRings').className = 'hero-rings disarmed';
-        $('heroIcon').innerHTML = ICONS.lockOpen;
+        $('heroIcon').innerHTML = ICONS.unlock;
         $('stateText').textContent = 'DISARMED';
         $('stateText').className = 'state-text state-disarmed';
         $('subText').textContent = 'keyless active — ready to ride';
@@ -1327,8 +1002,10 @@
         ctaIcon.innerHTML = ICONS.lock;
         ctaLabel.textContent = 'ARM';
         ctaSub.textContent = 'tap to lock & arm the bike';
-        $('replyText').textContent = 'pod replied: OK DISARM';
+        $('replyText').textContent = 'SYS \u25B8 OK DISARM';
       }
+
+      applyDial();
     }
 
     function setFob(near) {
@@ -1362,14 +1039,8 @@
 
     function closeArmModal() { $('armModal').classList.remove('show'); }
     function confirmArm() { closeArmModal(); setState('ARMED'); }
-
-    function toggleConnect() {
-      setState(isConnected ? 'OFFLINE' : 'ARMED');
-    }
-
-    function triggerPanic() {
-      $('replyText').textContent = 'pod replied: OK PANIC (chirping)';
-    }
+    function toggleConnect() { setState(isConnected ? 'OFFLINE' : 'ARMED'); }
+    function triggerPanic() { $('replyText').textContent = 'SYS \u25B8 OK PANIC (chirping)'; }
 
     function switchTab(tab) {
       activeTab = tab;
@@ -1393,35 +1064,44 @@
 
     function toggleFrame() { $('phoneWrapper').classList.toggle('raw-viewport'); }
 
-    function logReply(msg) { $('replyText').textContent = msg; }
+    function logReply(msg) { $('replyText').innerHTML = msg; }
 
     function savePin() {
       const pin = $('newPinInput').value;
       if (pin) {
         $('cfgPinStatus').textContent = `Current PIN: ${pin}`;
         $('newPinInput').value = '';
-        logReply('PIN updated to ' + pin);
+        logReply('SYS &#9656; PIN updated');
       }
     }
 
     function saveWheel() {
       const val = $('wheelInput').value;
       $('cfgWheelStatus').textContent = `Wheel circumference: ${val} m`;
-      logReply('Wheel circumference updated to ' + val);
+      logReply('SYS &#9656; wheel circumference \u2192 ' + val + ' m');
     }
 
     function clearFobs() {
       $('cfgFobStatus').textContent = 'Registered fobs: 0';
-      logReply('all fobs cleared');
+      logReply('SYS &#9656; all fobs cleared');
     }
 
     function setBt(on) {
       $('cfgBtStatus').textContent = `Bridge BT dial: ${on ? 'ON (Bluetooth)' : 'OFF (CAN Bus mode)'}`;
-      logReply(`BT dial turned ${on ? 'ON' : 'OFF'}`);
+      $('btOnBtn').classList.toggle('bt-active', on);
+      $('btOffBtn').classList.toggle('bt-active', !on);
+      logReply(`SYS &#9656; BT dial ${on ? 'ON' : 'OFF'}`);
+    }
+
+    function copyKey() {
+      const k = $('keyInput').value.trim();
+      if (!k) return;
+      if (navigator.clipboard) navigator.clipboard.writeText(k).catch(() => {});
+      logReply('SYS &#9656; key copied to clipboard');
     }
 
     function simulateScan() {
-      logReply('paired via QR scan: a1b2c3d4e5f60718293a4b5c6d7e8f90');
+      logReply('SYS &#9656; paired via QR: a1b2c3d4e5f60718293a4b5c6d7e8f90');
     }
 
     // URL-param initialization
@@ -1436,7 +1116,7 @@
 
       if (paramFrame === 'raw') {
         document.body.style.padding = '0';
-        document.body.style.background = '#0A0F14';
+        document.body.style.background = '#070B0F';
         document.body.style.justifyContent = 'flex-start';
         const tb = $('previewToolbar');
         if (tb) tb.style.display = 'none';

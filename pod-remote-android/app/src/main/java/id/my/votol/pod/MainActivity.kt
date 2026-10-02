@@ -49,7 +49,7 @@ import java.util.UUID
  *  2. Config: Manage PIN, wheel circumference, physical fobs, bridge BT dial, dark theme.
  *  3. Pairing: QR scanner (SYS → SET), manual key entry, forget pod.
  *
- * v3.0: full UI/UX redesign (amber brand, state-tinted hero, arrow-chip CTA,
+ * v4.0: cyber-industrial redesign (design-kit tokens+icons) (amber brand, state-tinted hero, arrow-chip CTA,
  * icon-badged config cards) + light/dark theme switcher (header button + Config switch).
  */
 class MainActivity : AppCompatActivity() {
@@ -90,12 +90,13 @@ class MainActivity : AppCompatActivity() {
     // Views: Control Tab
     private lateinit var viewControl: View
     private lateinit var heroCard: com.google.android.material.card.MaterialCardView
-    private lateinit var heroRings: FrameLayout
+    private lateinit var heroDial: HeroDialView
     private lateinit var heroIcon: ImageView
     private lateinit var stateText: TextView
     private lateinit var subText: TextView
     private lateinit var voltText: TextView
     private lateinit var fobText: TextView
+    private lateinit var ctaGlow: View
     private lateinit var ctaBtn: View
     private lateinit var ctaIcon: ImageView
     private lateinit var ctaLabel: TextView
@@ -125,6 +126,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var viewPairing: View
     private lateinit var scanBtn: View
     private lateinit var keyInput: EditText
+    private lateinit var keyCopyBtn: ImageView
     private lateinit var saveKeyBtn: com.google.android.material.button.MaterialButton
     private lateinit var forgetKeyBtn: com.google.android.material.button.MaterialButton
 
@@ -185,12 +187,13 @@ class MainActivity : AppCompatActivity() {
 
         viewControl = findViewById(R.id.viewControl)
         heroCard = findViewById(R.id.heroCard)
-        heroRings = findViewById(R.id.heroRings)
+        heroDial = findViewById(R.id.heroDial)
         heroIcon = findViewById(R.id.heroIcon)
         stateText = findViewById(R.id.stateText)
         subText = findViewById(R.id.subText)
         voltText = findViewById(R.id.voltText)
         fobText = findViewById(R.id.fobText)
+        ctaGlow = findViewById(R.id.ctaGlow)
         ctaBtn = findViewById(R.id.ctaBtn)
         ctaIcon = findViewById(R.id.ctaIcon)
         ctaLabel = findViewById(R.id.ctaLabel)
@@ -218,6 +221,7 @@ class MainActivity : AppCompatActivity() {
         viewPairing = findViewById(R.id.viewPairing)
         scanBtn = findViewById(R.id.scanBtn)
         keyInput = findViewById(R.id.keyInput)
+        keyCopyBtn = findViewById(R.id.keyCopyBtn)
         saveKeyBtn = findViewById(R.id.saveKeyBtn)
         forgetKeyBtn = findViewById(R.id.forgetKeyBtn)
     }
@@ -274,6 +278,13 @@ class MainActivity : AppCompatActivity() {
 
         // Pairing Tab
         scanBtn.setOnClickListener { launchQrScan() }
+        keyCopyBtn.setOnClickListener {
+            val k = keyInput.text.toString().trim()
+            if (k.isEmpty()) { toast("Nothing to copy"); return@setOnClickListener }
+            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("VOTOL pod key", k))
+            toast("Key copied to clipboard")
+        }
         saveKeyBtn.setOnClickListener { saveKey() }
         forgetKeyBtn.setOnClickListener {
             AlertDialog.Builder(this)
@@ -676,6 +687,17 @@ class MainActivity : AppCompatActivity() {
         cfgWheelStatus.text = "Wheel circumference: $podWheel m"
         cfgFobStatus.text = "Registered fobs: $podFobCount"
         cfgBtStatus.text = "Bridge BT dial: ${if (podBtOn) "ON (Bluetooth)" else "OFF (CAN Bus mode)"}"
+
+        // highlight the active BT segment (blue tint fill + colored text)
+        val activeFill = ColorStateList.valueOf(col(R.color.badgeBlueFill))
+        btOnBtn.backgroundTintList = if (podBtOn) activeFill else null
+        btOnBtn.setTextColor(col(if (podBtOn) R.color.accentBlue else R.color.textPrimary))
+        btOnBtn.strokeColor = ColorStateList.valueOf(
+            col(if (podBtOn) R.color.accentBlue else R.color.border))
+        btOffBtn.backgroundTintList = if (!podBtOn) activeFill else null
+        btOffBtn.setTextColor(col(if (!podBtOn) R.color.accentBlue else R.color.textPrimary))
+        btOffBtn.strokeColor = ColorStateList.valueOf(
+            col(if (!podBtOn) R.color.accentBlue else R.color.border))
     }
 
     private fun col(res: Int) = ContextCompat.getColor(this, res)
@@ -695,7 +717,7 @@ class MainActivity : AppCompatActivity() {
                 scanning -> {
                     linkBadge.text = "SEARCHING"
                     linkBadge.setBackgroundResource(R.drawable.bg_pill_warn)
-                    linkBadge.setTextColor(col(R.color.stateWarn))
+                    linkBadge.setTextColor(col(R.color.brandText))
                 }
                 else -> {
                     linkBadge.text = "OFFLINE"
@@ -715,8 +737,9 @@ class MainActivity : AppCompatActivity() {
             // Hero state + primary CTA
             when {
                 !isConnected -> {
-                    heroRings.setBackgroundResource(R.drawable.rings_offline)
-                    heroIcon.setImageResource(R.drawable.ic_link_off)
+                    heroDial.setDialColors(
+                        col(R.color.statGray), col(R.color.border), col(R.color.surfaceElevated))
+                    heroIcon.setImageResource(R.drawable.ic_disconnect)
                     tint(heroIcon, R.color.statGray)
                     stateText.text = "OFFLINE"
                     stateText.setTextColor(col(R.color.statGray))
@@ -725,8 +748,9 @@ class MainActivity : AppCompatActivity() {
                     voltText.text = "--.- V"
                     fobText.text = "--"
 
+                    ctaGlow.setBackgroundResource(android.R.color.transparent)
                     ctaBtn.setBackgroundResource(R.drawable.bg_cta_connect)
-                    ctaIcon.setImageResource(R.drawable.ic_radar)
+                    ctaIcon.setImageResource(R.drawable.ic_link)
                     tint(ctaIcon, R.color.textSecondary)
                     ctaLabel.text = "Connect to Control"
                     ctaLabel.setTextColor(col(R.color.textPrimary))
@@ -735,8 +759,9 @@ class MainActivity : AppCompatActivity() {
                     tint(ctaArrow, R.color.textSecondary)
                 }
                 armed == true -> {
-                    heroRings.setBackgroundResource(R.drawable.rings_armed)
-                    heroIcon.setImageResource(R.drawable.ic_no_entry)
+                    heroDial.setDialColors(
+                        col(R.color.stateRed), col(R.color.border), col(R.color.surfaceElevated))
+                    heroIcon.setImageResource(R.drawable.ic_lock)
                     tint(heroIcon, R.color.stateRed)
                     stateText.text = "ARMED"
                     stateText.setTextColor(col(R.color.stateRed))
@@ -747,8 +772,9 @@ class MainActivity : AppCompatActivity() {
                     fobText.setTextColor(
                         col(if (fobNear == true) R.color.stateGreen else R.color.stateRed))
 
+                    ctaGlow.setBackgroundResource(R.drawable.glow_green)
                     ctaBtn.setBackgroundResource(R.drawable.bg_cta_disarm)
-                    ctaIcon.setImageResource(R.drawable.ic_lock_open)
+                    ctaIcon.setImageResource(R.drawable.ic_unlock)
                     tint(ctaIcon, R.color.onGreen)
                     ctaLabel.text = "DISARM"
                     ctaLabel.setTextColor(col(R.color.onGreen))
@@ -757,8 +783,9 @@ class MainActivity : AppCompatActivity() {
                     tint(ctaArrow, R.color.onGreen)
                 }
                 armed == false -> {
-                    heroRings.setBackgroundResource(R.drawable.rings_disarmed)
-                    heroIcon.setImageResource(R.drawable.ic_lock_open)
+                    heroDial.setDialColors(
+                        col(R.color.jade), col(R.color.border), col(R.color.surfaceElevated))
+                    heroIcon.setImageResource(R.drawable.ic_unlock)
                     tint(heroIcon, R.color.stateGreen)
                     stateText.text = "DISARMED"
                     stateText.setTextColor(col(R.color.stateGreen))
@@ -769,6 +796,7 @@ class MainActivity : AppCompatActivity() {
                     fobText.setTextColor(
                         col(if (fobNear == true) R.color.stateGreen else R.color.statGray))
 
+                    ctaGlow.setBackgroundResource(R.drawable.glow_red)
                     ctaBtn.setBackgroundResource(R.drawable.bg_cta_arm)
                     ctaIcon.setImageResource(R.drawable.ic_lock)
                     tint(ctaIcon, R.color.stateRed)
@@ -780,8 +808,9 @@ class MainActivity : AppCompatActivity() {
                 }
                 else -> {
                     // linked but no status frame yet
-                    heroRings.setBackgroundResource(R.drawable.rings_offline)
-                    heroIcon.setImageResource(R.drawable.ic_help)
+                    heroDial.setDialColors(
+                        col(R.color.statGray), col(R.color.border), col(R.color.surfaceElevated))
+                    heroIcon.setImageResource(R.drawable.ic_shield)
                     tint(heroIcon, R.color.textSecondary)
                     stateText.text = "LINKED"
                     stateText.setTextColor(col(R.color.textPrimary))
@@ -790,6 +819,7 @@ class MainActivity : AppCompatActivity() {
                     voltText.text = voltage
                     fobText.text = "--"
 
+                    ctaGlow.setBackgroundResource(android.R.color.transparent)
                     ctaBtn.setBackgroundResource(R.drawable.bg_cta_connect)
                     ctaIcon.setImageResource(R.drawable.ic_lock)
                     tint(ctaIcon, R.color.textSecondary)

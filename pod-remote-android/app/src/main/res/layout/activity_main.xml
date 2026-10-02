@@ -12,7 +12,7 @@
         android:orientation="vertical"
         android:layout_marginBottom="92dp">
 
-        <!-- ============ App Header: logo + wordmark + theme toggle + link pill ============ -->
+        <!-- ============ App Header: bolt logo + wordmark + theme toggle + link pill ============ -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -33,7 +33,7 @@
                     android:layout_height="20dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_bolt"
-                    app:tint="#1A1205"
+                    app:tint="#241A02"
                     android:contentDescription="@string/app_name" />
             </FrameLayout>
 
@@ -61,7 +61,8 @@
                     android:textColor="@color/textMuted"
                     android:textSize="9sp"
                     android:textStyle="bold"
-                    android:letterSpacing="0.18" />
+                    android:fontFamily="monospace"
+                    android:letterSpacing="0.14" />
             </LinearLayout>
 
             <ImageButton
@@ -87,7 +88,8 @@
                 android:textColor="@color/statGray"
                 android:textSize="10sp"
                 android:textStyle="bold"
-                android:letterSpacing="0.1" />
+                android:fontFamily="monospace"
+                android:letterSpacing="0.08" />
         </LinearLayout>
 
         <!-- Page title + subtitle (per tab) -->
@@ -151,7 +153,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:padding="20dp">
+                            android:padding="18dp">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -159,18 +161,22 @@
                                 android:orientation="horizontal"
                                 android:gravity="center_vertical">
 
+                                <!-- tick-ring + gradient arc dial with centered icon -->
                                 <FrameLayout
-                                    android:id="@+id/heroRings"
-                                    android:layout_width="64dp"
-                                    android:layout_height="64dp"
-                                    android:background="@drawable/rings_offline">
+                                    android:layout_width="104dp"
+                                    android:layout_height="104dp">
+
+                                    <id.my.votol.pod.HeroDialView
+                                        android:id="@+id/heroDial"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="match_parent" />
 
                                     <ImageView
                                         android:id="@+id/heroIcon"
-                                        android:layout_width="30dp"
-                                        android:layout_height="30dp"
+                                        android:layout_width="34dp"
+                                        android:layout_height="34dp"
                                         android:layout_gravity="center"
-                                        android:src="@drawable/ic_link_off"
+                                        android:src="@drawable/ic_disconnect"
                                         app:tint="@color/statGray"
                                         android:contentDescription="alarm state" />
                                 </FrameLayout>
@@ -179,7 +185,7 @@
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:layout_marginStart="16dp"
+                                    android:layout_marginStart="18dp"
                                     android:orientation="vertical">
 
                                     <TextView
@@ -189,13 +195,14 @@
                                         android:textColor="@color/textSecondary"
                                         android:textSize="9sp"
                                         android:textStyle="bold"
-                                        android:letterSpacing="0.2" />
+                                        android:fontFamily="monospace"
+                                        android:letterSpacing="0.18" />
 
                                     <TextView
                                         android:id="@+id/stateText"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:layout_marginTop="2dp"
+                                        android:layout_marginTop="3dp"
                                         android:text="OFFLINE"
                                         android:textColor="@color/statGray"
                                         android:textSize="28sp"
@@ -205,7 +212,7 @@
                                         android:id="@+id/subText"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:layout_marginTop="2dp"
+                                        android:layout_marginTop="3dp"
                                         android:text="not connected"
                                         android:textColor="@color/textSecondary"
                                         android:textSize="13sp" />
@@ -233,9 +240,9 @@
                                     android:gravity="center_vertical">
 
                                     <ImageView
-                                        android:layout_width="18dp"
-                                        android:layout_height="18dp"
-                                        android:src="@drawable/ic_bolt"
+                                        android:layout_width="19dp"
+                                        android:layout_height="19dp"
+                                        android:src="@drawable/ic_battery"
                                         app:tint="@color/statVolt"
                                         android:contentDescription="battery" />
 
@@ -252,23 +259,26 @@
                                             android:textColor="@color/textSecondary"
                                             android:textSize="9sp"
                                             android:textStyle="bold"
-                                            android:letterSpacing="0.15" />
+                                            android:fontFamily="monospace"
+                                            android:letterSpacing="0.14" />
 
                                         <TextView
                                             android:id="@+id/voltText"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
+                                            android:layout_marginTop="1dp"
                                             android:text="--.- V"
                                             android:textColor="@color/statVolt"
                                             android:textSize="16sp"
-                                            android:textStyle="bold" />
+                                            android:textStyle="bold"
+                                            android:fontFamily="monospace" />
                                     </LinearLayout>
                                 </LinearLayout>
 
                                 <View
                                     android:layout_width="1dp"
-                                    android:layout_height="32dp"
-                                    android:layout_marginEnd="16dp"
+                                    android:layout_height="34dp"
+                                    android:layout_marginEnd="18dp"
                                     android:background="@color/border" />
 
                                 <LinearLayout
@@ -279,10 +289,10 @@
                                     android:gravity="center_vertical">
 
                                     <ImageView
-                                        android:layout_width="18dp"
-                                        android:layout_height="18dp"
-                                        android:src="@drawable/ic_radar"
-                                        app:tint="@color/accentGreen"
+                                        android:layout_width="19dp"
+                                        android:layout_height="19dp"
+                                        android:src="@drawable/ic_fob"
+                                        app:tint="@color/stateGreen"
                                         android:contentDescription="fob" />
 
                                     <LinearLayout
@@ -298,91 +308,106 @@
                                             android:textColor="@color/textSecondary"
                                             android:textSize="9sp"
                                             android:textStyle="bold"
-                                            android:letterSpacing="0.15" />
+                                            android:fontFamily="monospace"
+                                            android:letterSpacing="0.14" />
 
                                         <TextView
                                             android:id="@+id/fobText"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
+                                            android:layout_marginTop="1dp"
                                             android:text="--"
                                             android:textColor="@color/textSecondary"
                                             android:textSize="16sp"
-                                            android:textStyle="bold" />
+                                            android:textStyle="bold"
+                                            android:fontFamily="monospace" />
                                     </LinearLayout>
                                 </LinearLayout>
                             </LinearLayout>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Primary contextual action (ARM / DISARM / Connect) -->
+                    <!-- Primary contextual action (ARM / DISARM / Connect) with glow halo -->
                     <FrameLayout
-                        android:id="@+id/ctaBtn"
                         android:layout_width="match_parent"
-                        android:layout_height="84dp"
-                        android:layout_marginTop="18dp"
-                        android:background="@drawable/bg_cta_connect"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:foreground="?android:attr/selectableItemBackground">
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp">
 
-                        <LinearLayout
+                        <View
+                            android:id="@+id/ctaGlow"
                             android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:paddingStart="20dp"
-                            android:paddingEnd="20dp">
+                            android:layout_height="84dp"
+                            android:layout_marginTop="6dp"
+                            android:background="@android:color/transparent" />
 
-                            <ImageView
-                                android:id="@+id/ctaIcon"
-                                android:layout_width="26dp"
-                                android:layout_height="26dp"
-                                android:src="@drawable/ic_lock"
-                                app:tint="@color/textSecondary"
-                                android:contentDescription="action" />
+                        <FrameLayout
+                            android:id="@+id/ctaBtn"
+                            android:layout_width="match_parent"
+                            android:layout_height="84dp"
+                            android:background="@drawable/bg_cta_connect"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?android:attr/selectableItemBackground">
 
                             <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:layout_marginStart="14dp"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:id="@+id/ctaLabel"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Connect to Control"
-                                    android:textColor="@color/textPrimary"
-                                    android:textSize="19sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:id="@+id/ctaSub"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="1dp"
-                                    android:text="link with the display pod"
-                                    android:textColor="@color/textSecondary"
-                                    android:textSize="12sp" />
-                            </LinearLayout>
-
-                            <FrameLayout
-                                android:id="@+id/ctaChip"
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
-                                android:background="@drawable/bg_chip">
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:paddingStart="20dp"
+                                android:paddingEnd="20dp">
 
                                 <ImageView
-                                    android:id="@+id/ctaArrow"
-                                    android:layout_width="18dp"
-                                    android:layout_height="18dp"
-                                    android:layout_gravity="center"
-                                    android:src="@drawable/ic_arrow"
+                                    android:id="@+id/ctaIcon"
+                                    android:layout_width="27dp"
+                                    android:layout_height="27dp"
+                                    android:src="@drawable/ic_link"
                                     app:tint="@color/textSecondary"
-                                    android:contentDescription="go" />
-                            </FrameLayout>
-                        </LinearLayout>
+                                    android:contentDescription="action" />
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="14dp"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:id="@+id/ctaLabel"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Connect to Control"
+                                        android:textColor="@color/textPrimary"
+                                        android:textSize="19sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/ctaSub"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="1dp"
+                                        android:text="link with the display pod"
+                                        android:textColor="@color/textSecondary"
+                                        android:textSize="12sp" />
+                                </LinearLayout>
+
+                                <FrameLayout
+                                    android:id="@+id/ctaChip"
+                                    android:layout_width="40dp"
+                                    android:layout_height="40dp"
+                                    android:background="@drawable/bg_chip">
+
+                                    <ImageView
+                                        android:id="@+id/ctaArrow"
+                                        android:layout_width="18dp"
+                                        android:layout_height="18dp"
+                                        android:layout_gravity="center"
+                                        android:src="@drawable/ic_chevron_right"
+                                        app:tint="@color/textSecondary"
+                                        android:contentDescription="go" />
+                                </FrameLayout>
+                            </LinearLayout>
+                        </FrameLayout>
                     </FrameLayout>
 
                     <!-- Secondary actions: Disconnect + Panic -->
@@ -402,7 +427,7 @@
                             android:text="Disconnect"
                             android:textColor="@color/textSecondary"
                             android:textSize="14sp"
-                            app:icon="@drawable/ic_link_off"
+                            app:icon="@drawable/ic_disconnect"
                             app:iconTint="@color/textSecondary"
                             app:iconGravity="textStart"
                             app:strokeColor="@color/border"
@@ -419,13 +444,15 @@
                             android:textColor="@color/onRed"
                             android:textSize="14sp"
                             android:textStyle="bold"
-                            app:icon="@drawable/ic_siren"
+                            android:fontFamily="monospace"
+                            android:letterSpacing="0.08"
+                            app:icon="@drawable/ic_panic"
                             app:iconTint="@color/onRed"
                             app:iconGravity="textStart"
                             app:cornerRadius="18dp" />
                     </LinearLayout>
 
-                    <!-- Pod reply ticker -->
+                    <!-- Pod reply log strip -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -478,7 +505,7 @@
                         android:layout_marginBottom="14dp"
                         android:clickable="true"
                         android:focusable="true"
-                        app:cardBackgroundColor="@color/card"
+                        app:cardBackgroundColor="@color/surfaceElevated"
                         app:cardCornerRadius="18dp"
                         app:cardElevation="0dp"
                         app:strokeColor="@color/border"
@@ -494,7 +521,7 @@
                             <ImageView
                                 android:layout_width="22dp"
                                 android:layout_height="22dp"
-                                android:src="@drawable/ic_refresh"
+                                android:src="@drawable/ic_download"
                                 app:tint="@color/accentAmber"
                                 android:contentDescription="refresh" />
 
@@ -525,7 +552,7 @@
                             <ImageView
                                 android:layout_width="18dp"
                                 android:layout_height="18dp"
-                                android:src="@drawable/ic_arrow"
+                                android:src="@drawable/ic_chevron_right"
                                 app:tint="@color/textMuted"
                                 android:contentDescription="go" />
                         </LinearLayout>
@@ -536,7 +563,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="14dp"
-                        app:cardBackgroundColor="@color/card"
+                        app:cardBackgroundColor="@color/surfaceElevated"
                         app:cardCornerRadius="18dp"
                         app:cardElevation="0dp"
                         app:strokeColor="@color/border"
@@ -560,8 +587,8 @@
                                     android:background="@drawable/bg_badge_amber">
 
                                     <ImageView
-                                        android:layout_width="17dp"
-                                        android:layout_height="17dp"
+                                        android:layout_width="18dp"
+                                        android:layout_height="18dp"
                                         android:layout_gravity="center"
                                         android:src="@drawable/ic_lock"
                                         app:tint="@color/accentAmber"
@@ -576,7 +603,8 @@
                                     android:textColor="@color/accentAmber"
                                     android:textSize="11sp"
                                     android:textStyle="bold"
-                                    android:letterSpacing="0.12" />
+                                    android:fontFamily="monospace"
+                                    android:letterSpacing="0.1" />
                             </LinearLayout>
 
                             <TextView
@@ -630,7 +658,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="14dp"
-                        app:cardBackgroundColor="@color/card"
+                        app:cardBackgroundColor="@color/surfaceElevated"
                         app:cardCornerRadius="18dp"
                         app:cardElevation="0dp"
                         app:strokeColor="@color/border"
@@ -654,10 +682,10 @@
                                     android:background="@drawable/bg_badge_teal">
 
                                     <ImageView
-                                        android:layout_width="17dp"
-                                        android:layout_height="17dp"
+                                        android:layout_width="18dp"
+                                        android:layout_height="18dp"
                                         android:layout_gravity="center"
-                                        android:src="@drawable/ic_speed"
+                                        android:src="@drawable/ic_speedometer"
                                         app:tint="@color/accentTeal"
                                         android:contentDescription="speed" />
                                 </FrameLayout>
@@ -670,7 +698,8 @@
                                     android:textColor="@color/accentTeal"
                                     android:textSize="11sp"
                                     android:textStyle="bold"
-                                    android:letterSpacing="0.12" />
+                                    android:fontFamily="monospace"
+                                    android:letterSpacing="0.1" />
                             </LinearLayout>
 
                             <TextView
@@ -724,7 +753,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="14dp"
-                        app:cardBackgroundColor="@color/card"
+                        app:cardBackgroundColor="@color/surfaceElevated"
                         app:cardCornerRadius="18dp"
                         app:cardElevation="0dp"
                         app:strokeColor="@color/border"
@@ -748,10 +777,10 @@
                                     android:background="@drawable/bg_badge_green">
 
                                     <ImageView
-                                        android:layout_width="17dp"
-                                        android:layout_height="17dp"
+                                        android:layout_width="18dp"
+                                        android:layout_height="18dp"
                                         android:layout_gravity="center"
-                                        android:src="@drawable/ic_radar"
+                                        android:src="@drawable/ic_fob"
                                         app:tint="@color/accentGreen"
                                         android:contentDescription="fobs" />
                                 </FrameLayout>
@@ -760,11 +789,12 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginStart="12dp"
-                                    android:text="PHYSICAL FOBS (ITAG)"
+                                    android:text="PHYSICAL FOBS / ITAG"
                                     android:textColor="@color/accentGreen"
                                     android:textSize="11sp"
                                     android:textStyle="bold"
-                                    android:letterSpacing="0.12" />
+                                    android:fontFamily="monospace"
+                                    android:letterSpacing="0.1" />
                             </LinearLayout>
 
                             <TextView
@@ -798,7 +828,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="14dp"
-                        app:cardBackgroundColor="@color/card"
+                        app:cardBackgroundColor="@color/surfaceElevated"
                         app:cardCornerRadius="18dp"
                         app:cardElevation="0dp"
                         app:strokeColor="@color/border"
@@ -822,10 +852,10 @@
                                     android:background="@drawable/bg_badge_blue">
 
                                     <ImageView
-                                        android:layout_width="17dp"
-                                        android:layout_height="17dp"
+                                        android:layout_width="18dp"
+                                        android:layout_height="18dp"
                                         android:layout_gravity="center"
-                                        android:src="@drawable/ic_bt"
+                                        android:src="@drawable/ic_bluetooth"
                                         app:tint="@color/accentBlue"
                                         android:contentDescription="bluetooth" />
                                 </FrameLayout>
@@ -838,7 +868,8 @@
                                     android:textColor="@color/accentBlue"
                                     android:textSize="11sp"
                                     android:textStyle="bold"
-                                    android:letterSpacing="0.12" />
+                                    android:fontFamily="monospace"
+                                    android:letterSpacing="0.1" />
                             </LinearLayout>
 
                             <TextView
@@ -889,7 +920,7 @@
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:cardBackgroundColor="@color/card"
+                        app:cardBackgroundColor="@color/surfaceElevated"
                         app:cardCornerRadius="18dp"
                         app:cardElevation="0dp"
                         app:strokeColor="@color/border"
@@ -905,14 +936,14 @@
                             <FrameLayout
                                 android:layout_width="34dp"
                                 android:layout_height="34dp"
-                                android:background="@drawable/bg_badge_amber">
+                                android:background="@drawable/bg_badge_violet">
 
                                 <ImageView
-                                    android:layout_width="17dp"
-                                    android:layout_height="17dp"
+                                    android:layout_width="18dp"
+                                    android:layout_height="18dp"
                                     android:layout_gravity="center"
                                     android:src="@drawable/ic_moon"
-                                    app:tint="@color/accentAmber"
+                                    app:tint="@color/accentViolet"
                                     android:contentDescription="appearance" />
                             </FrameLayout>
 
@@ -927,10 +958,11 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="APPEARANCE"
-                                    android:textColor="@color/accentAmber"
+                                    android:textColor="@color/accentViolet"
                                     android:textSize="11sp"
                                     android:textStyle="bold"
-                                    android:letterSpacing="0.12" />
+                                    android:fontFamily="monospace"
+                                    android:letterSpacing="0.1" />
 
                                 <TextView
                                     android:layout_width="wrap_content"
@@ -963,7 +995,7 @@
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:cardBackgroundColor="@color/card"
+                        app:cardBackgroundColor="@color/surfaceElevated"
                         app:cardCornerRadius="24dp"
                         app:cardElevation="0dp"
                         app:strokeColor="@color/border"
@@ -982,7 +1014,8 @@
                                 android:textColor="@color/accentAmber"
                                 android:textSize="11sp"
                                 android:textStyle="bold"
-                                android:letterSpacing="0.12" />
+                                android:fontFamily="monospace"
+                                android:letterSpacing="0.1" />
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -992,40 +1025,52 @@
                                 android:textColor="@color/textSecondary"
                                 android:textSize="13sp" />
 
-                            <!-- Big amber Scan QR pill -->
+                            <!-- Big amber Scan QR pill with glow halo -->
                             <FrameLayout
-                                android:id="@+id/scanBtn"
                                 android:layout_width="match_parent"
-                                android:layout_height="62dp"
-                                android:layout_marginTop="16dp"
-                                android:background="@drawable/bg_scan_amber"
-                                android:clickable="true"
-                                android:focusable="true"
-                                android:foreground="?android:attr/selectableItemBackground">
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="16dp">
 
-                                <LinearLayout
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_gravity="center"
-                                    android:orientation="horizontal"
-                                    android:gravity="center_vertical">
+                                <View
+                                    android:id="@+id/scanGlow"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="62dp"
+                                    android:layout_marginTop="5dp"
+                                    android:background="@drawable/glow_amber" />
 
-                                    <ImageView
-                                        android:layout_width="22dp"
-                                        android:layout_height="22dp"
-                                        android:src="@drawable/ic_camera"
-                                        app:tint="@color/onBrand"
-                                        android:contentDescription="camera" />
+                                <FrameLayout
+                                    android:id="@+id/scanBtn"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="62dp"
+                                    android:background="@drawable/bg_scan_amber"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:foreground="?android:attr/selectableItemBackground">
 
-                                    <TextView
+                                    <LinearLayout
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
-                                        android:layout_marginStart="10dp"
-                                        android:text="Scan QR Code"
-                                        android:textColor="@color/onBrand"
-                                        android:textSize="16sp"
-                                        android:textStyle="bold" />
-                                </LinearLayout>
+                                        android:layout_gravity="center"
+                                        android:orientation="horizontal"
+                                        android:gravity="center_vertical">
+
+                                        <ImageView
+                                            android:layout_width="22dp"
+                                            android:layout_height="22dp"
+                                            android:src="@drawable/ic_scan"
+                                            app:tint="@color/onBrand"
+                                            android:contentDescription="camera" />
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginStart="10dp"
+                                            android:text="Scan QR Code"
+                                            android:textColor="@color/onBrand"
+                                            android:textSize="16sp"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
+                                </FrameLayout>
                             </FrameLayout>
 
                             <View
@@ -1042,22 +1087,40 @@
                                 android:textColor="@color/textMuted"
                                 android:textSize="11sp"
                                 android:textStyle="bold"
-                                android:letterSpacing="0.12" />
-
-                            <EditText
-                                android:id="@+id/keyInput"
-                                android:layout_width="match_parent"
-                                android:layout_height="48dp"
-                                android:layout_marginTop="10dp"
-                                android:background="@drawable/bg_input"
-                                android:paddingStart="12dp"
-                                android:paddingEnd="12dp"
-                                android:hint="32-hex key or PIN"
-                                android:maxLines="1"
-                                android:textColor="@color/textPrimary"
-                                android:textColorHint="@color/textMuted"
                                 android:fontFamily="monospace"
-                                android:textSize="13sp" />
+                                android:letterSpacing="0.1" />
+
+                            <FrameLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp">
+
+                                <EditText
+                                    android:id="@+id/keyInput"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="48dp"
+                                    android:background="@drawable/bg_input"
+                                    android:paddingStart="12dp"
+                                    android:paddingEnd="52dp"
+                                    android:hint="32-hex key or PIN"
+                                    android:maxLines="1"
+                                    android:textColor="@color/textPrimary"
+                                    android:textColorHint="@color/textMuted"
+                                    android:fontFamily="monospace"
+                                    android:textSize="13sp" />
+
+                                <ImageView
+                                    android:id="@+id/keyCopyBtn"
+                                    android:layout_width="40dp"
+                                    android:layout_height="40dp"
+                                    android:layout_gravity="end|center_vertical"
+                                    android:layout_marginEnd="4dp"
+                                    android:padding="9dp"
+                                    android:src="@drawable/ic_copy"
+                                    app:tint="@color/textSecondary"
+                                    android:background="?attr/selectableItemBackgroundBorderless"
+                                    android:contentDescription="Copy key" />
+                            </FrameLayout>
 
                             <LinearLayout
                                 android:layout_width="match_parent"

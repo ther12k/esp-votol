@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VOTOL Pod Remote 3.0 — UI/UX Screen Designs</title>
+  <title>VOTOL Pod Remote 4.0 — Cyber-Industrial UI Gallery</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <style>
     body {
       background: #030407;
-      color: #F2F5F8;
+      color: #F4F7F8;
       font-family: 'Inter', sans-serif;
       margin: 0;
       padding: 30px 20px;
@@ -16,37 +16,26 @@
     .header {
       max-width: 1400px;
       margin: 0 auto 30px auto;
-      border-bottom: 1px solid #2A3440;
+      border-bottom: 1px solid #2B3A43;
       padding-bottom: 20px;
     }
     .brand {
-      color: #F5B301;
+      color: #F7A915;
       font-size: 13px;
       font-weight: 800;
       letter-spacing: 0.15em;
       text-transform: uppercase;
     }
     h1 { margin: 8px 0; font-size: 28px; font-weight: 800; }
-    h2.section { margin: 44px 0 6px 0; font-size: 20px; max-width: 1400px; margin-left: auto; margin-right: auto; }
-    p.section-sub { color: #8A97A5; font-size: 14px; max-width: 1400px; margin: 0 auto 18px auto; }
-    .desc {
-      color: #9AA3B2;
-      font-size: 15px;
-      line-height: 1.5;
-      max-width: 900px;
-    }
+    h2.section { margin: 44px auto 6px auto; font-size: 20px; max-width: 1400px; }
+    p.section-sub { color: #93A4B2; font-size: 14px; max-width: 1400px; margin: 0 auto 18px auto; font-family: 'JetBrains Mono', monospace; }
+    .desc { color: #93A4B2; font-size: 15px; line-height: 1.5; max-width: 900px; }
     .nav-links { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 12px; }
     .nav-links a {
-      color: #F5B301;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 14px;
-      background: #11151F;
-      border: 1px solid #2A3242;
-      padding: 8px 16px;
-      border-radius: 8px;
+      color: #F7A915; text-decoration: none; font-weight: 600; font-size: 14px;
+      background: #0D141A; border: 1px solid #2B3A43; padding: 8px 16px; border-radius: 8px;
     }
-    .nav-links a:hover { background: #1F2633; }
+    .nav-links a:hover { background: #121B22; }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
@@ -55,76 +44,66 @@
       margin: 0 auto;
     }
     .card {
-      background: #11151F;
-      border: 1px solid #2A3242;
-      border-radius: 20px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
+      background: #0D141A; border: 1px solid #2B3A43; border-radius: 20px;
+      overflow: hidden; display: flex; flex-direction: column;
     }
     .card-header {
-      padding: 16px 20px;
-      background: #161B27;
-      border-bottom: 1px solid #2A3242;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
+      padding: 16px 20px; background: #121B22; border-bottom: 1px solid #2B3A43;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
     }
-    .card-title { font-size: 16px; font-weight: 700; color: #F2F5F8; }
+    .card-title { font-size: 16px; font-weight: 700; color: #F4F7F8; }
     .card-tag {
       font-size: 11px; font-weight: 700; padding: 4px 10px;
       border-radius: 10px; text-transform: uppercase; white-space: nowrap;
+      font-family: 'JetBrains Mono', monospace;
     }
-    .tag-armed { background: rgba(229,72,77,0.2); color: #E5484D; border: 1px solid rgba(229,72,77,0.4); }
-    .tag-disarmed { background: rgba(34,224,106,0.2); color: #22E06A; border: 1px solid rgba(34,224,106,0.4); }
-    .tag-offline { background: rgba(138,151,165,0.2); color: #8A97A5; border: 1px solid #2A3242; }
-    .tag-config { background: rgba(245,179,1,0.2); color: #F5B301; border: 1px solid rgba(245,179,1,0.4); }
-    .tag-pairing { background: rgba(62,201,240,0.2); color: #3EC9F0; border: 1px solid rgba(62,201,240,0.4); }
-    .tag-theme { background: rgba(94,107,121,0.25); color: #8A97A5; border: 1px solid #2A3440; }
+    .tag-armed { background: rgba(255,77,87,0.2); color: #FF4D57; border: 1px solid rgba(255,77,87,0.4); }
+    .tag-disarmed { background: rgba(64,240,182,0.15); color: #40F0B6; border: 1px solid rgba(64,240,182,0.4); }
+    .tag-offline { background: rgba(147,164,178,0.2); color: #93A4B2; border: 1px solid #2B3A43; }
+    .tag-config { background: rgba(247,169,21,0.2); color: #F7A915; border: 1px solid rgba(247,169,21,0.4); }
+    .tag-pairing { background: rgba(89,230,255,0.15); color: #59E6FF; border: 1px solid rgba(89,230,255,0.4); }
+    .tag-theme { background: rgba(123,124,255,0.15); color: #7B7CFF; border: 1px solid rgba(123,124,255,0.4); }
 
-    .card-body { padding: 20px; display: flex; justify-content: center; background: #07090D; }
+    .card-body { padding: 20px; display: flex; justify-content: center; background: #070B0F; }
     .card-body img {
       max-width: 100%; height: auto; border-radius: 12px;
-      border: 1px solid #2A3242; box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      border: 1px solid #2B3A43; box-shadow: 0 16px 40px rgba(0,0,0,0.35);
     }
     .card-body.light { background: #E9EDF2; }
     .card-footer {
-      padding: 16px 20px; font-size: 13px; color: #9AA3B2;
-      line-height: 1.4; border-top: 1px solid #2A3242;
+      padding: 16px 20px; font-size: 13px; color: #93A4B2;
+      line-height: 1.4; border-top: 1px solid #2B3A43;
     }
     .specs-box {
       max-width: 1400px; margin: 40px auto 0 auto;
-      background: #11151F; border: 1px solid #2A3242;
-      border-radius: 20px; padding: 24px;
+      background: #0D141A; border: 1px solid #2B3A43; border-radius: 20px; padding: 24px;
     }
-    .specs-box h2 { color: #F5B301; font-size: 18px; margin-bottom: 12px; }
-    .specs-box ul { margin-left: 20px; line-height: 1.8; color: #9AA3B2; font-size: 14px; }
-    .specs-box code { color: #3EC9F0; }
-    details summary { cursor: pointer; color: #8A97A5; font-size: 15px; font-weight: 700; }
+    .specs-box h2 { color: #F7A915; font-size: 18px; margin-bottom: 12px; }
+    .specs-box ul { margin-left: 20px; line-height: 1.8; color: #93A4B2; font-size: 14px; }
+    .specs-box code { color: #59E6FF; }
+    details summary { cursor: pointer; color: #93A4B2; font-size: 15px; font-weight: 700; }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <div class="brand">⚡ VOTOL Pod Remote 3.0</div>
-    <h1>UI/UX Redesign Gallery — with Light &amp; Dark Themes</h1>
+    <div class="brand">&#9889; VOTOL Pod Remote 4.0</div>
+    <h1>Cyber-Industrial Redesign Gallery — with Light &amp; Dark Themes</h1>
     <div class="desc">
-      Renders of the redesigned (v3.0) native Android companion app: amber-branded header,
-      state-tinted hero cards, icon-badged config cards, arrow-chip CTA — and a
-      <strong>light/dark theme switcher</strong> (header sun/moon + Config → Appearance).
-      Screenshots are pixel-derived from the same design tokens as the shipped APK.
+      The app rebuilt on the designer's asset kit: obsidian surfaces, tick-ring hero dial with a
+      240&deg; gradient sweep arc and state glow, jade/red/amber/cyan palette, stroke-based
+      currentColor icons, mono technical labels — plus the kept light/dark theme switcher.
     </div>
     <div class="nav-links">
-      <a href="/index.html" target="_blank">🚀 Interactive Inspector (with theme switcher)</a>
-      <a href="/index.html?frame=raw&state=armed&theme=light" target="_blank">☀️ Light Theme Preview</a>
-      <a href="/tft.html" target="_blank">🖥 TFT Pod Inspector (2.4&quot;)</a>
-      <a href="/tft-gallery.html" target="_blank">🖥 TFT Pod Gallery</a>
+      <a href="/index.html" target="_blank">&#127918; Interactive Inspector (theme switcher)</a>
+      <a href="/index.html?frame=raw&state=armed&theme=light" target="_blank">&#9728;&#65039; Light Theme Preview</a>
+      <a href="/kit/tokens/design-tokens.json" target="_blank">&#127919; Kit design tokens</a>
+      <a href="/tft.html" target="_blank">&#128421; TFT Pod Inspector (2.4&quot;)</a>
     </div>
   </div>
 
-  <h2 class="section">🌙 Dark Theme (default)</h2>
-  <p class="section-sub">Background #0A0F14 · cards #131A24 · brand amber #FFC93C · green #22E06A · red #E5484D · cyan #3EC9F0</p>
+  <h2 class="section">&#127769; Dark Theme (kit verbatim)</h2>
+  <p class="section-sub">bg #070B0F &middot; surface #0D141A &middot; elevated #121B22 &middot; border #2B3A43 &middot; amber #F7A915 &middot; jade #40F0B6 &middot; red #FF4D57 &middot; cyan #59E6FF</p>
   <div class="grid">
 
     <div class="card">
@@ -132,11 +111,11 @@
         <div class="card-title">1. Control — ARMED</div>
         <div class="card-tag tag-armed">ARMED</div>
       </div>
-      <div class="card-body"><img src="/screenshots/app3/dark_armed.png" alt="Dark Armed"></div>
+      <div class="card-body"><img src="/screenshots/app4/dark_armed.png" alt="Dark Armed"></div>
       <div class="card-footer">
-        Red-tinted hero (#2A1115) with no-entry icon in concentric rings, SYSTEM STATUS label,
-        battery/fob stat row with divider, green <strong>DISARM</strong> CTA with arrow chip,
-        Disconnect + PANIC tiles, monospace pod-reply ticker.
+        Red-tinted hero with the tick-ring dial: red gradient arc + glow + padlock center disc;
+        cyan battery / fob stats; glowing green <strong>DISARM</strong> CTA; Disconnect + PANIC tiles;
+        <code>SYS &#9656;</code> mono log strip.
       </div>
     </div>
 
@@ -145,10 +124,10 @@
         <div class="card-title">2. Control — DISARMED</div>
         <div class="card-tag tag-disarmed">DISARMED</div>
       </div>
-      <div class="card-body"><img src="/screenshots/app3/dark_disarmed.png" alt="Dark Disarmed"></div>
+      <div class="card-body"><img src="/screenshots/app4/dark_disarmed.png" alt="Dark Disarmed"></div>
       <div class="card-footer">
-        Green-tinted hero (#10241C) with open-padlock rings; outlined red <strong>ARM</strong> CTA
-        (opens a confirmation dialog — a stray tap can never arm).
+        Jade dial arc + unlock icon; outlined red <strong>ARM</strong> CTA (confirmation-gated);
+        amber header brand + jade LINKED pill; floating pill nav with home/gear/qr.
       </div>
     </div>
 
@@ -157,10 +136,9 @@
         <div class="card-title">3. Control — OFFLINE</div>
         <div class="card-tag tag-offline">OFFLINE</div>
       </div>
-      <div class="card-body"><img src="/screenshots/app3/dark_offline.png" alt="Dark Offline"></div>
+      <div class="card-body"><img src="/screenshots/app4/dark_offline.png" alt="Dark Offline"></div>
       <div class="card-footer">
-        Neutral slate hero with broken-link icon; CTA becomes <strong>Connect to Control</strong>
-        (tap = scan for the pod). Header pill shows OFFLINE.
+        Slate dial with broken-link icon; neutral <strong>Connect to Control</strong> CTA; OFFLINE pill.
       </div>
     </div>
 
@@ -169,9 +147,9 @@
         <div class="card-title">4. ARM Confirmation</div>
         <div class="card-tag tag-armed">SECURITY GATE</div>
       </div>
-      <div class="card-body"><img src="/screenshots/app3/dark_arm_modal.png" alt="Arm Modal"></div>
+      <div class="card-body"><img src="/screenshots/app4/dark_arm_modal.png" alt="Arm Modal"></div>
       <div class="card-footer">
-        Scrim + dialog asking "ARM the alarm?" — Cancel / ARM. Prevents accidental arming from the big CTA.
+        Scrim dialog — a stray tap on the big ARM CTA can never arm the bike directly.
       </div>
     </div>
 
@@ -180,11 +158,11 @@
         <div class="card-title">5. Configuration</div>
         <div class="card-tag tag-config">CONFIG</div>
       </div>
-      <div class="card-body"><img src="/screenshots/app3/dark_config.png" alt="Dark Config"></div>
+      <div class="card-body"><img src="/screenshots/app4/dark_config.png" alt="Dark Config"></div>
       <div class="card-footer">
-        "Read Config from Pod" card-button, then icon-badged cards: SECURITY PIN (amber lock),
-        SPEED CALIBRATION (teal gauge), PHYSICAL FOBS (green radar) + red destructive clear,
-        VOTOL BRIDGE BT LINK (blue). APPEARANCE card (dark-theme switch) sits below the fold.
+        Read-config card + icon-badged cards: PIN (amber lock), SPEED (cyan speedometer),
+        FOBS (jade fob) with red destructive clear, BRIDGE BT (blue bluetooth, active segment
+        highlighted). APPEARANCE (violet moon + switch) below the fold.
       </div>
     </div>
 
@@ -193,16 +171,16 @@
         <div class="card-title">6. Device Pairing</div>
         <div class="card-tag tag-pairing">PAIRING</div>
       </div>
-      <div class="card-body"><img src="/screenshots/app3/dark_pairing.png" alt="Dark Pairing"></div>
+      <div class="card-body"><img src="/screenshots/app4/dark_pairing.png" alt="Dark Pairing"></div>
       <div class="card-footer">
-        Big amber <strong>Scan QR Code</strong> pill (camera icon, dark text) — scans the pod's
-        SYS → SET screen; divider then monospace 32-hex manual key entry, green Save Key + red Forget.
+        Amber <strong>Scan QR Code</strong> pill with amber glow + scan-frame icon; mono key input
+        with in-field copy button; jade Save Key / red Forget.
       </div>
     </div>
   </div>
 
-  <h2 class="section">☀️ Light Theme</h2>
-  <p class="section-sub">Background #F2F5F8 · cards #FFFFFF · amber text #B45309 · green #0E9F5B · red #D93A3F · cyan #0E8FB8</p>
+  <h2 class="section">&#9728;&#65039; Light Theme (derived from kit hues)</h2>
+  <p class="section-sub">bg #EFF3F2 &middot; cards #FFFFFF &middot; amber text #9A6A03 &middot; green #0C9E6E &middot; red #D93440 &middot; cyan #0793B5</p>
   <div class="grid">
 
     <div class="card">
@@ -210,10 +188,10 @@
         <div class="card-title">7. Control — ARMED</div>
         <div class="card-tag tag-theme">LIGHT</div>
       </div>
-      <div class="card-body light"><img src="/screenshots/app3/light_armed.png" alt="Light Armed"></div>
+      <div class="card-body light"><img src="/screenshots/app4/light_armed.png" alt="Light Armed"></div>
       <div class="card-footer">
-        Same layout, light tokens: white cards on #F2F5F8, pink-tinted armed hero (#FBEBEC),
-        darkened state colors for AA contrast. Toggle from the header sun/moon button.
+        White cards on #EFF3F2, pink-tinted armed hero, darkened state colors for contrast;
+        saturated green DISARM fill keeps dark text for punch.
       </div>
     </div>
 
@@ -222,9 +200,9 @@
         <div class="card-title">8. Control — DISARMED</div>
         <div class="card-tag tag-theme">LIGHT</div>
       </div>
-      <div class="card-body light"><img src="/screenshots/app3/light_disarmed.png" alt="Light Disarmed"></div>
+      <div class="card-body light"><img src="/screenshots/app4/light_disarmed.png" alt="Light Disarmed"></div>
       <div class="card-footer">
-        Mint-tinted disarmed hero (#E7F8EF), green DISARM CTA keeps its saturated fill with dark text for punch.
+        Mint hero, jade dial arc, moon icon in the header (tap &rarr; back to dark).
       </div>
     </div>
 
@@ -233,9 +211,9 @@
         <div class="card-title">9. Configuration</div>
         <div class="card-tag tag-theme">LIGHT</div>
       </div>
-      <div class="card-body light"><img src="/screenshots/app3/light_config.png" alt="Light Config"></div>
+      <div class="card-body light"><img src="/screenshots/app4/light_config.png" alt="Light Config"></div>
       <div class="card-footer">
-        Config cards on white; icon badges keep their tinted fills with darkened accent strokes/labels.
+        Config badges keep tinted fills; strokes/labels switch to darkened accents.
       </div>
     </div>
 
@@ -244,33 +222,32 @@
         <div class="card-title">10. Device Pairing</div>
         <div class="card-tag tag-theme">LIGHT</div>
       </div>
-      <div class="card-body light"><img src="/screenshots/app3/light_pairing.png" alt="Light Pairing"></div>
+      <div class="card-body light"><img src="/screenshots/app4/light_pairing.png" alt="Light Pairing"></div>
       <div class="card-footer">
-        Amber scan pill works identically in light theme (dark text on amber).
+        Amber scan pill is identical in both themes (dark text on amber).
       </div>
     </div>
   </div>
 
   <div class="specs-box">
-    <h2>📐 v3.0 Design Tokens (mirror of the APK resources)</h2>
+    <h2>&#128208; v4.0 tokens &amp; components (mirror of the APK resources)</h2>
     <ul>
-      <li><strong>Theme system:</strong> DayNight resource aliases — <code>values/colors.xml</code> (light) vs <code>values-night/colors.xml</code> (dark); switched live via <code>AppCompatDelegate.setDefaultNightMode</code>, persisted in prefs (<code>darkTheme</code>, default true).</li>
-      <li><strong>Brand:</strong> amber fill <code>#F5B301</code> (logo badge, scan pill, nav indicator); amber text <code>#FFC93C</code> dark / <code>#B45309</code> light.</li>
-      <li><strong>State colors:</strong> green <code>#22E06A</code>/#0E9F5B, red <code>#E5484D</code>/#D93A3F, cyan battery <code>#3EC9F0</code>/#0E8FB8; hero tints armed <code>#2A1115</code>/#FBEBEC, disarmed <code>#10241C</code>/#E7F8EF, offline <code>#161B27</code>/#EDF1F6.</li>
-      <li><strong>Surfaces:</strong> bg <code>#0A0F14</code>/#F2F5F8, card <code>#131A24</code>/#FFFFFF, border <code>#2A3440</code>/#DFE5EC.</li>
-      <li><strong>Primary CTA:</strong> 84dp, radius 24dp — icon + label(19sp)/sub(12sp) + 40dp arrow chip; green DISARM / outlined-red ARM / neutral Connect.</li>
-      <li><strong>Config badges:</strong> 34dp rounded-12 tinted squares with amber/teal/green/blue strokes and matching icons.</li>
-      <li><strong>Bottom nav:</strong> floating pill (radius 28, margins 12/10, 64dp) with amber active indicator.</li>
-      <li><strong>URL states:</strong> <code>/index.html?state=armed|disarmed|offline&tab=control|config|pairing&theme=dark|light&frame=raw&modal=arm</code></li>
+      <li><strong>Palette (dark)</strong>: bg <code>#070B0F</code>, surface <code>#0D141A</code>, elevated <code>#121B22</code>, border <code>#2B3A43</code>, text <code>#F4F7F8</code>/<code>#93A4B2</code>.</li>
+      <li><strong>Signals</strong>: amber <code>#F7A915</code> (brand/nav/pairing CTA), jade <code>#40F0B6</code> + green <code>#21D99B</code> (disarmed/safe), red <code>#FF4D57</code> (armed/panic/destructive), cyan <code>#59E6FF</code> (battery), blue <code>#55A7FF</code>, violet <code>#7B7CFF</code>.</li>
+      <li><strong>Hero dial</strong>: custom <code>HeroDialView</code> — 60-tick ring, 240&deg; SweepGradient arc, radial glow, center disc; color driven by state (jade/red/slate).</li>
+      <li><strong>Glows</strong>: CTA halos (layered translucent shapes on Android / box-shadow on web) — jadeGlow/amberGlow/redGlow per kit effects.</li>
+      <li><strong>Icons</strong>: kit stroke SVGs (1.8 stroke, currentColor) converted to Android vectors; tinted at usage site. Mono labels via <code>JetBrains Mono</code>/<code>monospace</code>.</li>
+      <li><strong>Theme system</strong>: DayNight aliases — light palette derived from the same hues; persisted pref, header sun/moon + Config &rarr; Appearance switch.</li>
+      <li><strong>URL states</strong>: <code>/index.html?state=armed|disarmed|offline&tab=control|config|pairing&theme=dark|light&frame=raw&modal=arm</code></li>
     </ul>
   </div>
 
   <div class="specs-box">
     <details>
-      <summary>📁 Previous design (v2.1) — for reference</summary>
-      <p style="color:#9AA3B2;font-size:14px;margin-top:10px;">
-        The pre-redesign screens (emoji icons, plain Material buttons) are still in
-        <code>/screenshots/01…09_*.png</code> and the git history.
+      <summary>&#128193; Previous designs — v3.0 amber rings / v2.1 — and the raw kit</summary>
+      <p style="color:#93A4B2;font-size:14px;margin-top:10px;">
+        v3.0 screenshots live in <code>/screenshots/app3/</code>, v2.1-era in <code>/screenshots/*_mobile.png</code>;
+        the designer's original kit (icons/tokens/README) is vendored at <code>pod-remote-web/kit/</code>.
       </p>
     </details>
   </div>

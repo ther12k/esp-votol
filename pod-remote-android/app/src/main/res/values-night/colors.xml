@@ -1,43 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- ============ dark palette (default look) ============ -->
-    <color name="bg">#0A0F14</color>
-    <color name="surface">#0D141C</color>
-    <color name="card">#131A24</color>
-    <color name="cardAlt">#161C24</color>
-    <color name="border">#2A3440</color>
-    <color name="textPrimary">#F2F5F8</color>
-    <color name="textSecondary">#8A97A5</color>
-    <color name="textMuted">#5E6B79</color>
+    <!-- ============ dark palette = kit tokens verbatim ============ -->
+    <color name="bg">#070B0F</color>
+    <color name="surface">#0D141A</color>
+    <color name="surfaceElevated">#121B22</color>
+    <color name="border">#2B3A43</color>
+    <color name="textPrimary">#F4F7F8</color>
+    <color name="textSecondary">#93A4B2</color>
+    <color name="textMuted">#5E707D</color>
 
-    <color name="brandText">#FFC93C</color>
-    <color name="stateGreen">#22E06A</color>
-    <color name="stateRed">#E5484D</color>
-    <color name="stateWarn">#FFC93C</color>
-    <color name="statGray">#9AA3B2</color>
-    <color name="statVolt">#3EC9F0</color>
+    <color name="brandText">#F7A915</color>
+    <color name="jade">#40F0B6</color>
+    <color name="stateGreen">#40F0B6</color>
+    <color name="stateRed">#FF4D57</color>
+    <color name="statGray">#93A4B2</color>
+    <color name="statVolt">#59E6FF</color>
 
-    <color name="heroArmedBg">#2A1115</color>
-    <color name="heroDisarmedBg">#10241C</color>
-    <color name="heroOfflineBg">#161B27</color>
+    <color name="heroArmedBg">#1C1216</color>
+    <color name="heroDisarmedBg">#0F1E1B</color>
+    <color name="heroOfflineBg">#121B22</color>
 
-    <color name="ctaArmBg">#2A1115</color>
-    <color name="ctaArmStroke">#7A2E33</color>
+    <color name="ctaArmBg">#24161A</color>
+    <color name="ctaArmStroke">#8A3038</color>
 
-    <color name="pillGoodFill">#1A22E06A</color>
-    <color name="pillWarnFill">#1AFFC93C</color>
-    <color name="pillGrayFill">#145E6B79</color>
+    <color name="pillGoodFill">#1A40F0B6</color>
+    <color name="pillWarnFill">#1AF7A915</color>
+    <color name="pillGrayFill">#145E707D</color>
 
-    <color name="accentAmber">#FFC93C</color>
-    <color name="accentTeal">#2DD4E8</color>
-    <color name="accentGreen">#22E06A</color>
-    <color name="accentBlue">#5B9DFF</color>
-    <color name="badgeAmberFill">#1AF5B301</color>
-    <color name="badgeTealFill">#1A2DD4E8</color>
-    <color name="badgeGreenFill">#1A22E06A</color>
-    <color name="badgeBlueFill">#1A5B9DFF</color>
+    <color name="accentAmber">#F7A915</color>
+    <color name="accentTeal">#59E6FF</color>
+    <color name="accentGreen">#40F0B6</color>
+    <color name="accentBlue">#55A7FF</color>
+    <color name="accentViolet">#7B7CFF</color>
+    <color name="badgeAmberFill">#1AF7A915</color>
+    <color name="badgeTealFill">#1A59E6FF</color>
+    <color name="badgeGreenFill">#1A40F0B6</color>
+    <color name="badgeBlueFill">#1A55A7FF</color>
+    <color name="badgeVioletFill">#1A7B7CFF</color>
 
-    <color name="brandDim">#2EF5B301</color>
+    <color name="brandDim">#2EF7A915</color>
     <color name="chipBg">#1AFFFFFF</color>
-    <color name="onAccent">#FFFFFF</color>
+    <color name="glowGreen">#2E21D99B</color>
+    <color name="glowRed">#2EFF4D57</color>
+    <color name="glowAmber">#2EF7A915</color>
 </resources>

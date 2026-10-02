@@ -1,0 +1,43 @@
+{
+  "colors": {
+    "bg": "#070B0F",
+    "surface": "#0D141A",
+    "surfaceElevated": "#121B22",
+    "border": "#2B3A43",
+    "textPrimary": "#F4F7F8",
+    "textSecondary": "#93A4B2",
+    "amber": "#F7A915",
+    "jade": "#40F0B6",
+    "green": "#21D99B",
+    "red": "#FF4D57",
+    "cyan": "#59E6FF",
+    "blue": "#55A7FF",
+    "violet": "#7B7CFF"
+  },
+  "radius": {
+    "sm": 12,
+    "md": 18,
+    "lg": 24,
+    "xl": 32,
+    "pill": 999
+  },
+  "spacing": {
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32
+  },
+  "typography": {
+    "ui": "Inter, system-ui, sans-serif",
+    "display": "Inter Tight, Inter, system-ui, sans-serif",
+    "mono": "JetBrains Mono, ui-monospace, monospace"
+  },
+  "effects": {
+    "shadow": "0 16px 40px rgba(0,0,0,.35)",
+    "jadeGlow": "0 0 32px rgba(64,240,182,.22)",
+    "amberGlow": "0 0 28px rgba(247,169,21,.22)",
+    "redGlow": "0 0 28px rgba(255,77,87,.25)"
+  }
+}

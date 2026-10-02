@@ -3,14 +3,14 @@ set -e
 
 REPO_DIR="/home/ther12k/Workspace/Learning/esp-votol"
 SHOT_DIR="$REPO_DIR/output/screenshots"
-V3_DIR="$SHOT_DIR/app3"
+V3_DIR="$SHOT_DIR/app4"
 mkdir -p "$SHOT_DIR" "$V3_DIR"
 
 BASE_URL="http://127.0.0.1:8096"
 CHROME="google-chrome"
 FLAGS="--headless --disable-gpu --hide-scrollbars --virtual-time-budget=2500"
 
-echo "Capturing v3.0 redesign screenshots — both themes (412x915)..."
+echo "Capturing v4.0 cyber-industrial screenshots — both themes (412x915)..."
 
 # Control tab: 3 states x 2 themes
 for theme in dark light; do
